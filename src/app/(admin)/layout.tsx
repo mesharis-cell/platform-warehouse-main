@@ -78,41 +78,41 @@ const navigation: NavItem[] = [
 		href: '/conditions',
 		icon: AlertCircle,
 	},
-	{
-		name: 'Users',
-		href: '/users',
-		icon: Users,
-	},
-	{
-		name: 'Companies',
-		href: '/companies',
-		icon: Building,
-	},
-	{
-		name: 'Warehouses',
-		href: '/warehouses',
-		icon: Warehouse,
-	},
-	{
-		name: 'Zones',
-		href: '/zones',
-		icon: Grid3x3,
-	},
-	{
-		name: 'Brands',
-		href: '/brands',
-		icon: Tag,
-	},
+	// {
+	// 	name: 'Users',
+	// 	href: '/users',
+	// 	icon: Users,
+	// },
+	// {
+	// 	name: 'Companies',
+	// 	href: '/companies',
+	// 	icon: Building,
+	// },
+	// {
+	// 	name: 'Warehouses',
+	// 	href: '/warehouses',
+	// 	icon: Warehouse,
+	// },
+	// {
+	// 	name: 'Zones',
+	// 	href: '/zones',
+	// 	icon: Grid3x3,
+	// },
+	// {
+	// 	name: 'Brands',
+	// 	href: '/brands',
+	// 	icon: Tag,
+	// },
 	{
 		name: 'Assets',
 		href: '/assets',
 		icon: Package,
 	},
-	{
-		name: 'Collections',
-		href: '/collections',
-		icon: Layers,
-	},
+	// {
+	// 	name: 'Collections',
+	// 	href: '/collections',
+	// 	icon: Layers,
+	// },
 ]
 
 function AdminSidebarContent() {
