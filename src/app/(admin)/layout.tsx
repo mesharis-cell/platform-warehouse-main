@@ -88,16 +88,16 @@ const navigation: NavItem[] = [
 	// 	href: '/companies',
 	// 	icon: Building,
 	// },
-	// {
-	// 	name: 'Warehouses',
-	// 	href: '/warehouses',
-	// 	icon: Warehouse,
-	// },
-	// {
-	// 	name: 'Zones',
-	// 	href: '/zones',
-	// 	icon: Grid3x3,
-	// },
+	{
+		name: 'Warehouses',
+		href: '/warehouses',
+		icon: Warehouse,
+	},
+	{
+		name: 'Zones',
+		href: '/zones',
+		icon: Grid3x3,
+	},
 	// {
 	// 	name: 'Brands',
 	// 	href: '/brands',
