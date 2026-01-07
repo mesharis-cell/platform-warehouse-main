@@ -98,21 +98,21 @@ const navigation: NavItem[] = [
 		href: '/zones',
 		icon: Grid3x3,
 	},
-	// {
-	// 	name: 'Brands',
-	// 	href: '/brands',
-	// 	icon: Tag,
-	// },
+	{
+		name: 'Brands',
+		href: '/brands',
+		icon: Tag,
+	},
 	{
 		name: 'Assets',
 		href: '/assets',
 		icon: Package,
 	},
-	// {
-	// 	name: 'Collections',
-	// 	href: '/collections',
-	// 	icon: Layers,
-	// },
+	{
+		name: 'Collections',
+		href: '/collections',
+		icon: Layers,
+	},
 ]
 
 function AdminSidebarContent() {
