@@ -1,7 +1,8 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import Providers from "@/providers";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 
 const geistSans = Geist({
 	variable: '--font-geist-sans',
@@ -13,18 +14,29 @@ const geistMono = Geist_Mono({
 	subsets: ['latin'],
 })
 
+export const viewport: Viewport = {
+	width: 'device-width',
+	initialScale: 1,
+	maximumScale: 1,
+	userScalable: false,
+	themeColor: [
+		{ media: '(prefers-color-scheme: light)', color: '#ffffff' },
+		{ media: '(prefers-color-scheme: dark)', color: '#000000' },
+	],
+}
+
 // Update this
 export const metadata: Metadata = {
 	title: {
-		default: 'Creatr',
-		template: '%s | Creatr',
+		default: 'Logistic PMG',
+		template: '%s | Logistic PMG',
 	},
-	description: 'A modern web application built with Next.js and TypeScript',
-	applicationName: 'Creatr',
-	keywords: ['next.js', 'react', 'typescript', 'web application'],
-	authors: [{ name: 'Creatr Team' }],
-	creator: 'Creatr Team',
-	publisher: 'Creatr Team',
+	description: 'Logistic PMG - Asset Management Platform',
+	applicationName: 'Logistic PMG',
+	keywords: ['logistics', 'asset management', 'inventory', 'tracking'],
+	authors: [{ name: 'PMG Team' }],
+	creator: 'PMG Team',
+	publisher: 'PMG Team',
 	icons: {
 		icon: [
 			{ url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
@@ -43,7 +55,7 @@ export const metadata: Metadata = {
 	appleWebApp: {
 		capable: true,
 		statusBarStyle: 'default',
-		title: 'Creatr',
+		title: 'Logistic PMG',
 	},
 	formatDetection: {
 		telephone: false,
@@ -58,15 +70,14 @@ export default function RootLayout({
 	return (
 		<html lang='en' suppressHydrationWarning>
 			<head>
-				<script
-					async
-					crossOrigin="anonymous"
-					src="https://tweakcn.com/live-preview.min.js"
-				/>
+				<link rel="manifest" href="/site.webmanifest" />
+				<meta name="mobile-web-app-capable" content="yes" />
+				<meta name="apple-mobile-web-app-capable" content="yes" />
 			</head>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
+				<ServiceWorkerRegister />
 				<Providers>
 					{children}
 				</Providers>
@@ -74,3 +85,4 @@ export default function RootLayout({
 		</html>
 	)
 }
+

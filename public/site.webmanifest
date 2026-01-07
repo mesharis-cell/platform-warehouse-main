@@ -1,7 +1,8 @@
 {
-    "name": "Creatr Base",
-    "short_name": "Creatr",
-    "description": "Creatr - Your Creative Platform",
+    "name": "Logistic PMG",
+    "short_name": "LogisticPMG",
+    "description": "Logistic PMG - Asset Management Platform",
+    "id": "/",
     "icons": [
         {
             "src": "/android-chrome-192x192.png",
@@ -17,10 +18,15 @@
         }
     ],
     "start_url": "/",
-    "theme_color": "#ffffff",
+    "theme_color": "#000000",
     "background_color": "#ffffff",
     "display": "standalone",
     "orientation": "portrait",
     "scope": "/",
-    "prefer_related_applications": false
+    "prefer_related_applications": false,
+    "categories": ["business", "productivity"],
+    "permissions": [
+        "camera",
+        "geolocation"
+    ]
 }
