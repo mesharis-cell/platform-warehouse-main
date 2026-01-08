@@ -47,6 +47,7 @@ import {
 import Providers from '@/providers'
 import { toast } from 'sonner'
 import { useToken } from '@/lib/auth/use-token'
+import { usePlatform } from '@/contexts/platform-context'
 
 type NavItem = {
 	name: string
@@ -120,6 +121,7 @@ function AdminSidebarContent() {
 	const router = useRouter()
 	const { state } = useSidebar()
 	const { logout, user } = useToken()
+	const { platform } = usePlatform()
 
 	const handleSignOut = () => {
 		logout()
@@ -149,8 +151,8 @@ function AdminSidebarContent() {
 					</div>
 					{!isCollapsed && (
 						<div>
-							<h2 className='text-lg font-mono font-bold tracking-tight uppercase'>
-								PMG Platform
+							<h2 className='text-16px font-mono font-bold tracking-tight uppercase'>
+								{platform?.platform_name}
 							</h2>
 							<p className='text-[10px] font-mono text-muted-foreground tracking-[0.15em] uppercase'>
 								Operations Command

@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Calendar, MapPin, Package, DollarSign } from 'lucide-react';
-import { usePricingReviewOrders, useA2ApproveStandard, useAdjustPricing, useAdminOrders } from '@/hooks/use-orders';
+import { useA2ApproveStandard, useAdjustPricing, useAdminOrders } from '@/hooks/use-orders';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -190,7 +190,7 @@ export default function PricingReviewPage() {
 											</div>
 											<p className="font-medium font-mono">
 												{order.logistics_pricing?.base_price
-													? `${(Number(order.logistics_pricing.base_price) + Number(order.platform_pricing.margin_amount)).toFixed(2)} AED`
+													? Number(order.logistics_pricing.base_price).toFixed(2)
 													: <span className="text-amber-600 text-xs">No Tier Matched</span>
 												}
 											</p>
@@ -204,14 +204,7 @@ export default function PricingReviewPage() {
 											<div className="flex items-baseline justify-between">
 												<span className="text-sm text-muted-foreground font-mono">Base Price</span>
 												<span className="text-2xl font-bold font-mono text-primary">
-													{Number(order.logistics_pricing.base_price)} AED
-												</span>
-											</div>
-											<div className="flex items-baseline justify-between">
-												<span className="text-sm text-muted-foreground font-mono">Margin Amount</span>
-												<span className="text-2xl font-bold font-mono text-primary">
-													<span className="text-sm mr-2">({order.platform_pricing.margin_percent}%)</span>
-													{Number(order.platform_pricing.margin_amount)} AED
+													{Number(order.logistics_pricing.base_price).toFixed(2)} AED
 												</span>
 											</div>
 											{order?.pricing_tier && (
@@ -328,10 +321,6 @@ export default function PricingReviewPage() {
 									<div className="flex justify-between">
 										<span>Base Price</span>
 										<span className="font-bold">{Number(selectedOrder?.logistics_pricing?.base_price).toFixed(2)} AED</span>
-									</div>
-									<div className="flex justify-between">
-										<span>Margin Amount</span>
-										<span className="font-bold">{Number(selectedOrder?.platform_pricing?.margin_amount).toFixed(2)} AED</span>
 									</div>
 								</div>
 							</div>
