@@ -118,7 +118,7 @@ export default function HomePage() {
 							</div>
 							<div>
 								<h1 className="text-2xl font-bold tracking-tight font-mono uppercase">
-									{platform?.company_name || "PMG Platform"}
+									{platform?.platform_name || "PMG Platform"}
 								</h1>
 								<p className="text-xs text-muted-foreground font-mono tracking-wider">
 									Asset Fulfillment System
@@ -204,10 +204,10 @@ export default function HomePage() {
 								{/* Forgot Password Link */}
 								<div className="flex justify-end">
 									<Link
-										href="/reset-password"
+										href="/forgot-password"
 										className="text-xs font-mono text-muted-foreground hover:text-primary transition-colors uppercase tracking-wider"
 									>
-										Reset Credentials →
+										Forget Password →
 									</Link>
 								</div>
 

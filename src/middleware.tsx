@@ -4,7 +4,7 @@ import { jwtDecode } from 'jwt-decode'
 import { CustomJwtPayload } from './app/page'
 
 // Routes that don't require authentication
-const publicRoutes = ['/', '/reset-password']
+const publicRoutes = ['/', '/forgot-password']
 
 export async function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl
