@@ -277,14 +277,7 @@ export function useExportOrders() {
 				responseType: 'blob',
 			})
 
-			// Get blob and create download link
-			const url = URL.createObjectURL(res.data)
-			const link = document.createElement('a')
-			link.href = url
-			link.download = `orders-${new Date().toISOString().split('T')[0]}.csv`
-			link.click()
-			URL.revokeObjectURL(url)
-			return true
+			return res.data
 		},
 	})
 }
