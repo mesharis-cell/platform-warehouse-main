@@ -28,6 +28,7 @@ import {
 	AlertCircle,
 	LogOut,
 	Box,
+	Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -47,6 +48,7 @@ import {
 import Providers from '@/providers'
 import { toast } from 'sonner'
 import { useToken } from '@/lib/auth/use-token'
+import { usePlatform } from '@/contexts/platform-context'
 
 type NavItem = {
 	name: string
@@ -78,16 +80,6 @@ const navigation: NavItem[] = [
 		href: '/conditions',
 		icon: AlertCircle,
 	},
-	// {
-	// 	name: 'Users',
-	// 	href: '/users',
-	// 	icon: Users,
-	// },
-	// {
-	// 	name: 'Companies',
-	// 	href: '/companies',
-	// 	icon: Building,
-	// },
 	{
 		name: 'Warehouses',
 		href: '/warehouses',
@@ -113,6 +105,11 @@ const navigation: NavItem[] = [
 		href: '/collections',
 		icon: Layers,
 	},
+	{
+		name: "Reset Password",
+		href: '/reset-password',
+		icon: Lock,
+	}
 ]
 
 function AdminSidebarContent() {
@@ -120,6 +117,7 @@ function AdminSidebarContent() {
 	const router = useRouter()
 	const { state } = useSidebar()
 	const { logout, user } = useToken()
+	const { platform } = usePlatform()
 
 	const handleSignOut = () => {
 		logout()
@@ -149,8 +147,8 @@ function AdminSidebarContent() {
 					</div>
 					{!isCollapsed && (
 						<div>
-							<h2 className='text-lg font-mono font-bold tracking-tight uppercase'>
-								PMG Platform
+							<h2 className='text-16px font-mono font-bold tracking-tight uppercase'>
+								{platform?.platform_name}
 							</h2>
 							<p className='text-[10px] font-mono text-muted-foreground tracking-[0.15em] uppercase'>
 								Operations Command

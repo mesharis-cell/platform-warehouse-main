@@ -40,25 +40,52 @@ import {
 	User,
 	Phone,
 	Mail,
-	FileText,
 	Clock,
 	Edit,
 	Save,
 	X,
 	Boxes,
-	ChevronRight,
 	Truck,
 	PlayCircle,
 	AlertCircle,
 	ScanLine,
-	DollarSign,
-	CheckCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
-import { hasPermission } from '@/lib/auth/permissions'
-import { useSession } from '@/lib/auth'
 import { apiClient } from '@/lib/api/api-client'
+
+const FINANCIAL_STATUS = {
+	PENDING_QUOTE: {
+		label: 'PENDING_QUOTE',
+		color: 'bg-slate-500/10 text-slate-600 border-slate-500/20',
+		nextStates: ['QUOTE_SENT'],
+	},
+	QUOTE_SENT: {
+		label: 'QUOTE_SENT',
+		color: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+		nextStates: ['QUOTE_ACCEPTED'],
+	},
+	QUOTE_ACCEPTED: {
+		label: 'QUOTE_ACCEPTED',
+		color: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
+		nextStates: ['PENDING_INVOICE'],
+	},
+	PENDING_INVOICE: {
+		label: 'PENDING_INVOICE',
+		color: 'bg-orange-500/10 text-orange-700 border-orange-500/20',
+		nextStates: ['INVOICED'],
+	},
+	INVOICED: {
+		label: 'INVOICED',
+		color: 'bg-purple-500/10 text-purple-700 border-purple-500/20',
+		nextStates: ['PAID'],
+	},
+	PAID: {
+		label: 'PAID',
+		color: 'bg-teal-500/10 text-teal-700 border-teal-500/20',
+		nextStates: [],
+	},
+}
 
 // Status configuration with next states for state machine (Feedback #1: Updated for new flow)
 const STATUS_CONFIG: Record<
@@ -159,13 +186,7 @@ export default function AdminOrderDetailPage({
 	const [selectedNextStatus, setSelectedNextStatus] = useState('')
 	const [statusNotes, setStatusNotes] = useState('')
 	const [timeWindowsOpen, setTimeWindowsOpen] = useState(false)
-	const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
-	const [paymentDetails, setPaymentDetails] = useState({
-		paymentMethod: '',
-		paymentReference: '',
-		paymentDate: new Date(),
-		notes: '',
-	})
+
 	const [timeWindows, setTimeWindows] = useState<{
 		deliveryWindowStart: Date | undefined
 		deliveryWindowEnd: Date | undefined
@@ -261,53 +282,6 @@ export default function AdminOrderDetailPage({
 		}
 	}
 
-	const handleConfirmPayment = async () => {
-		if (!order?.data) return
-
-		// Validate required fields
-		if (
-			!paymentDetails.paymentMethod ||
-			!paymentDetails.paymentReference ||
-			!paymentDetails.paymentDate
-		) {
-			toast.error('Payment method, reference, and date are required')
-			return
-		}
-
-		try {
-			const response = await fetch(
-				`/api/invoices/${order.data.id}/confirm-payment`,
-				{
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						paymentMethod: paymentDetails.paymentMethod,
-						paymentReference: paymentDetails.paymentReference,
-						paymentDate: paymentDetails.paymentDate.toISOString(),
-						notes: paymentDetails.notes || undefined,
-					}),
-				}
-			)
-
-			if (!response.ok) {
-				const error = await response.json()
-				throw new Error(error.error || 'Failed to confirm payment')
-			}
-
-			toast.success('Payment confirmed successfully')
-			setPaymentDialogOpen(false)
-			setPaymentDetails({
-				paymentMethod: '',
-				paymentReference: '',
-				paymentDate: new Date(),
-				notes: '',
-			})
-			window.location.reload()
-		} catch (error: any) {
-			toast.error(error.message)
-		}
-	}
-
 	if (isLoading) {
 		return (
 			<div className='p-8'>
@@ -363,6 +337,13 @@ export default function AdminOrderDetailPage({
 						</div>
 
 						<div className='flex items-center gap-3'>
+							<div>
+								<Badge
+									className={`${FINANCIAL_STATUS[order?.data?.financial_status].color} border font-mono text-xs px-3 py-1`}
+								>
+									{FINANCIAL_STATUS[order?.data?.financial_status].label}
+								</Badge>
+							</div>
 							<Badge
 								className={`${currentStatusConfig.color} border font-mono text-xs px-3 py-1`}
 							>
@@ -377,7 +358,13 @@ export default function AdminOrderDetailPage({
 									<DialogTrigger asChild>
 										<Button
 											size='sm'
-											className='gap-2 font-mono text-xs'
+											className='gap-2 font-mono text-xs disabled:pointer-events-auto disabled:cursor-not-allowed'
+											disabled={
+												progressLoading ||
+												order.data.order_status === 'IN_PREPARATION' ||
+												order.data.order_status === 'AWAITING_RETURN' ||
+												order.data.order_status === 'QUOTED'
+											}
 										>
 											<PlayCircle className='h-3.5 w-3.5' />
 											PROGRESS
@@ -450,7 +437,13 @@ export default function AdminOrderDetailPage({
 											</Button>
 											<Button
 												onClick={handleStatusProgression}
-												disabled={!selectedNextStatus || progressLoading}
+												disabled={
+													!selectedNextStatus ||
+													progressLoading ||
+													order.data.order_status === 'IN_PREPARATION' ||
+													order.data.order_status === 'AWAITING_RETURN' ||
+													order.data.order_status === 'QUOTED'
+												}
 												className='font-mono text-xs'
 											>
 												{progressLoading ? (
@@ -991,34 +984,45 @@ export default function AdminOrderDetailPage({
 							</CardHeader>
 							<CardContent className='space-y-2'>
 								{order?.data?.items?.map((item: any) => (
-									<div
-										key={item.id}
-										className='p-3 bg-muted/30 rounded border'
-									>
-										<p className='font-mono text-sm font-medium'>
-											{item.asset?.name}
-										</p>
-										<p className='font-mono text-xs text-muted-foreground mt-1'>
-											QTY: {item?.order_item?.quantity} | VOL:{' '}
-											{item?.order_item?.total_volume}m³ | WT:{' '}
-											{item?.order_item?.total_weight}kg
-										</p>
-										{item?.order_item?.handling_tags?.length > 0 && (
-											<div className='flex gap-1 mt-2'>
-												{item?.order_item?.handling_tags.map(
-													(tag: string) => (
-														<Badge
-															key={tag}
-															variant='outline'
-															className='text-[10px] font-mono bg-amber-500/10 border-amber-500/20'
-														>
-															{tag}
-														</Badge>
-													)
+									<Link className='block' key={item.id} href={`/assets/${item.asset?.id}`}>
+										<div className='flex items-center justify-between gap-2 bg-muted/30 rounded border border-border p-3 group'>
+											<div
+												className='flex-1'
+											>
+												<p className='font-mono text-sm font-medium'>
+													{item.asset?.name}
+												</p>
+												<p className='font-mono text-xs text-muted-foreground mt-1'>
+													QTY: {item?.order_item?.quantity} | VOL:{' '}
+													{item?.order_item?.total_volume}m³ | WT:{' '}
+													{item?.order_item?.total_weight}kg
+												</p>
+												{item?.order_item?.handling_tags?.length > 0 && (
+													<div className='flex gap-1 mt-2'>
+														{item?.order_item?.handling_tags.map(
+															(tag: string) => (
+																<Badge
+																	key={tag}
+																	variant='outline'
+																	className='text-[10px] font-mono bg-amber-500/10 border-amber-500/20'
+																>
+																	{tag}
+																</Badge>
+															)
+														)}
+													</div>
 												)}
 											</div>
-										)}
-									</div>
+
+											<Button
+												variant="ghost"
+												size="sm"
+												className="opacity-0 group-hover:opacity-100 transition-opacity"
+											>
+												View Details
+											</Button>
+										</div>
+									</Link>
 								))}
 							</CardContent>
 						</Card>
