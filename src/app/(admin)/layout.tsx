@@ -28,6 +28,7 @@ import {
 	AlertCircle,
 	LogOut,
 	Box,
+	Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -79,16 +80,6 @@ const navigation: NavItem[] = [
 		href: '/conditions',
 		icon: AlertCircle,
 	},
-	// {
-	// 	name: 'Users',
-	// 	href: '/users',
-	// 	icon: Users,
-	// },
-	// {
-	// 	name: 'Companies',
-	// 	href: '/companies',
-	// 	icon: Building,
-	// },
 	{
 		name: 'Warehouses',
 		href: '/warehouses',
@@ -114,6 +105,11 @@ const navigation: NavItem[] = [
 		href: '/collections',
 		icon: Layers,
 	},
+	{
+		name: "Reset Password",
+		href: '/reset-password',
+		icon: Lock,
+	}
 ]
 
 function AdminSidebarContent() {

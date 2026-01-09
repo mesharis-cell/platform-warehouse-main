@@ -90,6 +90,8 @@ export default function AdminOrdersPage() {
 				brand: brand || undefined,
 				status: status || undefined,
 				search: search || undefined,
+				sortBy,
+				sortOrder,
 			});
 			toast.success('Orders exported successfully');
 		} catch (error) {
