@@ -68,7 +68,6 @@ const navigation: NavItem[] = [
 		name: 'Pricing Review',
 		href: '/orders/pricing-review',
 		icon: DollarSign,
-		badge: 'A2',
 	},
 	{
 		name: 'Scanning',

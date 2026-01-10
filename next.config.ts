@@ -15,7 +15,8 @@ const withPWA = withPWAInit({
 	},
 });
 
-const nextConfig: NextConfig = {
+const nextConfig = {
+	turbopack: {},
 	trailingSlash: false,
 	images: {
 		unoptimized: true,
@@ -35,6 +36,9 @@ const nextConfig: NextConfig = {
 	},
 	productionBrowserSourceMaps: true,
 	serverExternalPackages: ['pdfkit'],
+} satisfies NextConfig & {
+	eslint?: { ignoreDuringBuilds?: boolean };
+	typescript?: { ignoreBuildErrors?: boolean };
 }
 
 export default withPWA(nextConfig)

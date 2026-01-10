@@ -182,7 +182,7 @@ export default function ForgotPasswordPage() {
                   {platform?.company_name || "PMG Platform"}
                 </h1>
                 <p className="text-xs text-muted-foreground font-mono tracking-wider">
-                  Asset Fulfillment System
+                  Asset Management System
                 </p>
               </div>
             </div>
@@ -454,7 +454,7 @@ export default function ForgotPasswordPage() {
           {/* Footer Info */}
           <div className="mt-8 text-center animate-in fade-in duration-700 delay-400">
             <p className="text-xs text-muted-foreground font-mono">
-              PMG Asset Fulfillment Platform v1.0 • Secure Connection Active
+              Asset Management Platform v1.0 • Secure Connection Active
             </p>
           </div>
         </div>

@@ -358,7 +358,7 @@ export default function PricingReviewPage() {
 							Cancel
 						</Button>
 						<Button onClick={handleAdjust} disabled={adjustPricing.isPending}>
-							{adjustPricing.isPending ? 'Submitting...' : 'Submit for PMG Approval'}
+							{adjustPricing.isPending ? 'Submitting...' : 'Submit for Admin Approval'}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
