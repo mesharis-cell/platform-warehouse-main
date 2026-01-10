@@ -7,7 +7,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useAdminOrders, useExportOrders } from '@/hooks/use-orders';
+import { useExportOrders } from '@/hooks/use-orders';
+import { useOfflineAdminOrders } from '@/hooks/use-offline-orders';
 import { useCompanies } from '@/hooks/use-companies';
 import { useBrands } from '@/hooks/use-brands';
 import { Button } from '@/components/ui/button';
@@ -52,7 +53,7 @@ export default function AdminOrdersPage() {
 	const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
 	// Data fetching
-	const { data, isLoading, error } = useAdminOrders({
+	const { data, isLoading, error } = useOfflineAdminOrders({
 		page,
 		limit,
 		company: company || undefined,

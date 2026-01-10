@@ -9,6 +9,59 @@ const withPWA = withPWAInit({
 	disable: process.env.NODE_ENV === "development",
 	workboxOptions: {
 		disableDevLogs: true,
+		// Runtime caching for API routes
+		runtimeCaching: [
+			{
+				// Cache scanning progress API for offline access
+				urlPattern: /^https?:\/\/.*\/operations\/v1\/scanning\/.*/i,
+				handler: 'NetworkFirst',
+				options: {
+					cacheName: 'scanning-api-cache',
+					expiration: {
+						maxEntries: 50,
+						maxAgeSeconds: 24 * 60 * 60, // 24 hours
+					},
+					networkTimeoutSeconds: 10,
+				},
+			},
+			{
+				// Cache order API for offline viewing
+				urlPattern: /^https?:\/\/.*\/client\/v1\/order.*/i,
+				handler: 'NetworkFirst',
+				options: {
+					cacheName: 'orders-api-cache',
+					expiration: {
+						maxEntries: 100,
+						maxAgeSeconds: 24 * 60 * 60, // 24 hours
+					},
+					networkTimeoutSeconds: 10,
+				},
+			},
+			{
+				// Cache static assets with StaleWhileRevalidate
+				urlPattern: /\.(?:js|css|woff2?|ttf|eot)$/i,
+				handler: 'StaleWhileRevalidate',
+				options: {
+					cacheName: 'static-resources',
+					expiration: {
+						maxEntries: 100,
+						maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+					},
+				},
+			},
+			{
+				// Cache images
+				urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+				handler: 'CacheFirst',
+				options: {
+					cacheName: 'image-cache',
+					expiration: {
+						maxEntries: 200,
+						maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+					},
+				},
+			},
+		],
 	},
 	fallbacks: {
 		document: "/offline",
