@@ -13,7 +13,8 @@
 
 import { use, useState } from 'react'
 import Link from 'next/link'
-import { useAdminOrderDetails, useAdminOrderStatusHistory, useUpdateJobNumber } from '@/hooks/use-orders'
+import { useAdminOrderStatusHistory, useUpdateJobNumber } from '@/hooks/use-orders'
+import { useOfflineAdminOrderDetails } from '@/hooks/use-offline-orders'
 import { ScanActivityTimeline } from '@/components/scanning/scan-activity-timeline'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -175,7 +176,7 @@ export default function AdminOrderDetailPage({
 }) {
 	const resolvedParams = use(params)
 	const [progressLoading, setProgressLoading] = useState(false)
-	const { data: order, isLoading } = useAdminOrderDetails(resolvedParams.id)
+	const { data: order, isLoading } = useOfflineAdminOrderDetails(resolvedParams.id)
 	const { data: statusHistory, isLoading: statusHistoryLoading } = useAdminOrderStatusHistory(order?.data?.id ? order?.data?.id : '')
 
 	const updateJobNumber = useUpdateJobNumber();
