@@ -9,8 +9,7 @@
 
 import { useState, useEffect } from 'react'
 import { use } from 'react'
-import { useAsset, useGenerateQRCode, useDeleteAsset } from '@/hooks/use-assets'
-import { useConditionHistory } from '@/hooks/use-conditions'
+import { useAsset, useDeleteAsset } from '@/hooks/use-assets'
 import { useAssetAvailabilityStats } from '@/hooks/use-asset-availability-stats'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
