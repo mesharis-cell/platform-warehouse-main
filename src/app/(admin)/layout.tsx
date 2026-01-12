@@ -29,6 +29,7 @@ import {
 	LogOut,
 	Box,
 	Lock,
+	Calendar,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -78,6 +79,11 @@ const navigation: NavItem[] = [
 		name: 'Conditions',
 		href: '/conditions',
 		icon: AlertCircle,
+	},
+	{
+		name: 'Event Calendar',
+		href: '/event-calendar',
+		icon: Calendar,
 	},
 	{
 		name: 'Warehouses',
