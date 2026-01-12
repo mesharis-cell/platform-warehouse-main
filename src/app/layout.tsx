@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import Providers from "@/providers";
 import { ServiceWorkerRegister } from "@/components/sw-register";
+import { headers } from 'next/headers';
 
 const geistSans = Geist({
 	variable: '--font-geist-sans',
@@ -25,41 +26,97 @@ export const viewport: Viewport = {
 	],
 }
 
-// Update this
-export const metadata: Metadata = {
-	title: {
-		default: 'Logistic PMG',
-		template: '%s | Logistic PMG',
-	},
-	description: 'Logistic PMG - Asset Management Platform',
-	applicationName: 'Logistic PMG',
-	keywords: ['logistics', 'asset management', 'inventory', 'tracking'],
-	authors: [{ name: 'PMG Team' }],
-	creator: 'PMG Team',
-	publisher: 'PMG Team',
-	icons: {
-		icon: [
-			{ url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-			{ url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-			{ url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' },
-		],
-		apple: [
-			{
-				url: '/apple-touch-icon.png',
-				sizes: '180x180',
-				type: 'image/png',
+
+export async function generateMetadata(): Promise<Metadata> {
+	try {
+		const headersList = await headers()
+		const host = headersList.get('host') || ''
+
+		// Pass the host to your backend so it can identify the tenant
+		const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/context`, {
+			headers: {
+				'x-forwarded-host': host,
 			},
-		],
-	},
-	manifest: '/site.webmanifest',
-	appleWebApp: {
-		capable: true,
-		statusBarStyle: 'default',
-		title: 'Logistic PMG',
-	},
-	formatDetection: {
-		telephone: false,
-	},
+			cache: 'no-store',
+		})
+
+		if (!res.ok) throw new Error('Failed to fetch context')
+
+		const data = await res.json()
+
+		return {
+			title: {
+				default: `${data.data.platform_name || 'Logistic Platform'}`,
+				template: '%s | Logistic Platform',
+			},
+			description: 'Logistic Platform - Asset Management Platform',
+			applicationName: 'Logistic Platform',
+			keywords: ['logistics', 'asset management', 'inventory', 'tracking'],
+			authors: [{ name: 'PMG Team' }],
+			creator: 'PMG Team',
+			publisher: 'PMG Team',
+			icons: {
+				icon: [
+					{ url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+					{ url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+					{ url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' },
+				],
+				apple: [
+					{
+						url: '/apple-touch-icon.png',
+						sizes: '180x180',
+						type: 'image/png',
+					},
+				],
+			},
+			manifest: '/site.webmanifest',
+			appleWebApp: {
+				capable: true,
+				statusBarStyle: 'default',
+				title: `${data.data.platform_name || 'Logistic Platform'}`,
+			},
+			formatDetection: {
+				telephone: false,
+			},
+		}
+	} catch (error) {
+		// Fallback to static metadata
+		return {
+			title: {
+				default: 'Logistic Platform',
+				template: '%s | Logistic Platform',
+			},
+			description: 'Logistic Platform - Asset Management Platform',
+			applicationName: 'Logistic Platform',
+			keywords: ['logistics', 'asset management', 'inventory', 'tracking'],
+			authors: [{ name: 'PMG Team' }],
+			creator: 'PMG Team',
+			publisher: 'PMG Team',
+			icons: {
+				icon: [
+					{ url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+					{ url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+					{ url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' },
+				],
+				apple: [
+					{
+						url: '/apple-touch-icon.png',
+						sizes: '180x180',
+						type: 'image/png',
+					},
+				],
+			},
+			manifest: '/site.webmanifest',
+			appleWebApp: {
+				capable: true,
+				statusBarStyle: 'default',
+				title: 'Logistic Platform',
+			},
+			formatDetection: {
+				telephone: false,
+			},
+		}
+	}
 }
 
 export default function RootLayout({
