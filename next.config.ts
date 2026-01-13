@@ -70,7 +70,8 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig = {
-	turbopack: {},
+	// Note: turbopack is removed as it interferes with next-pwa webpack-based SW generation
+	// Use --turbopack flag only in dev script for faster development
 	trailingSlash: false,
 	images: {
 		unoptimized: true,
@@ -82,16 +83,13 @@ const nextConfig = {
 			},
 		],
 	},
-	eslint: {
-		ignoreDuringBuilds: true,
-	},
+	// Note: eslint config moved to eslint.config.mjs in Next.js 16
 	typescript: {
 		ignoreBuildErrors: true,
 	},
 	productionBrowserSourceMaps: true,
 	serverExternalPackages: ['pdfkit'],
 } satisfies NextConfig & {
-	eslint?: { ignoreDuringBuilds?: boolean };
 	typescript?: { ignoreBuildErrors?: boolean };
 }
 

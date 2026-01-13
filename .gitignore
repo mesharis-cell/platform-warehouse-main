@@ -44,8 +44,7 @@ next-env.d.ts
 .cache
 .npm
 
-# PWA generated files
-public/sw.js
-public/sw.js.map
-public/workbox-*.js
-public/workbox-*.js.map
+# PWA generated files - DO NOT ignore, needed for deployment
+# The next-pwa plugin generates these during build
+# If using Vercel/Netlify, the build process will generate them
+# If not, run `npm run build` and commit the generated files
