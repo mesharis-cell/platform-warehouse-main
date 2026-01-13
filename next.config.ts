@@ -7,6 +7,7 @@ const withPWA = withPWAInit({
 	aggressiveFrontEndNavCaching: true,
 	reloadOnOnline: true,
 	disable: process.env.NODE_ENV === "development",
+	register: true,
 	workboxOptions: {
 		disableDevLogs: true,
 		// Runtime caching for API routes
