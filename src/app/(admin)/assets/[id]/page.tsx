@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect } from 'react'
+// eslint-disable-next-line import/named
 import { use } from 'react'
 import { useAsset, useDeleteAsset } from '@/hooks/use-assets'
 import { useAssetAvailabilityStats } from '@/hooks/use-asset-availability-stats'
