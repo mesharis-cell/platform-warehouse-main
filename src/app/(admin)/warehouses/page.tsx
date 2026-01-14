@@ -3,7 +3,23 @@
 import { AdminHeader } from "@/components/admin-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	Table,
 	TableBody,
@@ -12,22 +28,49 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useWarehouses } from "@/hooks/use-warehouses";
-
+import {
+	useArchiveUnarchiveWarehouse,
+	useCreateWarehouse,
+	useUpdateWarehouse,
+	useWarehouses
+} from "@/hooks/use-warehouses";
+import type {
+	Warehouse as WarehouseType
+} from "@/types";
 import {
 	Archive,
 	Globe,
 	MapPin,
+	MoreVertical,
+	Pencil,
+	Plus,
 	Search,
+	Undo2,
 	Warehouse,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 export default function WarehousesPage() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [countryFilter, setCountryFilter] = useState("");
 	const [cityFilter, setCityFilter] = useState("");
 	const [includeArchived, setIncludeArchived] = useState(false);
+	const [isCreateOpen, setIsCreateOpen] = useState(false);
+	const [editingWarehouse, setEditingWarehouse] =
+		useState<WarehouseType | null>(null);
+	const [confirmArchive, setConfirmArchive] = useState<WarehouseType | null>(null);
+
+	const [formData, setFormData] = useState({
+		name: "",
+		country: "",
+		city: "",
+		address: "",
+		coordinates: {
+			lat: undefined,
+			lng: undefined,
+		}
+	});
 
 	// Build query params
 	const queryParams = useMemo(() => {
@@ -47,6 +90,89 @@ export default function WarehousesPage() {
 	const warehouses = data?.data || [];
 	const total = data?.meta?.total || 0;
 
+	// Mutations
+	const createMutation = useCreateWarehouse();
+	const updateMutation = useUpdateWarehouse();
+	const archiveUnarchiveMutation = useArchiveUnarchiveWarehouse();
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+
+		try {
+			if (editingWarehouse) {
+				await updateMutation.mutateAsync({
+					id: editingWarehouse.id,
+					data: formData,
+				});
+				toast.success("Warehouse updated", {
+					description: `${formData.name} in ${formData.city}, ${formData.country} has been updated.`,
+				});
+			} else {
+				await createMutation.mutateAsync(formData);
+				toast.success("Warehouse created", {
+					description: `${formData.name} in ${formData.city}, ${formData.country} has been added.`,
+				});
+			}
+
+			setIsCreateOpen(false);
+			setEditingWarehouse(null);
+			resetForm();
+		} catch (error) {
+			let errorMessage = "Unknown error";
+			if (error instanceof Error) {
+				// Check if it's an Axios error with a response
+				const axiosError = error as { response?: { data?: { message?: string } } };
+				errorMessage = axiosError.response?.data?.message || error.message;
+			}
+			toast.error("Operation failed", {
+				description: errorMessage,
+			});
+		}
+	};
+
+	const handleArchiveUnarchive = async () => {
+		if (!confirmArchive) return;
+
+		try {
+			await archiveUnarchiveMutation.mutateAsync(confirmArchive.id);
+			toast.success("Warehouse archived", {
+				description: `${confirmArchive.name} has been archived.`,
+			});
+			setConfirmArchive(null);
+		} catch (error) {
+			toast.error("Archive failed");
+			setConfirmArchive(null);
+		}
+	};
+
+	const resetForm = () => {
+		setFormData({
+			name: "",
+			country: "",
+			city: "",
+			address: "",
+			coordinates: {
+				lat: undefined,
+				lng: undefined,
+			}
+		});
+	};
+
+	const openEditDialog = (warehouse: WarehouseType) => {
+		setEditingWarehouse(warehouse);
+		setFormData({
+			name: warehouse.name,
+			country: warehouse.country,
+			city: warehouse.city,
+			address: warehouse.address,
+			coordinates: {
+				lat: warehouse.coordinates?.lat || undefined,
+				lng: warehouse.coordinates?.lng || undefined,
+			}
+		});
+		setIsCreateOpen(true);
+	};
+
 	// Get unique countries and cities for filters
 	const uniqueCountries = Array.from(
 		new Set(warehouses.map((w) => w.country)),
@@ -61,7 +187,206 @@ export default function WarehousesPage() {
 				icon={Warehouse}
 				title="WAREHOUSE REGISTRY"
 				description="Physical Locations · Capacity · Operations"
-				stats={{ label: 'ACTIVE FACILITIES', value: total }}
+				stats={{ label: 'ACTIVE WAREHOUSES', value: total }}
+				actions={
+					<Dialog
+						open={isCreateOpen}
+						onOpenChange={(open) => {
+							setIsCreateOpen(open);
+							if (!open) {
+								setEditingWarehouse(null);
+								resetForm();
+							}
+						}}
+					>
+						<DialogTrigger asChild>
+							<Button className="gap-2 font-mono">
+								<Plus className="h-4 w-4" />
+								NEW WAREHOUSE
+							</Button>
+						</DialogTrigger>
+						<DialogContent className="max-w-2xl">
+							<DialogHeader>
+								<DialogTitle className="font-mono">
+									{editingWarehouse
+										? "EDIT WAREHOUSE"
+										: "CREATE NEW WAREHOUSE"}
+								</DialogTitle>
+								<DialogDescription className="font-mono text-xs">
+									{editingWarehouse
+										? "Update warehouse details"
+										: "Add new warehouse to network"}
+								</DialogDescription>
+							</DialogHeader>
+							<form onSubmit={handleSubmit} className="space-y-6">
+								<div className="space-y-2">
+									<Label htmlFor="name" className="font-mono text-xs">
+										WAREHOUSE NAME *
+									</Label>
+									<Input
+										id="name"
+										value={formData.name}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												name: e.target.value,
+											})
+										}
+										placeholder="e.g., Dubai Main Warehouse"
+										required
+										className="font-mono"
+									/>
+								</div>
+
+								<div className="grid grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label
+											htmlFor="country"
+											className="font-mono text-xs flex items-center gap-2"
+										>
+											<Globe className="h-3 w-3" />
+											COUNTRY *
+										</Label>
+										<Input
+											id="country"
+											value={formData.country}
+											onChange={(e) =>
+												setFormData({
+													...formData,
+													country: e.target.value,
+												})
+											}
+											placeholder="United Arab Emirates"
+											required
+											className="font-mono"
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label
+											htmlFor="city"
+											className="font-mono text-xs flex items-center gap-2"
+										>
+											<MapPin className="h-3 w-3" />
+											CITY *
+										</Label>
+										<Input
+											id="city"
+											value={formData.city}
+											onChange={(e) =>
+												setFormData({
+													...formData,
+													city: e.target.value,
+												})
+											}
+											placeholder="Dubai"
+											required
+											className="font-mono"
+										/>
+									</div>
+								</div>
+
+								<div className="space-y-2">
+									<Label
+										htmlFor="address"
+										className="font-mono text-xs"
+									>
+										FULL ADDRESS *
+									</Label>
+									<Input
+										id="address"
+										value={formData.address}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												address: e.target.value,
+											})
+										}
+										placeholder="Building 123, Street Name, Area, Dubai, UAE"
+										required
+										className="font-mono"
+									/>
+								</div>
+
+								<div className="flex items-center gap-4">
+									<div className="w-full space-y-2">
+										<Label
+											htmlFor="latitude"
+											className="font-mono text-xs"
+										>
+											LATITUDE
+										</Label>
+										<Input
+											id="latitude"
+											type="number"
+											value={formData.coordinates?.lat?.toString()}
+											onChange={(e) =>
+												setFormData({
+													...formData,
+													coordinates: {
+														lat: Number(e.target.value),
+														lng: formData.coordinates?.lng || undefined,
+													}
+												})
+											}
+											className="font-mono"
+										/>
+									</div>
+
+									<div className="w-full space-y-2">
+										<Label
+											htmlFor="longitude"
+											className="font-mono text-xs"
+										>
+											LONGITUDE
+										</Label>
+										<Input
+											id="longitude"
+											type="number"
+											value={formData.coordinates?.lng?.toString()}
+											onChange={(e) =>
+												setFormData({
+													...formData,
+													coordinates: {
+														lat: Number(formData.coordinates?.lat),
+														lng: Number(e.target.value),
+													}
+												})
+											}
+											className="font-mono"
+										/>
+									</div>
+								</div>
+
+								<div className="flex justify-end gap-3 pt-4 border-t">
+									<Button
+										type="button"
+										variant="outline"
+										onClick={() => {
+											setIsCreateOpen(false);
+											setEditingWarehouse(null);
+											resetForm();
+										}}
+										disabled={createMutation.isPending || updateMutation.isPending}
+										className="font-mono"
+									>
+										CANCEL
+									</Button>
+									<Button
+										type="submit"
+										disabled={createMutation.isPending || updateMutation.isPending}
+										className="font-mono"
+									>
+										{createMutation.isPending || updateMutation.isPending
+											? "PROCESSING..."
+											: editingWarehouse
+												? "UPDATE"
+												: "CREATE"}
+									</Button>
+								</div>
+							</form>
+						</DialogContent>
+					</Dialog>
+				}
 			/>
 
 			{/* Control Panel with Geographic Filters */}
@@ -133,6 +458,14 @@ export default function WarehousesPage() {
 						<p className="font-mono text-sm text-muted-foreground">
 							NO WAREHOUSES FOUND
 						</p>
+						<Button
+							onClick={() => setIsCreateOpen(true)}
+							variant="outline"
+							className="font-mono text-xs"
+						>
+							<Plus className="h-3.5 w-3.5 mr-2" />
+							CREATE FIRST WAREHOUSE
+						</Button>
 					</div>
 				) : (
 					<div className="border border-border rounded-lg overflow-hidden bg-card">
@@ -140,7 +473,7 @@ export default function WarehousesPage() {
 							<TableHeader>
 								<TableRow className="bg-muted/50 border-border/50">
 									<TableHead className="font-mono text-xs font-bold">
-										FACILITY
+										WAREHOUSE
 									</TableHead>
 									<TableHead className="font-mono text-xs font-bold">
 										LOCATION
@@ -154,6 +487,7 @@ export default function WarehousesPage() {
 									<TableHead className="font-mono text-xs font-bold">
 										STATUS
 									</TableHead>
+									<TableHead className="w-12"></TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -231,6 +565,41 @@ export default function WarehousesPage() {
 												</Badge>
 											)}
 										</TableCell>
+										<TableCell>
+											<DropdownMenu>
+												<DropdownMenuTrigger asChild>
+													<Button
+														variant="ghost"
+														size="sm"
+														className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+													>
+														<MoreVertical className="h-4 w-4" />
+													</Button>
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="end">
+													<DropdownMenuItem
+														onClick={() =>
+															openEditDialog(warehouse)
+														}
+														className="font-mono text-xs"
+													>
+														<Pencil className="h-3.5 w-3.5 mr-2" />
+														Edit Warehouse
+													</DropdownMenuItem>
+
+													<DropdownMenuItem
+														onClick={() =>
+															setConfirmArchive(warehouse)
+														}
+														className={`font-mono text-xs ${warehouse.is_active ? "text-destructive" : "text-primary"}`}
+													>
+														{warehouse.is_active ? <Archive className="h-3.5 w-3.5 mr-2" /> : <Undo2 className="h-3.5 w-3.5 mr-2" />}
+														{warehouse.is_active ? "Archive Warehouse" : "Unarchive Warehouse"}
+													</DropdownMenuItem>
+
+												</DropdownMenuContent>
+											</DropdownMenu>
+										</TableCell>
 									</TableRow>
 								))}
 							</TableBody>
@@ -240,8 +609,20 @@ export default function WarehousesPage() {
 			</div>
 
 			<div className="fixed bottom-4 right-4 font-mono text-xs text-muted-foreground/40">
-				ZONE: ADMIN-WAREHOUSES · SEC-LEVEL: PMG-ADMIN
+				ZONE: ADMIN-WAREHOUSES · SEC-LEVEL: Platform-ADMIN
 			</div>
+
+			{/* Confirm Archive Dialog */}
+			<ConfirmDialog
+				open={!!confirmArchive}
+				onOpenChange={(open) => !open && setConfirmArchive(null)}
+				onConfirm={handleArchiveUnarchive}
+				title={confirmArchive?.is_active ? "Archive Warehouse" : "Unarchive Warehouse"}
+				description={`Are you sure you want to ${confirmArchive?.is_active ? "archive" : "unarchive"} ${confirmArchive?.name}? This will soft-delete the warehouse.`}
+				confirmText={confirmArchive?.is_active ? "Archive" : "Unarchive"}
+				cancelText="Cancel"
+				variant={confirmArchive?.is_active ? "destructive" : "default"}
+			/>
 		</div>
 	);
 }

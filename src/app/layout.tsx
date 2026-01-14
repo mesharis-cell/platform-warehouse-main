@@ -46,15 +46,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 		return {
 			title: {
-				default: `${data.data.platform_name || 'Logistic Platform'}`,
-				template: '%s | Logistic Platform',
+				default: `${data.data.platform_name || 'Logistic'}`,
+				template: '%s | Logistic',
 			},
 			description: 'Logistic Platform - Asset Management Platform',
 			applicationName: 'Logistic Platform',
 			keywords: ['logistics', 'asset management', 'inventory', 'tracking'],
-			authors: [{ name: 'PMG Team' }],
-			creator: 'PMG Team',
-			publisher: 'PMG Team',
+			authors: [{ name: 'Platform Team' }],
+			creator: 'Platform Team',
+			publisher: 'Platform Team',
 			icons: {
 				icon: [
 					{ url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
@@ -73,7 +73,7 @@ export async function generateMetadata(): Promise<Metadata> {
 			appleWebApp: {
 				capable: true,
 				statusBarStyle: 'default',
-				title: `${data.data.platform_name || 'Logistic Platform'}`,
+				title: `${data.data.platform_name || 'Logistic'}`,
 			},
 			formatDetection: {
 				telephone: false,
@@ -83,15 +83,15 @@ export async function generateMetadata(): Promise<Metadata> {
 		// Fallback to static metadata
 		return {
 			title: {
-				default: 'Logistic Platform',
-				template: '%s | Logistic Platform',
+				default: 'Logistic',
+				template: '%s | Logistic',
 			},
-			description: 'Logistic Platform - Asset Management Platform',
-			applicationName: 'Logistic Platform',
+			description: 'Logistic - Asset Management Platform',
+			applicationName: 'Logistic',
 			keywords: ['logistics', 'asset management', 'inventory', 'tracking'],
-			authors: [{ name: 'PMG Team' }],
-			creator: 'PMG Team',
-			publisher: 'PMG Team',
+			authors: [{ name: 'Platform Team' }],
+			creator: 'Platform Team',
+			publisher: 'Platform Team',
 			icons: {
 				icon: [
 					{ url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
@@ -110,7 +110,7 @@ export async function generateMetadata(): Promise<Metadata> {
 			appleWebApp: {
 				capable: true,
 				statusBarStyle: 'default',
-				title: 'Logistic Platform',
+				title: 'Logistic',
 			},
 			formatDetection: {
 				telephone: false,

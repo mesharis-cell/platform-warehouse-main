@@ -179,7 +179,7 @@ export default function ForgotPasswordPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight font-mono uppercase">
-                  {platform?.company_name || "PMG Platform"}
+                  {platform?.company_name || "Platform"}
                 </h1>
                 <p className="text-xs text-muted-foreground font-mono tracking-wider">
                   Asset Management System
