@@ -86,6 +86,11 @@ const navigation: NavItem[] = [
 		icon: Calendar,
 	},
 	{
+		name: 'Companies',
+		href: '/companies',
+		icon: Users,
+	},
+	{
 		name: 'Warehouses',
 		href: '/warehouses',
 		icon: Warehouse,
@@ -291,7 +296,7 @@ function AdminSidebarContent() {
 				{/* Bottom zone marker */}
 				{!isCollapsed && (
 					<div className='text-[9px] font-mono text-muted-foreground/30 tracking-[0.2em] uppercase text-center pt-2'>
-						PMG Asset Fulfillment v1.0
+						Platform Asset Fulfillment v1.0
 					</div>
 				)}
 			</SidebarFooter>
