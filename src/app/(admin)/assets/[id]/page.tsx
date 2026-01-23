@@ -15,6 +15,7 @@ import { useAssetAvailabilityStats } from '@/hooks/use-asset-availability-stats'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { AssetLineage } from '@/components/assets/AssetLineage'
 import {
 	ArrowLeft,
 	Package,
