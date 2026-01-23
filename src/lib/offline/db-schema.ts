@@ -127,13 +127,16 @@ export interface AuthToken {
 }
 
 export interface OfflineMetadata {
-  id: 'storage-stats';
+  id: string;
   totalSizeBytes: number;
   orderCount: number;
   scanCount: number;
   photoCount: number;
   lastSyncAt: number | null;
   lastCalculatedAt: number;
+  data?: unknown;
+  cachedAt?: number;
+  orderId?: string;
 }
 
 // ============================================================

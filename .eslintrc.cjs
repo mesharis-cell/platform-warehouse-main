@@ -36,6 +36,10 @@ const config = {
 		'plugin:creatr/recommended',
 	],
 	rules: {
+		indent: ['error', 4, { SwitchCase: 1 }],
+		quotes: ['error', 'double', { avoidEscape: true, allowTemplateLiterals: true }],
+		semi: ['error', 'always'],
+		'jsx-quotes': ['error', 'prefer-double'],
 		'react/react-in-jsx-scope': 'off',
 		'no-duplicate-imports': 'off',
 		'no-undef': 'error',

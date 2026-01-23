@@ -50,14 +50,14 @@ export function useOfflineAdminOrders(
       
       // Try to get cached orders from IndexedDB
       const metadata = await db.get('metadata', ORDERS_CACHE_KEY);
-      
-      if (!metadata) return null;
-      
+
+      if (!metadata || !('data' in metadata) || !('cachedAt' in metadata)) return null;
+
       // Return cached data with offline indicator
       return {
-        ...metadata.data,
+        ...(metadata.data as APIOrdersResponse),
         _offline: true,
-        _cachedAt: metadata.cachedAt,
+        _cachedAt: metadata.cachedAt as number,
       } as APIOrdersResponse & { _offline: boolean; _cachedAt: number };
     },
     enabled: !network.isOnline,
@@ -122,13 +122,14 @@ export function useOfflineAdminOrderDetails(orderId: string | null) {
       // Get cached order details
       const cacheKey = `${ORDER_DETAILS_CACHE_KEY}-${orderId}`;
       const cached = await db.get('metadata', cacheKey);
-      
-      if (!cached) return null;
-      
+
+      const cachedDetails = cached as CachedOrderDetails | null;
+      if (!cachedDetails?.data) return null;
+
       return {
-        ...(cached as unknown as CachedOrderDetails).data,
+        ...(cachedDetails.data as Record<string, unknown>),
         _offline: true,
-        _cachedAt: (cached as unknown as CachedOrderDetails).cachedAt,
+        _cachedAt: cachedDetails.cachedAt,
       };
     },
     enabled: !!orderId && !network.isOnline,

@@ -443,7 +443,7 @@ export default function BulkUploadPage() {
                         )}
 
                         {/* Action Buttons */}
-                        {parsedRows.length > 0 && validationErrors.length === 0 && state !== 'uploading' && (
+                        {parsedRows.length > 0 && validationErrors.length === 0 && (
                           <div className="flex gap-3">
                             <Button
                               variant="outline"
