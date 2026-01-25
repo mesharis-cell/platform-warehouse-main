@@ -44,6 +44,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Html5Qrcode } from "html5-qrcode";
+import { TransformedAssetWarning } from "@/components/scanning/TransformedAssetWarning";
+
+interface TransformedAssetInfo {
+    oldAssetName: string;
+    oldQrCode: string;
+    newAssetName: string;
+    newQrCode: string;
+}
 
 type ScanStep = "scanning" | "complete";
 type InspectionState = {
@@ -75,6 +83,7 @@ export default function InboundScanningPage() {
     const [lastScannedQR, setLastScannedQR] = useState<string | null>(null);
     const [manualQRInput, setManualQRInput] = useState("");
     const [isScanning, setIsScanning] = useState(false);
+    const [transformedAssetInfo, setTransformedAssetInfo] = useState<TransformedAssetInfo | null>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -448,17 +457,36 @@ export default function InboundScanningPage() {
             {
                 onSuccess: async (data: any) => {
                     // Handle API response structure
-                    const asset = data.data?.asset || data.asset;
-                    const progress = data.data?.progress || data.progress;
+                    const responseData = data.data || data;
+                    const asset = responseData.asset;
+                    const progress = responseData.progress;
+                    const redirectAsset = responseData.redirect_asset;
 
-                    const scannedAssetName = currentInspection.assetName; // Use from state before clearing
-                    setLastScannedQR(currentInspection.qrCode);
+                    const scannedAssetName = currentInspection.assetName;
+                    const scannedQrCode = currentInspection.qrCode;
+
                     setInspectionDialogOpen(false);
                     setCurrentInspection(null);
                     setIsScanning(false);
 
                     // Stop damage photo camera if active
                     stopDamagePhotoCamera();
+
+                    // Check if this is a transformed asset redirect
+                    if (redirectAsset) {
+                        setTransformedAssetInfo({
+                            oldAssetName: asset?.name || scannedAssetName,
+                            oldQrCode: scannedQrCode,
+                            newAssetName: redirectAsset.name,
+                            newQrCode: redirectAsset.qr_code,
+                        });
+                        toast.warning("Asset has been transformed", {
+                            description: "Please scan the new QR code",
+                        });
+                        return;
+                    }
+
+                    setLastScannedQR(scannedQrCode);
 
                     // Resume QR scanner
                     if (qrScannerRef.current && qrScannerRef.current.getState() === 2) {
@@ -477,7 +505,7 @@ export default function InboundScanningPage() {
                     setTimeout(() => setLastScannedQR(null), 2000);
 
                     // Complete scan if 100%
-                    if (progress.percent_complete === 100) {
+                    if (progress?.percent_complete === 100) {
                         handleCompleteScan();
                     }
                 },
@@ -1107,6 +1135,23 @@ export default function InboundScanningPage() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Transformed Asset Warning Dialog */}
+            {transformedAssetInfo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+                    <div className="w-full max-w-md bg-card rounded-lg overflow-hidden">
+                        <TransformedAssetWarning
+                            oldAssetName={transformedAssetInfo.oldAssetName}
+                            oldQrCode={transformedAssetInfo.oldQrCode}
+                            newAssetName={transformedAssetInfo.newAssetName}
+                            newQrCode={transformedAssetInfo.newQrCode}
+                            onScanNewQr={() => {
+                                setTransformedAssetInfo(null);
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Complete Step */}
             {step === "complete" && (
