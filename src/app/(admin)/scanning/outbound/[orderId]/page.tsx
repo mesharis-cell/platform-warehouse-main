@@ -35,8 +35,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Html5Qrcode } from "html5-qrcode";
+import { TransformedAssetWarning } from "@/components/scanning/TransformedAssetWarning";
 
 type ScanStep = "scanning" | "photos" | "complete";
+
+interface TransformedAssetInfo {
+    oldAssetName: string;
+    oldQrCode: string;
+    newAssetName: string;
+    newQrCode: string;
+}
 
 export default function OutboundScanningPage() {
     const params = useParams();
@@ -56,6 +64,7 @@ export default function OutboundScanningPage() {
         assetId: string;
     } | null>(null);
     const [batchQuantityInput, setBatchQuantityInput] = useState("");
+    const [transformedAssetInfo, setTransformedAssetInfo] = useState<TransformedAssetInfo | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -365,15 +374,32 @@ export default function OutboundScanningPage() {
             {
                 onSuccess: (data: any) => {
                     // Handle API response structure (checking for nested data object)
-                    const asset = data.data?.asset || data.asset;
-                    const progress = data.data?.progress || data.progress;
+                    const responseData = data.data || data;
+                    const asset = responseData.asset;
+                    const progress = responseData.progress;
+                    const redirectAsset = responseData.redirect_asset;
 
-                    setLastScannedQR(qrCode);
+                    setIsScanning(false);
                     setManualQRInput("");
                     setManualQuantityInput("");
-                    setIsScanning(false);
 
-                    toast.success(`Scanned: ${asset.asset_name}`, {
+                    // Check if this is a transformed asset redirect
+                    if (redirectAsset) {
+                        setTransformedAssetInfo({
+                            oldAssetName: asset?.name || "Unknown Asset",
+                            oldQrCode: qrCode,
+                            newAssetName: redirectAsset.name,
+                            newQrCode: redirectAsset.qr_code,
+                        });
+                        toast.warning("Asset has been transformed", {
+                            description: "Please scan the new QR code",
+                        });
+                        return;
+                    }
+
+                    setLastScannedQR(qrCode);
+
+                    toast.success(`Scanned: ${asset?.asset_name || asset?.name}`, {
                         description: `${progress.items_scanned}/${progress.total_items} items`,
                     });
 
@@ -770,6 +796,24 @@ export default function OutboundScanningPage() {
                                 </div>
                             );
                         })()}
+
+                    {/* Transformed Asset Warning Dialog */}
+                    {transformedAssetInfo && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+                            <div className="w-full max-w-md bg-card rounded-lg overflow-hidden">
+                                <TransformedAssetWarning
+                                    oldAssetName={transformedAssetInfo.oldAssetName}
+                                    oldQrCode={transformedAssetInfo.oldQrCode}
+                                    newAssetName={transformedAssetInfo.newAssetName}
+                                    newQrCode={transformedAssetInfo.newQrCode}
+                                    onScanNewQr={() => {
+                                        // Clear the warning and let user scan new QR
+                                        setTransformedAssetInfo(null);
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Manual QR input */}
                     <div className="space-y-2">
