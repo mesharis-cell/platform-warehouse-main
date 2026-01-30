@@ -11,12 +11,19 @@
  * - Timeline visualization with connection lines
  */
 
-// eslint-disable-next-line import/named
 import { use, useState } from "react";
 import Link from "next/link";
-import { useAdminOrderStatusHistory, useUpdateJobNumber } from "@/hooks/use-orders";
-import { useOfflineAdminOrderDetails } from "@/hooks/use-offline-orders";
+import {
+    useAdminOrderDetails,
+    useAdminOrderStatusHistory,
+    useUpdateJobNumber,
+} from "@/hooks/use-orders";
 import { ScanActivityTimeline } from "@/components/scanning/scan-activity-timeline";
+import {
+    PricingReviewSection,
+    AwaitingFabricationSection,
+} from "./hybrid-sections";
+import { OrderItemCard } from "@/components/orders/OrderItemCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +96,11 @@ const FINANCIAL_STATUS = {
         color: "bg-teal-500/10 text-teal-700 border-teal-500/20",
         nextStates: [],
     },
+    CANCELLED: {
+        label: "CANCELLED",
+        color: "bg-red-500/10 text-red-700 border-red-500/20",
+        nextStates: [],
+    },
 };
 
 // Status configuration with next states for state machine (Feedback #1: Updated for new flow)
@@ -116,7 +128,7 @@ const STATUS_CONFIG: Record<
         nextStates: ["QUOTED", "PENDING_APPROVAL"],
     },
     PENDING_APPROVAL: {
-        label: "PLATFORM APPROVAL",
+        label: "PLATFORM REVIEW",
         color: "bg-orange-500/10 text-orange-700 border-orange-500/20",
         nextStates: ["QUOTED"],
     },
@@ -170,12 +182,18 @@ const STATUS_CONFIG: Record<
         color: "bg-slate-600/10 text-slate-700 border-slate-600/20",
         nextStates: [],
     },
+    CANCELLED: {
+        label: "CANCELLED",
+        color: "bg-red-500/10 text-red-700 border-red-500/20",
+        nextStates: [],
+    },
 };
 
 export default function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const resolvedParams = use(params);
+    const { id } = use(params);
     const [progressLoading, setProgressLoading] = useState(false);
-    const { data: order, isLoading } = useOfflineAdminOrderDetails(resolvedParams.id);
+    const { data: order, isLoading, refetch } = useAdminOrderDetails(id);
+
     const { data: statusHistory, isLoading: statusHistoryLoading } = useAdminOrderStatusHistory(
         order?.data?.id ? order?.data?.id : ""
     );
@@ -333,19 +351,17 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <div>
-                                <Badge
-                                    className={`${FINANCIAL_STATUS[order?.data?.financial_status].color} border font-mono text-xs px-3 py-1`}
-                                >
-                                    {removeUnderScore(
-                                        FINANCIAL_STATUS[order?.data?.financial_status].label
-                                    )}
-                                </Badge>
-                            </div>
+                            <Badge
+                                className={`${FINANCIAL_STATUS[order?.data?.financial_status]?.color} border font-mono text-xs px-3 py-1`}
+                            >
+                                {removeUnderScore(
+                                    FINANCIAL_STATUS[order?.data?.financial_status]?.label
+                                )}
+                            </Badge>
                             <Badge
                                 className={`${currentStatusConfig.color} border font-mono text-xs px-3 py-1`}
                             >
-                                {currentStatusConfig.label}
+                                {removeUnderScore(currentStatusConfig.label)}
                             </Badge>
 
                             {allowedNextStates.length > 0 && (
@@ -356,6 +372,9 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                             className="gap-2 font-mono text-xs disabled:pointer-events-auto disabled:cursor-not-allowed"
                                             disabled={
                                                 progressLoading ||
+                                                order.data.order_status === "PENDING_APPROVAL" ||
+                                                order.data.order_status === "AWAITING_FABRICATION" ||
+                                                order.data.order_status === "PRICING_REVIEW" ||
                                                 order.data.order_status === "IN_PREPARATION" ||
                                                 order.data.order_status === "AWAITING_RETURN" ||
                                                 order.data.order_status === "QUOTED" ||
@@ -454,6 +473,19 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
+                        {/* NEW: AWAITING_FABRICATION - Fabrication Tracking */}
+                        {order.data.order_status === "AWAITING_FABRICATION" && (
+                            <AwaitingFabricationSection
+                                order={order.data}
+                                orderId={order.data.id}
+                            />
+                        )}
+
+                        {/* NEW: PRICING_REVIEW - Logistics Review Section */}
+                        {order.data.order_status === "PRICING_REVIEW" && (
+                            <PricingReviewSection order={order.data} orderId={order.data.id} onRefresh={refetch} />
+                        )}
+
                         {/* Feedback #3: Refurb Items Banner - Show for PRICING_REVIEW and PENDING_APPROVAL */}
                         {(order.data.order_status === "PRICING_REVIEW" ||
                             order.data.order_status === "PENDING_APPROVAL") &&
@@ -521,19 +553,17 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                 {Math.floor(
                                                     (Date.now() -
                                                         new Date(
-                                                            order?.data?.final_pricing
-                                                                ?.quote_sent_at
+                                                            order?.data?.final_pricing?.quote_sent_at
                                                         ).getTime()) /
-                                                        (1000 * 60 * 60 * 24)
+                                                    (1000 * 60 * 60 * 24)
                                                 )}{" "}
                                                 days ago
                                                 {Math.floor(
                                                     (Date.now() -
                                                         new Date(
-                                                            order?.data?.final_pricing
-                                                                ?.quote_sent_at
+                                                            order?.data?.final_pricing?.quote_sent_at
                                                         ).getTime()) /
-                                                        (1000 * 60 * 60 * 24)
+                                                    (1000 * 60 * 60 * 24)
                                                 ) >= 2 && " - Consider following up with client"}
                                             </p>
                                         </div>
@@ -558,7 +588,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                 </Card>
                             )}
 
-                        {order.data.order_status === "AWAITING_RETURN" &&
+                        {order?.data?.order_status === "AWAITING_RETURN" &&
                             order?.data?.pickup_window?.start &&
                             (() => {
                                 const hoursUntilPickup =
@@ -588,7 +618,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                             })()}
 
                         {/* Job Number Card */}
-                        {order.data.job_number !== undefined && (
+                        {order?.data?.job_number !== undefined && (
                             <Card className="border-2 border-primary/20 bg-primary/5">
                                 <CardContent className="pt-6">
                                     <div className="flex items-center justify-between">
@@ -650,213 +680,213 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                         {["CONFIRMED", "IN_PREPARATION", "READY_FOR_DELIVERY"].includes(
                             order?.data?.order_status
                         ) && (
-                            <Card className="border-2">
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <CardTitle className="font-mono text-sm flex items-center gap-2">
-                                            <Truck className="h-4 w-4 text-secondary" />
-                                            DELIVERY SCHEDULE
-                                        </CardTitle>
-                                        <Dialog
-                                            open={timeWindowsOpen}
-                                            onOpenChange={setTimeWindowsOpen}
-                                        >
-                                            <DialogTrigger asChild>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="font-mono text-xs"
-                                                >
-                                                    <Edit className="h-3 w-3 mr-2" />
-                                                    EDIT
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="sm:max-w-lg overflow-y-auto">
-                                                <DialogHeader>
-                                                    <DialogTitle className="font-mono">
-                                                        UPDATE DELIVERY SCHEDULE
-                                                    </DialogTitle>
-                                                    <DialogDescription className="font-mono text-xs">
-                                                        Set time windows for delivery and pickup
-                                                        coordination
-                                                    </DialogDescription>
-                                                </DialogHeader>
-
-                                                <div className="space-y-6 py-4">
-                                                    <div className="space-y-3">
-                                                        <Label className="font-mono text-sm font-bold">
-                                                            DELIVERY WINDOW
-                                                        </Label>
-                                                        <div className="grid grid-cols-2 gap-4">
-                                                            <div className="space-y-2">
-                                                                <Label className="font-mono text-xs text-muted-foreground">
-                                                                    START
-                                                                </Label>
-                                                                <DateTimePicker
-                                                                    value={
-                                                                        timeWindows.deliveryWindowStart
-                                                                    }
-                                                                    onChange={(date) =>
-                                                                        setTimeWindows((prev) => ({
-                                                                            ...prev,
-                                                                            deliveryWindowStart:
-                                                                                date,
-                                                                        }))
-                                                                    }
-                                                                    placeholder="Select delivery start"
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label className="font-mono text-xs text-muted-foreground">
-                                                                    END
-                                                                </Label>
-                                                                <DateTimePicker
-                                                                    value={
-                                                                        timeWindows.deliveryWindowEnd
-                                                                    }
-                                                                    onChange={(date) =>
-                                                                        setTimeWindows((prev) => ({
-                                                                            ...prev,
-                                                                            deliveryWindowEnd: date,
-                                                                        }))
-                                                                    }
-                                                                    placeholder="Select delivery end"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <Separator />
-
-                                                    <div className="space-y-3">
-                                                        <Label className="font-mono text-sm font-bold">
-                                                            PICKUP WINDOW
-                                                        </Label>
-                                                        <div className="grid grid-cols-2 gap-4">
-                                                            <div className="space-y-2">
-                                                                <Label className="font-mono text-xs text-muted-foreground">
-                                                                    START
-                                                                </Label>
-                                                                <DateTimePicker
-                                                                    value={
-                                                                        timeWindows.pickupWindowStart
-                                                                    }
-                                                                    onChange={(date) =>
-                                                                        setTimeWindows((prev) => ({
-                                                                            ...prev,
-                                                                            pickupWindowStart: date,
-                                                                        }))
-                                                                    }
-                                                                    placeholder="Select pickup start"
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label className="font-mono text-xs text-muted-foreground">
-                                                                    END
-                                                                </Label>
-                                                                <DateTimePicker
-                                                                    value={
-                                                                        timeWindows.pickupWindowEnd
-                                                                    }
-                                                                    onChange={(date) =>
-                                                                        setTimeWindows((prev) => ({
-                                                                            ...prev,
-                                                                            pickupWindowEnd: date,
-                                                                        }))
-                                                                    }
-                                                                    placeholder="Select pickup end"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <DialogFooter>
+                                <Card className="border-2">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="font-mono text-sm flex items-center gap-2">
+                                                <Truck className="h-4 w-4 text-secondary" />
+                                                DELIVERY SCHEDULE
+                                            </CardTitle>
+                                            <Dialog
+                                                open={timeWindowsOpen}
+                                                onOpenChange={setTimeWindowsOpen}
+                                            >
+                                                <DialogTrigger asChild>
                                                     <Button
+                                                        size="sm"
                                                         variant="outline"
-                                                        disabled={updateTimeWindowsLoading}
-                                                        onClick={() => setTimeWindowsOpen(false)}
                                                         className="font-mono text-xs"
                                                     >
-                                                        CANCEL
+                                                        <Edit className="h-3 w-3 mr-2" />
+                                                        EDIT
                                                     </Button>
-                                                    <Button
-                                                        onClick={handleTimeWindowsSave}
-                                                        disabled={updateTimeWindowsLoading}
-                                                        className="font-mono text-xs"
-                                                    >
-                                                        {updateTimeWindowsLoading
-                                                            ? "Saving..."
-                                                            : "SAVE SCHEDULE"}
-                                                    </Button>
-                                                </DialogFooter>
-                                            </DialogContent>
-                                        </Dialog>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    {order?.data?.delivery_window?.start ? (
-                                        <>
-                                            <div className="p-3 bg-green-500/5 border border-green-500/20 rounded">
-                                                <Label className="font-mono text-[10px] text-muted-foreground">
-                                                    DELIVERY
-                                                </Label>
-                                                <p className="font-mono text-xs mt-1">
-                                                    {new Date(
-                                                        order?.data?.delivery_window?.start
-                                                    ).toLocaleString("en-US", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                    })}
-                                                    {" → "}
-                                                    {new Date(
-                                                        order?.data?.delivery_window?.end
-                                                    ).toLocaleTimeString("en-US", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                    })}
-                                                </p>
-                                            </div>
-                                            <div className="p-3 bg-orange-500/5 border border-orange-500/20 rounded">
-                                                <Label className="font-mono text-[10px] text-muted-foreground">
-                                                    PICKUP
-                                                </Label>
-                                                <p className="font-mono text-xs mt-1">
-                                                    {new Date(
-                                                        order?.data?.pickup_window?.start
-                                                    ).toLocaleString("en-US", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                    })}
-                                                    {" → "}
-                                                    {new Date(
-                                                        order?.data?.pickup_window?.end
-                                                    ).toLocaleString("en-US", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                        hour: "2-digit",
-                                                        minute: "2-digit",
-                                                    })}
-                                                </p>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="p-8 text-center bg-muted/20 rounded border-2 border-dashed">
-                                            <Clock className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                                            <p className="font-mono text-xs text-muted-foreground">
-                                                NO SCHEDULE SET
-                                            </p>
+                                                </DialogTrigger>
+                                                <DialogContent className="sm:max-w-lg overflow-y-auto">
+                                                    <DialogHeader>
+                                                        <DialogTitle className="font-mono">
+                                                            UPDATE DELIVERY SCHEDULE
+                                                        </DialogTitle>
+                                                        <DialogDescription className="font-mono text-xs">
+                                                            Set time windows for delivery and pickup
+                                                            coordination
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+
+                                                    <div className="space-y-6 py-4">
+                                                        <div className="space-y-3">
+                                                            <Label className="font-mono text-sm font-bold">
+                                                                DELIVERY WINDOW
+                                                            </Label>
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div className="space-y-2">
+                                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                                        START
+                                                                    </Label>
+                                                                    <DateTimePicker
+                                                                        value={
+                                                                            timeWindows.deliveryWindowStart
+                                                                        }
+                                                                        onChange={(date) =>
+                                                                            setTimeWindows((prev) => ({
+                                                                                ...prev,
+                                                                                deliveryWindowStart:
+                                                                                    date,
+                                                                            }))
+                                                                        }
+                                                                        placeholder="Select delivery start"
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                                        END
+                                                                    </Label>
+                                                                    <DateTimePicker
+                                                                        value={
+                                                                            timeWindows.deliveryWindowEnd
+                                                                        }
+                                                                        onChange={(date) =>
+                                                                            setTimeWindows((prev) => ({
+                                                                                ...prev,
+                                                                                deliveryWindowEnd: date,
+                                                                            }))
+                                                                        }
+                                                                        placeholder="Select delivery end"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <Separator />
+
+                                                        <div className="space-y-3">
+                                                            <Label className="font-mono text-sm font-bold">
+                                                                PICKUP WINDOW
+                                                            </Label>
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div className="space-y-2">
+                                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                                        START
+                                                                    </Label>
+                                                                    <DateTimePicker
+                                                                        value={
+                                                                            timeWindows.pickupWindowStart
+                                                                        }
+                                                                        onChange={(date) =>
+                                                                            setTimeWindows((prev) => ({
+                                                                                ...prev,
+                                                                                pickupWindowStart: date,
+                                                                            }))
+                                                                        }
+                                                                        placeholder="Select pickup start"
+                                                                    />
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                                        END
+                                                                    </Label>
+                                                                    <DateTimePicker
+                                                                        value={
+                                                                            timeWindows.pickupWindowEnd
+                                                                        }
+                                                                        onChange={(date) =>
+                                                                            setTimeWindows((prev) => ({
+                                                                                ...prev,
+                                                                                pickupWindowEnd: date,
+                                                                            }))
+                                                                        }
+                                                                        placeholder="Select pickup end"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <DialogFooter>
+                                                        <Button
+                                                            variant="outline"
+                                                            disabled={updateTimeWindowsLoading}
+                                                            onClick={() => setTimeWindowsOpen(false)}
+                                                            className="font-mono text-xs"
+                                                        >
+                                                            CANCEL
+                                                        </Button>
+                                                        <Button
+                                                            onClick={handleTimeWindowsSave}
+                                                            disabled={updateTimeWindowsLoading}
+                                                            className="font-mono text-xs"
+                                                        >
+                                                            {updateTimeWindowsLoading
+                                                                ? "Saving..."
+                                                                : "SAVE SCHEDULE"}
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
                                         </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        {order?.data?.delivery_window?.start ? (
+                                            <>
+                                                <div className="p-3 bg-green-500/5 border border-green-500/20 rounded">
+                                                    <Label className="font-mono text-[10px] text-muted-foreground">
+                                                        DELIVERY
+                                                    </Label>
+                                                    <p className="font-mono text-xs mt-1">
+                                                        {new Date(
+                                                            order?.data?.delivery_window?.start
+                                                        ).toLocaleString("en-US", {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                        })}
+                                                        {" → "}
+                                                        {new Date(
+                                                            order?.data?.delivery_window?.end
+                                                        ).toLocaleTimeString("en-US", {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                        })}
+                                                    </p>
+                                                </div>
+                                                <div className="p-3 bg-orange-500/5 border border-orange-500/20 rounded">
+                                                    <Label className="font-mono text-[10px] text-muted-foreground">
+                                                        PICKUP
+                                                    </Label>
+                                                    <p className="font-mono text-xs mt-1">
+                                                        {new Date(
+                                                            order?.data?.pickup_window?.start
+                                                        ).toLocaleString("en-US", {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                        })}
+                                                        {" → "}
+                                                        {new Date(
+                                                            order?.data?.pickup_window?.end
+                                                        ).toLocaleString("en-US", {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                        })}
+                                                    </p>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="p-8 text-center bg-muted/20 rounded border-2 border-dashed">
+                                                <Clock className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                                                <p className="font-mono text-xs text-muted-foreground">
+                                                    NO SCHEDULE SET
+                                                </p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
 
                         {/* Event & Venue */}
                         <Card className="border-2">
@@ -948,47 +978,12 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                             </CardHeader>
                             <CardContent className="space-y-2">
                                 {order?.data?.items?.map((item: any) => (
-                                    <Link
-                                        className="block"
+                                    <OrderItemCard
                                         key={item.id}
-                                        href={`/assets/${item.asset?.id}`}
-                                    >
-                                        <div className="flex items-center justify-between gap-2 bg-muted/30 rounded border border-border p-3 group">
-                                            <div className="flex-1">
-                                                <p className="font-mono text-sm font-medium">
-                                                    {item.asset?.name}
-                                                </p>
-                                                <p className="font-mono text-xs text-muted-foreground mt-1">
-                                                    QTY: {item?.order_item?.quantity} | VOL:{" "}
-                                                    {item?.order_item?.total_volume}m³ | WT:{" "}
-                                                    {item?.order_item?.total_weight}kg
-                                                </p>
-                                                {item?.order_item?.handling_tags?.length > 0 && (
-                                                    <div className="flex gap-1 mt-2">
-                                                        {item?.order_item?.handling_tags.map(
-                                                            (tag: string) => (
-                                                                <Badge
-                                                                    key={tag}
-                                                                    variant="outline"
-                                                                    className="text-[10px] font-mono bg-amber-500/10 border-amber-500/20"
-                                                                >
-                                                                    {tag}
-                                                                </Badge>
-                                                            )
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                View Details
-                                            </Button>
-                                        </div>
-                                    </Link>
+                                        item={item}
+                                        orderId={order?.data?.id}
+                                        orderStatus={order?.data?.order_status}
+                                    />
                                 ))}
                             </CardContent>
                         </Card>
@@ -1004,18 +999,18 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                             "CLOSED",
                             "PRICING_REVIEW",
                         ].includes(order?.data?.order_status) && (
-                            <Card className="border-2">
-                                <CardHeader>
-                                    <CardTitle className="font-mono text-sm flex items-center gap-2">
-                                        <ScanLine className="h-4 w-4 text-primary" />
-                                        SCANNING ACTIVITY
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <ScanActivityTimeline orderId={order?.data?.order_id} />
-                                </CardContent>
-                            </Card>
-                        )}
+                                <Card className="border-2">
+                                    <CardHeader>
+                                        <CardTitle className="font-mono text-sm flex items-center gap-2">
+                                            <ScanLine className="h-4 w-4 text-primary" />
+                                            SCANNING ACTIVITY
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ScanActivityTimeline orderId={order?.data?.order_id} />
+                                    </CardContent>
+                                </Card>
+                            )}
                     </div>
 
                     {/* Status History Timeline */}
@@ -1050,15 +1045,14 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                     >
                                                         {index <
                                                             statusHistory?.data?.history?.length -
-                                                                1 && (
-                                                            <div className="absolute left-[7px] top-5 bottom-0 w-px bg-border" />
-                                                        )}
+                                                            1 && (
+                                                                <div className="absolute left-[7px] top-5 bottom-0 w-px bg-border" />
+                                                            )}
                                                         <div
-                                                            className={`absolute left-0 top-0.5 h-4 w-4 rounded-full border-2 ${
-                                                                isLatest
-                                                                    ? "bg-primary border-primary"
-                                                                    : "bg-muted border-border"
-                                                            }`}
+                                                            className={`absolute left-0 top-0.5 h-4 w-4 rounded-full border-2 ${isLatest
+                                                                ? "bg-primary border-primary"
+                                                                : "bg-muted border-border"
+                                                                }`}
                                                         />
                                                         <div>
                                                             <Badge

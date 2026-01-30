@@ -16,6 +16,7 @@ import type {
     SubmitOrderResponse,
 } from "@/types/order";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { invoiceKeys } from "./use-invoices";
 
 // ============================================================
 // Order Submission
@@ -211,6 +212,29 @@ export function useAdminOrderStatusHistory(orderId: string | null) {
     });
 }
 
+export function useSendInvoice() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (orderId: string) => {
+            try {
+                const response = await apiClient.patch(`/client/v1/order/${orderId}/send-invoice`);
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+        onSuccess: (data, variables) => {
+            // Invalidate invoice queries
+            queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(variables) });
+            queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+
+            // Invalidate order queries (status changed to PAID)
+            queryClient.invalidateQueries({ queryKey: ["orders"] });
+        },
+    });
+}
+
 /**
  * Update job number (PMG Admin only)
  */
@@ -274,7 +298,6 @@ export function useExportOrders() {
             const res = await apiClient.get(`/client/v1/order/export?${queryParams}`, {
                 responseType: "blob",
             });
-
             return res.data;
         },
     });
@@ -304,20 +327,18 @@ export function usePricingReviewOrders() {
 }
 
 /**
- * List orders in PENDING_APPROVAL status (PMG Admin)
+ * List orders in PENDING_APPROVAL status (Admin)
  */
 export function usePendingApprovalOrders() {
     return useQuery({
         queryKey: ["orders", "pending-approval"],
         queryFn: async () => {
-            const response = await fetch("/api/admin/orders/pending-approval");
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || "Failed to fetch pending approval orders");
+            try {
+                const response = await apiClient.get("/client/v1/order/pending-approval");
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
             }
-
-            return response.json();
         },
     });
 }
@@ -340,12 +361,15 @@ export function useA2ApproveStandard() {
                 throwApiError(error);
             }
         },
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
             queryClient.invalidateQueries({
                 queryKey: ["orders", "pricing-review"],
             });
             queryClient.invalidateQueries({
                 queryKey: ["orders", "admin-list"],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["orders", "admin-detail", variables.orderId],
             });
         },
     });
@@ -381,12 +405,15 @@ export function useAdjustPricing() {
                 throwApiError(error);
             }
         },
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
             queryClient.invalidateQueries({
                 queryKey: ["orders", "pricing-review"],
             });
             queryClient.invalidateQueries({
                 queryKey: ["orders", "admin-list"],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["orders", "admin-detail", variables.orderId],
             });
         },
     });
@@ -425,12 +452,15 @@ export function usePMGApprovePricing() {
                 throwApiError(error);
             }
         },
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
             queryClient.invalidateQueries({
                 queryKey: ["orders", "pending-approval"],
             });
             queryClient.invalidateQueries({
                 queryKey: ["orders", "admin-list"],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["orders", "admin-detail", variables.orderId],
             });
         },
     });
@@ -500,6 +530,173 @@ export function useClientDeclineQuote() {
             });
             queryClient.invalidateQueries({ queryKey: ["client-orders"] });
             queryClient.invalidateQueries({ queryKey: ["orders", "my-orders"] });
+        },
+    });
+}
+
+// ============================================================
+// Phase: Hybrid Pricing Workflow Hooks (NEW)
+// ============================================================
+
+/**
+ * Submit order for Admin approval (Logistics → Admin)
+ */
+export function useSubmitForApproval() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (orderId: string) => {
+            try {
+                const response = await apiClient.post(
+                    `/client/v1/order/${orderId}/submit-for-approval`
+                );
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ["orders", "pricing-review"] });
+            queryClient.invalidateQueries({ queryKey: ["orders", "pending-approval"] });
+            queryClient.invalidateQueries({ queryKey: ["orders", "admin-list"] });
+            queryClient.invalidateQueries({ queryKey: ["orders", "admin-detail", variables] });
+        },
+    });
+}
+
+/**
+ * Admin approve quote and send to client
+ */
+export function useAdminApproveQuote() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            orderId,
+            marginOverridePercent,
+            marginOverrideReason,
+        }: {
+            orderId: string;
+            marginOverridePercent?: number;
+            marginOverrideReason?: string;
+        }) => {
+            try {
+                const response = await apiClient.post(
+                    `/client/v1/order/${orderId}/admin-approve-quote`,
+                    {
+                        margin_override_percent: marginOverridePercent,
+                        margin_override_reason: marginOverrideReason,
+                    }
+                );
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ["orders", "pending-approval"] });
+            queryClient.invalidateQueries({ queryKey: ["orders", "admin-list"] });
+            queryClient.invalidateQueries({ queryKey: ["orders", "admin-detail", variables.orderId] });
+        },
+    });
+}
+
+/**
+ * Admin returns order to Logistics for revisions
+ */
+export function useReturnToLogistics() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ orderId, reason }: { orderId: string; reason: string }) => {
+            try {
+                const response = await apiClient.post(
+                    `/client/v1/order/${orderId}/return-to-logistics`,
+                    {
+                        reason,
+                    }
+                );
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ["orders", "pending-approval"] });
+            queryClient.invalidateQueries({ queryKey: ["orders", "pricing-review"] });
+            queryClient.invalidateQueries({ queryKey: ["orders", "admin-list"] });
+            queryClient.invalidateQueries({ queryKey: ["orders", "admin-detail", variables.orderId] });
+        },
+    });
+}
+
+/**
+ * Cancel order (Admin only)
+ */
+export function useCancelOrder() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            orderId,
+            reason,
+            notes,
+            notifyClient,
+        }: {
+            orderId: string;
+            reason: string;
+            notes: string;
+            notifyClient: boolean;
+        }) => {
+            try {
+                const response = await apiClient.post(`/client/v1/order/${orderId}/cancel`, {
+                    reason,
+                    notes,
+                    notify_client: notifyClient,
+                });
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ["orders"] });
+            queryClient.invalidateQueries({ queryKey: ["orders", "admin-detail", variables.orderId] });
+        },
+    });
+}
+
+/**
+ * Update order vehicle type (Logistics)
+ */
+export function useUpdateOrderVehicle() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            orderId,
+            vehicleType,
+            reason,
+        }: {
+            orderId: string;
+            vehicleType: string;
+            reason: string;
+        }) => {
+            try {
+                const response = await apiClient.patch(`/client/v1/order/${orderId}/vehicle`, {
+                    vehicle_type: vehicleType,
+                    reason,
+                });
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: ["orders", "admin-detail", variables.orderId],
+            });
+            queryClient.invalidateQueries({ queryKey: ["orders", "pricing-review"] });
         },
     });
 }
