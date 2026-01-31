@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useListReskinRequests } from "@/hooks/use-reskin-requests";
 
 interface OrderItemCardProps {
@@ -24,18 +25,44 @@ interface OrderItemCardProps {
   };
   orderId: string;
   orderStatus: string;
+  onProcessReskin?: (reskinData: {
+    orderItemId: string;
+    originalAssetName: string;
+    targetBrandName: string;
+    clientNotes: string;
+  }) => void;
+  onRejectReskin?: (orderItemId: string) => void;
 }
 
 export function OrderItemCard({
   item,
   orderId,
   orderStatus,
+  onProcessReskin,
+  onRejectReskin,
 }: OrderItemCardProps) {
   const { data: reskinRequests } = useListReskinRequests(orderId || "");
 
   const reskinRequest = reskinRequests?.find(
     (request: any) => request?.orderItemId === item?.order_item?.id
   );
+
+  const handleProcessReskin = () => {
+    if (onProcessReskin) {
+      onProcessReskin({
+        orderItemId: item?.order_item?.id || "",
+        originalAssetName: item?.asset?.name || "",
+        targetBrandName: item?.order_item?.reskin_target_brand_custom || "Linked Brand",
+        clientNotes: item?.order_item?.reskin_notes || "No notes provided",
+      });
+    }
+  };
+
+  const handleRejectReskin = () => {
+    if (onRejectReskin && item?.order_item?.id) {
+      onRejectReskin(item.order_item.id);
+    }
+  };
 
   return (
     <div className="bg-muted/30 rounded border border-border p-3">
@@ -81,6 +108,25 @@ export function OrderItemCard({
           <div className="bg-primary/10 p-2 rounded border border-primary/20 mt-4 font-mono text-xs text-muted-foreground">
             <p className="mt-2">Client instructions: {item?.order_item?.reskin_notes}</p>
             <p className="mt-2">Status: ⏳ Awaiting Processing</p>
+
+            {!reskinRequest && (
+              <div className="mt-4 flex gap-2">
+                <Button
+                  variant="default"
+                  className="text-xs font-mono"
+                  onClick={handleProcessReskin}
+                >
+                  Rebrand Request
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-xs font-mono"
+                  onClick={handleRejectReskin}
+                >
+                  Reject & Contact Client
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
