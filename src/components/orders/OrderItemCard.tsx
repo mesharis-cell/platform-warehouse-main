@@ -108,25 +108,6 @@ export function OrderItemCard({
           <div className="bg-primary/10 p-2 rounded border border-primary/20 mt-4 font-mono text-xs text-muted-foreground">
             <p className="mt-2">Client instructions: {item?.order_item?.reskin_notes}</p>
             <p className="mt-2">Status: ⏳ Awaiting Processing</p>
-
-            {!reskinRequest && (
-              <div className="mt-4 flex gap-2">
-                <Button
-                  variant="default"
-                  className="text-xs font-mono"
-                  onClick={handleProcessReskin}
-                >
-                  Rebrand Request
-                </Button>
-                <Button
-                  variant="outline"
-                  className="text-xs font-mono"
-                  onClick={handleRejectReskin}
-                >
-                  Reject & Contact Client
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </div>
