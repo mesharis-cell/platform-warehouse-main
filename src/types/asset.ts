@@ -58,7 +58,9 @@ export interface Asset {
         width: number;
         height: number;
     };
+    brand_id?: string;
     volume_per_unit: number; // m³
+    weight_per_unit: number; // kg
     condition: Condition;
     status: AssetStatus;
     refurb_days_estimate?: number | null; // Feedback #2: Estimated days to refurbish

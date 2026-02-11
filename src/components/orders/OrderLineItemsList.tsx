@@ -98,7 +98,7 @@ export function OrderLineItemsList({ targetId, canManage = false, purposeType = 
                                     <span className="font-mono font-semibold">
                                         {item.total.toFixed(2)} AED
                                     </span>
-                                    {canManage && (
+                                    {canManage && ['PRICING_REVIEW', "PENDING_APPROVAL", "QUOTED"].includes(item.request_status) && (
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -149,7 +149,7 @@ export function OrderLineItemsList({ targetId, canManage = false, purposeType = 
                                     <span className="font-mono font-semibold">
                                         {item.total.toFixed(2)} AED
                                     </span>
-                                    {canManage && (
+                                    {canManage && ['PRICING_REVIEW', "PENDING_APPROVAL", "QUOTED"].includes(item.request_status) && (
                                         <Button
                                             variant="ghost"
                                             size="sm"

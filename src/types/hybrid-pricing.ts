@@ -169,6 +169,7 @@ export interface OrderLineItem {
     orderId: string;
     serviceTypeId: string | null;
     reskinRequestId: string | null;
+    request_status: string;
     lineItemType: LineItemType;
     category: ServiceCategory;
     description: string;
