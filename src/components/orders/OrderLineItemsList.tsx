@@ -1,34 +1,43 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useListOrderLineItems, useVoidLineItem } from "@/hooks/use-order-line-items";
+import { useListLineItems, useVoidLineItem } from "@/hooks/use-order-line-items";
+import { VoidLineItemDialog } from "./VoidLineItemDialog";
 import type { OrderLineItem } from "@/types/hybrid-pricing";
 
 interface OrderLineItemsListProps {
-    orderId: string;
+    targetId: string;
     canManage?: boolean;
+    purposeType?: "ORDER" | "INBOUND_REQUEST";
 }
 
-export function OrderLineItemsList({ orderId, canManage = false }: OrderLineItemsListProps) {
-    const { data: lineItems, isLoading } = useListOrderLineItems(orderId);
-    const voidLineItem = useVoidLineItem(orderId);
+export function OrderLineItemsList({ targetId, canManage = false, purposeType = "ORDER" }: OrderLineItemsListProps) {
+    const { data: lineItems, isLoading } = useListLineItems(targetId, purposeType);
+    const voidLineItem = useVoidLineItem(targetId, purposeType);
 
-    const handleVoid = async (item: OrderLineItem) => {
-        const reason = prompt("Reason for removing this line item:");
-        if (!reason || reason.trim().length < 10) {
-            toast.error("Void reason required (min 10 characters)");
-            return;
-        }
+    const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<OrderLineItem | null>(null);
+
+    const openVoidDialog = (item: OrderLineItem) => {
+        setSelectedItem(item);
+        setVoidDialogOpen(true);
+    };
+
+    const handleVoid = async (reason: string) => {
+        if (!selectedItem) return;
 
         try {
             await voidLineItem.mutateAsync({
-                itemId: item.id,
-                data: { void_reason: reason.trim() },
+                itemId: selectedItem.id,
+                data: { void_reason: reason },
             });
             toast.success("Line item removed");
+            setVoidDialogOpen(false);
+            setSelectedItem(null);
         } catch (error: any) {
             toast.error(error.message || "Failed to void line item");
         }
@@ -89,11 +98,11 @@ export function OrderLineItemsList({ orderId, canManage = false }: OrderLineItem
                                     <span className="font-mono font-semibold">
                                         {item.total.toFixed(2)} AED
                                     </span>
-                                    {canManage && (
+                                    {canManage && ['PRICING_REVIEW', "PENDING_APPROVAL", "QUOTED"].includes(item.request_status) && (
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => handleVoid(item)}
+                                            onClick={() => openVoidDialog(item)}
                                             disabled={voidLineItem.isPending}
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -140,11 +149,11 @@ export function OrderLineItemsList({ orderId, canManage = false }: OrderLineItem
                                     <span className="font-mono font-semibold">
                                         {item.total.toFixed(2)} AED
                                     </span>
-                                    {canManage && (
+                                    {canManage && ['PRICING_REVIEW', "PENDING_APPROVAL", "QUOTED"].includes(item.request_status) && (
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => handleVoid(item)}
+                                            onClick={() => openVoidDialog(item)}
                                             disabled={voidLineItem.isPending}
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -156,6 +165,15 @@ export function OrderLineItemsList({ orderId, canManage = false }: OrderLineItem
                     </div>
                 </div>
             )}
+
+            {/* Void Line Item Dialog */}
+            <VoidLineItemDialog
+                open={voidDialogOpen}
+                onOpenChange={setVoidDialogOpen}
+                item={selectedItem}
+                onConfirm={handleVoid}
+                isPending={voidLineItem.isPending}
+            />
         </div>
     );
 }

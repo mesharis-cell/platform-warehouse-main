@@ -116,6 +116,11 @@ const navigation: NavItem[] = [
         icon: Layers,
     },
     {
+        name: "Inbound Requests",
+        href: "/inbound-request",
+        icon: Package,
+    },
+    {
         name: "Reset Password",
         href: "/reset-password",
         icon: Lock,

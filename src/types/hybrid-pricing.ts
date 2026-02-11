@@ -26,30 +26,49 @@ export interface SetPricingConfigRequest {
 // ============================================================
 
 export type TripType = "ONE_WAY" | "ROUND_TRIP";
-export type VehicleType = "STANDARD" | "7_TON" | "10_TON";
+export interface VehicleType {
+    id: string;
+    name: string;
+    vehicle_size: number;
+    platform_id: string;
+    is_default: boolean;
+    is_active: boolean;
+    display_order: number;
+    description: string;
+    created_at: string;
+    updated_at: string;
+}
 
 export interface TransportRate {
     id: string;
-    platformId: string;
-    companyId: string | null;
-    emirate: string;
+    platform_id: string;
+    company: {
+        id: string;
+        name: string;
+    };
+    city: {
+        id: string;
+        name: string;
+    };
     area: string | null;
-    tripType: TripType;
-    vehicleType: VehicleType;
+    trip_type: TripType;
+    vehicle_type: {
+        id: string;
+        name: string;
+    };
     rate: number;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface CreateTransportRateRequest {
-    companyId?: string | null;
-    emirate: string;
+    company_id?: string | null;
+    city_id: string;
     area?: string | null;
-    tripType: TripType;
-    vehicleType: VehicleType;
+    trip_type: TripType;
+    vehicle_type_id: string;
     rate: number;
-    isActive?: boolean;
 }
 
 export interface UpdateTransportRateRequest {
@@ -65,6 +84,40 @@ export interface TransportRateLookup {
 }
 
 // ============================================================
+// Vehicle Types (Entity)
+// ============================================================
+
+export interface VehicleTypeEntity {
+    id: string;
+    platform_id: string;
+    name: string;
+    vehicle_size: number;
+    display_order: number;
+    description: string | null;
+    is_active: boolean;
+    is_default: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateVehicleTypeRequest {
+    name: string;
+    vehicle_size: number | null;
+    display_order?: number;
+    description?: string;
+    isDefault?: boolean;
+}
+
+export interface UpdateVehicleTypeRequest {
+    name?: string;
+    vehicle_size?: number;
+    display_order?: number;
+    description?: string;
+    isActive?: boolean;
+    isDefault?: boolean;
+}
+
+// ============================================================
 // Service Types
 // ============================================================
 
@@ -76,22 +129,22 @@ export interface ServiceType {
     name: string;
     category: ServiceCategory;
     unit: string;
-    defaultRate: number | null;
+    default_rate: number | null;
     description: string | null;
-    displayOrder: number;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
+    display_order: number;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface CreateServiceTypeRequest {
     name: string;
     category: ServiceCategory;
     unit: string;
-    defaultRate?: number | null;
+    default_rate?: number | null;
     description?: string;
-    displayOrder?: number;
-    isActive?: boolean;
+    display_order?: number;
+    is_active?: boolean;
 }
 
 export interface UpdateServiceTypeRequest {
@@ -108,6 +161,7 @@ export interface UpdateServiceTypeRequest {
 // ============================================================
 
 export type LineItemType = "CATALOG" | "CUSTOM";
+export type PurposeType = "ORDER" | "INBOUND_REQUEST";
 
 export interface OrderLineItem {
     id: string;
@@ -115,6 +169,7 @@ export interface OrderLineItem {
     orderId: string;
     serviceTypeId: string | null;
     reskinRequestId: string | null;
+    request_status: string;
     lineItemType: LineItemType;
     category: ServiceCategory;
     description: string;
@@ -134,18 +189,23 @@ export interface OrderLineItem {
 }
 
 export interface CreateCatalogLineItemRequest {
+    order_id?: string;
+    inbound_request_id?: string;
+    purpose_type: PurposeType;
     service_type_id: string;
     quantity: number;
-    unit_rate: number;
     notes?: string;
 }
 
 export interface CreateCustomLineItemRequest {
+    order_id?: string;
+    inbound_request_id?: string;
+    purpose_type: PurposeType;
     description: string;
     category: ServiceCategory;
     total: number;
     notes?: string;
-    reskinRequestId?: string;
+    reskin_request_id?: string;
 }
 
 export interface UpdateLineItemRequest {
@@ -164,27 +224,28 @@ export interface VoidLineItemRequest {
 // ============================================================
 
 export interface OrderPricing {
-    base_ops_total: string;
-    logistics_sub_total: string;
-    base_operations: {
+    warehouse_ops_rate?: number;
+    base_ops_total: number;
+    logistics_sub_total: number;
+    base_operations?: {
         volume: number;
         rate: number;
         total: number;
     };
     transport: {
-        emirate: string;
-        trip_type: TripType;
-        vehicle_type: VehicleType;
+        emirate?: string;
+        trip_type?: TripType;
+        vehicle_type?: VehicleType;
         system_rate: number;
         final_rate: number;
-        vehicle_changed: boolean;
-        vehicle_change_reason: string | null;
+        vehicle_changed?: boolean;
+        vehicle_change_reason?: string | null;
     };
     line_items: {
         catalog_total: number;
         custom_total: number;
     };
-    logistics_subtotal: number;
+    logistics_subtotal?: number;
     margin: {
         percent: number;
         amount: number;
@@ -193,7 +254,7 @@ export interface OrderPricing {
     };
     final_total: number;
     calculated_at: string;
-    calculated_by: string;
+    calculated_by?: string;
 }
 
 // ============================================================
