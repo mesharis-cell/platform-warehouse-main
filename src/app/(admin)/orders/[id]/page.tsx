@@ -19,8 +19,14 @@ import {
     useUpdateJobNumber,
 } from "@/hooks/use-orders";
 import { ScanActivityTimeline } from "@/components/scanning/scan-activity-timeline";
-import { PricingReviewSection, AwaitingFabricationSection } from "./hybrid-sections";
+import {
+    PricingReviewSection,
+    AwaitingFabricationSection,
+    CancelOrderButton,
+} from "./hybrid-sections";
+import { ProcessReskinModal } from "@/components/orders/ProcessReskinModal";
 import { OrderItemCard } from "@/components/orders/OrderItemCard";
+import { TruckDetailsModal } from "@/components/orders/TruckDetailsModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +52,7 @@ import {
     User,
     Phone,
     Mail,
+    FileText,
     Clock,
     Edit,
     Save,
@@ -55,13 +62,78 @@ import {
     PlayCircle,
     AlertCircle,
     ScanLine,
+    CheckCircle,
     Loader2,
+    PlusCircle,
+    Pencil,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { apiClient } from "@/lib/api/api-client";
-import { removeUnderScore } from "@/lib/utils/helper";
+import { getOrderPrice, removeUnderScore } from "@/lib/utils/helper";
 import { addDays, endOfDay, isAfter, isBefore, startOfDay, subDays } from "date-fns";
+import { LogisticsPricingReview } from "@/components/orders/LogisticsPricingReview";
+import { OrderApprovalRequestSubmitBtn } from "@/components/orders/OrderApprovalRequestSubmitBtn";
+import { LogisticsPricing } from "@/components/orders/LogisticsPricing";
+import { OrderLineItemsList } from "@/components/orders/OrderLineItemsList";
+import { canManageLineItems } from "@/lib/order-helpers";
+
+const getTruckDetailsInitialData = (details: any) => {
+    if (!details) return undefined;
+    return {
+        truckPlate: details.truck_plate || "",
+        driverName: details.driver_name || "",
+        driverContact: details.driver_contact || "",
+        truckSize: details.truck_size || "",
+        tailgateRequired: details.tailgate_required || false,
+        manpower: details.manpower || 0,
+        notes: details.notes || "",
+    };
+};
+
+const FINANCIAL_STATUS = {
+    PENDING_QUOTE: {
+        label: "PENDING_QUOTE",
+        color: "bg-slate-500/10 text-slate-600 border-slate-500/20",
+        nextStates: ["QUOTE_SENT"],
+    },
+    QUOTE_SENT: {
+        label: "QUOTE_SENT",
+        color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+        nextStates: ["QUOTE_ACCEPTED"],
+    },
+    QUOTE_ACCEPTED: {
+        label: "QUOTE_ACCEPTED",
+        color: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20",
+        nextStates: ["PENDING_INVOICE"],
+    },
+    QUOTE_REVISED: {
+        label: "QUOTE_REVISED",
+        color: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20",
+        nextStates: ["PENDING_INVOICE"],
+    },
+    PENDING_INVOICE: {
+        label: "PENDING_INVOICE",
+        color: "bg-orange-500/10 text-orange-700 border-orange-500/20",
+        nextStates: ["INVOICED"],
+    },
+    INVOICED: {
+        label: "INVOICED",
+        color: "bg-purple-500/10 text-purple-700 border-purple-500/20",
+        nextStates: ["PAID"],
+    },
+    PAID: {
+        label: "PAID",
+        color: "bg-teal-500/10 text-teal-700 border-teal-500/20",
+        nextStates: [],
+    },
+    CANCELLED: {
+        label: "CANCELLED",
+        color: "bg-red-500/10 text-red-700 border-red-500/20",
+        nextStates: [],
+    },
+};
 
 // Status configuration with next states for state machine (Feedback #1: Updated for new flow)
 const STATUS_CONFIG: Record<
@@ -110,7 +182,7 @@ const STATUS_CONFIG: Record<
     AWAITING_FABRICATION: {
         label: "AWAITING FABRICATION",
         color: "bg-cyan-500/10 text-cyan-700 border-cyan-500/20",
-        nextStates: ["READY_FOR_DELIVERY"],
+        nextStates: ["IN_PREPARATION"],
     },
     IN_PREPARATION: {
         label: "IN PREP",
@@ -158,6 +230,8 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     const { id } = use(params);
     const [progressLoading, setProgressLoading] = useState(false);
     const { data: order, isLoading, refetch } = useAdminOrderDetails(id);
+    const [processModalOpen, setProcessModalOpen] = useState(false);
+    const [selectedReskinData, setSelectedReskinData] = useState<any>(null);
 
     const { data: statusHistory, isLoading: statusHistoryLoading } = useAdminOrderStatusHistory(
         order?.data?.id ? order?.data?.id : ""
@@ -171,8 +245,15 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     const [selectedNextStatus, setSelectedNextStatus] = useState("");
     const [statusNotes, setStatusNotes] = useState("");
     const [timeWindowsOpen, setTimeWindowsOpen] = useState(false);
+    const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
     const [updateTimeWindowsLoading, setUpdateTimeWindowsLoading] = useState(false);
 
+    const [paymentDetails, setPaymentDetails] = useState({
+        paymentMethod: "",
+        paymentReference: "",
+        paymentDate: new Date(),
+        notes: "",
+    });
     const [timeWindows, setTimeWindows] = useState<{
         deliveryWindowStart: Date | undefined;
         deliveryWindowEnd: Date | undefined;
@@ -184,6 +265,10 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         pickupWindowStart: undefined,
         pickupWindowEnd: undefined,
     });
+
+    // Truck details modal states
+    const [deliveryTruckDialogOpen, setDeliveryTruckDialogOpen] = useState(false);
+    const [pickupTruckDialogOpen, setPickupTruckDialogOpen] = useState(false);
 
     // Initialize states when order loads
     if (order) {
@@ -288,6 +373,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         );
     }
 
+    const { total } = getOrderPrice(order?.data?.pricing);
     const currentStatusConfig = STATUS_CONFIG[order.data.order_status] || STATUS_CONFIG.DRAFT;
     const allowedNextStates = currentStatusConfig.nextStates || [];
 
@@ -336,7 +422,11 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
 
                         <div className="flex items-center gap-3">
                             <Badge
-                                className={`${currentStatusConfig.color} border font-mono text-xs px-3 py-1`}
+                                className={`${FINANCIAL_STATUS[order?.data?.financial_status]?.color} border font-mono text-xs px-3 py-1`}
+                            >
+                                {removeUnderScore(FINANCIAL_STATUS[order?.data?.financial_status]?.label)}
+                            </Badge>
+                            <Badge className={`${currentStatusConfig.color} border font-mono text-xs px-3 py-1`}
                             >
                                 {removeUnderScore(currentStatusConfig.label)}
                             </Badge>
@@ -350,7 +440,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                             disabled={
                                                 progressLoading ||
                                                 order.data.order_status === "PENDING_APPROVAL" ||
-                                                order.data.order_status === "AWAITING_FABRICATION" ||
+                                                // order.data.order_status === "AWAITING_FABRICATION" ||
                                                 order.data.order_status === "PRICING_REVIEW" ||
                                                 order.data.order_status === "IN_PREPARATION" ||
                                                 order.data.order_status === "AWAITING_RETURN" ||
@@ -475,10 +565,18 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                             />
                         )}
 
-                        {/* NEW: PRICING_REVIEW - Logistics Review Section */}
-                        {order.data.order_status === "PRICING_REVIEW" && (
-                            <PricingReviewSection order={order.data} orderId={order.data.id} onRefresh={refetch} />
+                        {order.data.order_status === "IN_PREPARATION" && (
+                            <Card className="bg-red-500/5 border-red-500/30">
+                                <CardHeader>
+                                    <CardTitle className="text-red-500">Order In Preparation</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p>The order is currently being prepared. Please scan out the items once it&apos;s ready for delivery.</p>
+                                </CardContent>
+                            </Card>
                         )}
+
+
 
                         {/* Feedback #3: Refurb Items Banner - Show for PRICING_REVIEW and PENDING_APPROVAL */}
                         {(order.data.order_status === "PRICING_REVIEW" ||
@@ -652,68 +750,12 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                 </CardContent>
                             </Card>
                         )}
-                        {/* Payment Status Card - PMG Admin Only (Feedback #1: Financial status separate) */}
-                        {/* {(order.invoice?.invoice_id ||
-                            [
-                                "CONFIRMED",
-                                "IN_PREPARATION",
-                                "READY_FOR_DELIVERY",
-                                "IN_TRANSIT",
-                                "DELIVERED",
-                                "IN_USE",
-                                "AWAITING_RETURN",
-                                "CLOSED",
-                            ].includes(order?.data?.order_status)) && (
-                                <Card className="border-2 border-indigo-500/20 bg-indigo-500/5">
-                                    <CardHeader>
-                                        <CardTitle className="font-mono text-sm flex items-center gap-2">
-                                            <FileText className="h-4 w-4 text-indigo-600" />
-                                            INVOICE & PAYMENT
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <Label className="font-mono text-xs text-muted-foreground">
-                                                INVOICE NUMBER
-                                            </Label>
-                                            <p className="font-mono text-sm font-bold">
-                                                {order?.data?.invoice?.invoice_id || (
-                                                    <span className="text-muted-foreground">
-                                                        Pending...
-                                                    </span>
-                                                )}
-                                            </p>
-                                        </div>
-
-                                        <Separator />
-                                        <div className="flex justify-between items-center">
-                                            <Label className="font-mono text-xs text-muted-foreground">
-                                                PAYMENT STATUS
-                                            </Label>
-                                            <Badge
-                                                className={`font-mono text-xs ${order?.data?.financial_status === "PAID"
-                                                    ? "bg-green-500/10 text-green-700 border-green-500/30"
-                                                    : order?.data?.financial_status === "INVOICED"
-                                                        ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
-                                                        : "bg-slate-500/10 text-slate-600 border-slate-500/20"
-                                                    }`}
-                                            >
-                                                {order?.data?.financial_status === "PAID"
-                                                    ? "PAID"
-                                                    : order?.data?.financial_status === "INVOICED"
-                                                        ? "PENDING"
-                                                        : order?.data?.financial_status || "N/A"}
-                                            </Badge>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )} */}
 
                         {/* Delivery Schedule Card - Show for CONFIRMED+ states (Feedback #1: Independent from payment) */}
                         {["AWAITING_FABRICATION", "CONFIRMED", "IN_PREPARATION", "READY_FOR_DELIVERY"].includes(
                             order?.data?.order_status
                         ) && (
-                                <Card className="border-2">
+                                <Card>
                                     <CardHeader>
                                         <div className="flex items-center justify-between">
                                             <CardTitle className="font-mono text-sm flex items-center gap-2">
@@ -931,8 +973,134 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                 </Card>
                             )}
 
+
+                        {/* Truck details */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="font-mono text-sm flex items-center gap-2">
+                                    <Truck className="h-4 w-4 text-primary" />
+                                    TRUCK DETAILS
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {/* Delivery Truck Section */}
+                                {order.data.delivery_truck_details && Object.keys(order.data.delivery_truck_details).length > 0 ? (
+                                    <div className="border-2 rounded-lg p-4 border-blue-200 bg-blue-50/50">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex gap-3">
+                                                <div>
+                                                    <p className="font-mono text-sm font-bold text-blue-900">
+                                                        Delivery Truck
+                                                    </p>
+                                                    <div className="mt-2 space-y-1 text-xs text-blue-800 font-mono">
+                                                        <p>Plate: {order.data.delivery_truck_details.truck_plate}</p>
+                                                        <p>Driver: {order.data.delivery_truck_details.driver_name}</p>
+                                                        <p>Contact: {order.data.delivery_truck_details.driver_contact}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                                                onClick={() => setDeliveryTruckDialogOpen(true)}
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="border-2 rounded-lg p-4 transition-all border-primary/30 bg-primary/5 cursor-pointer hover:border-primary/50">
+                                        <button
+                                            className="w-full flex items-center justify-between cursor-pointer"
+                                            onClick={() => setDeliveryTruckDialogOpen(true)}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-left">
+                                                    <p className="font-mono text-sm font-bold">
+                                                        Delivery Truck
+                                                    </p>
+                                                    <p className="font-mono text-xs text-muted-foreground">
+                                                        Click to add pickup truck details
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <PlusCircle className="h-6 w-6 text-primary" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                <TruckDetailsModal
+                                    open={deliveryTruckDialogOpen}
+                                    onOpenChange={setDeliveryTruckDialogOpen}
+                                    type="delivery"
+                                    orderId={id}
+                                    initialData={getTruckDetailsInitialData(order.data.delivery_truck_details)}
+                                />
+
+                                <Separator />
+
+                                {/* Pickup Truck Section */}
+                                {order.data.pickup_truck_details && Object.keys(order.data.pickup_truck_details).length > 0 ? (
+                                    <div className="border-2 rounded-lg p-4 border-rose-200 bg-rose-50/50">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex gap-3">
+
+                                                <div>
+                                                    <p className="font-mono text-sm font-bold text-rose-900">
+                                                        Pickup Truck
+                                                    </p>
+                                                    <div className="mt-2 space-y-1 text-xs text-rose-800 font-mono">
+                                                        <p>Plate: {order.data.pickup_truck_details.truck_plate}</p>
+                                                        <p>Driver: {order.data.pickup_truck_details.driver_name}</p>
+                                                        <p>Contact: {order.data.pickup_truck_details.driver_contact}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-100"
+                                                onClick={() => setPickupTruckDialogOpen(true)}
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="border-2 rounded-lg p-4 transition-all border-primary/30 bg-primary/5 cursor-pointer hover:border-primary/50">
+                                        <button
+                                            className="w-full flex items-center justify-between cursor-pointer"
+                                            onClick={() => setPickupTruckDialogOpen(true)}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-left">
+                                                    <p className="font-mono text-sm font-bold">
+                                                        Pickup Truck
+                                                    </p>
+                                                    <p className="font-mono text-xs text-muted-foreground">
+                                                        Click to add pickup truck details
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <PlusCircle className="h-6 w-6 text-primary" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                <TruckDetailsModal
+                                    open={pickupTruckDialogOpen}
+                                    onOpenChange={setPickupTruckDialogOpen}
+                                    type="pickup"
+                                    orderId={id}
+                                    initialData={getTruckDetailsInitialData(order.data.pickup_truck_details)}
+                                />
+                            </CardContent>
+                        </Card>
+
+
                         {/* Event & Venue */}
-                        <Card className="border-2">
+                        <Card>
                             <CardHeader>
                                 <CardTitle className="font-mono text-sm flex items-center gap-2">
                                     <Calendar className="h-4 w-4 text-primary" />
@@ -991,7 +1159,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                         </Card>
 
                         {/* Contact */}
-                        <Card className="border-2">
+                        <Card>
                             <CardHeader>
                                 <CardTitle className="font-mono text-sm flex items-center gap-2">
                                     <User className="h-4 w-4 text-primary" />
@@ -1012,7 +1180,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                         </Card>
 
                         {/* Order Items */}
-                        <Card className="border-2">
+                        <Card>
                             <CardHeader>
                                 <CardTitle className="font-mono text-sm flex items-center gap-2">
                                     <Boxes className="h-4 w-4 text-primary" />
@@ -1026,6 +1194,15 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                         item={item}
                                         orderId={order?.data?.id}
                                         orderStatus={order?.data?.order_status}
+                                        onProcessReskin={(reskinData) => {
+                                            setSelectedReskinData(reskinData);
+                                            setProcessModalOpen(true);
+                                        }}
+                                        onRejectReskin={(orderItemId) => {
+                                            // TODO: Implement reject and contact client logic
+                                            console.log("Reject reskin for order item:", orderItemId);
+                                        }}
+                                        onRefresh={refetch}
                                     />
                                 ))}
                             </CardContent>
@@ -1042,7 +1219,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                             "CLOSED",
                             "PRICING_REVIEW",
                         ].includes(order?.data?.order_status) && (
-                                <Card className="border-2">
+                                <Card>
                                     <CardHeader>
                                         <CardTitle className="font-mono text-sm flex items-center gap-2">
                                             <ScanLine className="h-4 w-4 text-primary" />
@@ -1054,11 +1231,47 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                     </CardContent>
                                 </Card>
                             )}
+
+                        {/* NEW: PRICING_REVIEW - Logistics Review Section */}
+                        {order.data.order_status === "PRICING_REVIEW" && (
+                            <PricingReviewSection order={order.data} orderId={order.data.id} onRefresh={refetch} />
+                        )}
+
+                        {order.data.order_status !== "PRICING_REVIEW" && (
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle>Service Line Items</CardTitle>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <OrderLineItemsList
+                                        targetId={order?.data?.id}
+                                        canManage={canManageLineItems(order?.data?.order_status)}
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-3">
+                                        Add services like assembly, equipment rental, etc. Custom charges will be
+                                        handled by Admin.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {order.data.order_status !== "PRICING_REVIEW" && (
+                            <LogisticsPricing pricing={order.data.order_pricing} order={order.data} />
+                        )}
+
+                        {/* Submit order for the review */}
+                        <OrderApprovalRequestSubmitBtn
+                            orderId={order.data.id}
+                            onSubmitSuccess={refetch}
+                            isVisible={order?.data?.order_status === "PRICING_REVIEW"}
+                        />
                     </div>
 
-                    {/* Status History Timeline */}
+                    {/* Right: Status History Timeline */}
                     <div className="lg:col-span-1">
-                        <Card className="border-2 sticky top-24">
+                        <Card className="sticky top-24">
                             <CardHeader>
                                 <CardTitle className="font-mono text-sm flex items-center gap-2">
                                     <Clock className="h-4 w-4 text-primary" />

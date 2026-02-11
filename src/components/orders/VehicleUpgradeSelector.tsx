@@ -15,25 +15,27 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useUpdateOrderVehicle } from "@/hooks/use-orders";
-import type { VehicleType } from "@/types/hybrid-pricing";
+import { Card, CardContent } from "../ui/card";
+import { useListVehicleTypes } from "@/hooks/use-vehicle-types";
 
 interface VehicleUpgradeSelectorProps {
     orderId: string;
-    currentVehicle: VehicleType;
-    onVehicleChange?: (vehicle: VehicleType, reason: string) => void;
+    currentVehicle: string;
     onSuccess?: () => void;
 }
 
 export function VehicleUpgradeSelector({
     orderId,
     currentVehicle,
-    onVehicleChange,
     onSuccess,
 }: VehicleUpgradeSelectorProps) {
     const updateVehicle = useUpdateOrderVehicle();
+    const { data: vehicleTypes } = useListVehicleTypes()
     const [changeVehicle, setChangeVehicle] = useState(false);
-    const [selectedVehicle, setSelectedVehicle] = useState<VehicleType>(currentVehicle);
+    const [selectedVehicle, setSelectedVehicle] = useState<string>(currentVehicle);
     const [reason, setReason] = useState("");
+
+    const vehicleType = vehicleTypes?.data?.find((v) => v.id === currentVehicle);
 
     const handleSaveVehicleChange = async () => {
         if (!reason.trim() || reason.trim().length < 10) {
@@ -48,9 +50,6 @@ export function VehicleUpgradeSelector({
                 reason: reason.trim(),
             });
             toast.success("Vehicle type updated and transport rate recalculated");
-            if (onVehicleChange) {
-                onVehicleChange(selectedVehicle, reason.trim());
-            }
             // Reset form and call onSuccess to refetch order data
             setChangeVehicle(false);
             setReason("");
@@ -65,7 +64,7 @@ export function VehicleUpgradeSelector({
             <div className="flex items-center justify-between">
                 <Label className="text-base font-semibold">Vehicle Type</Label>
                 <Badge variant={changeVehicle ? "default" : "outline"}>
-                    {changeVehicle ? "Upgrading" : currentVehicle}
+                    {changeVehicle ? "Upgrading" : vehicleType?.name}
                 </Badge>
             </div>
 
@@ -86,15 +85,17 @@ export function VehicleUpgradeSelector({
                         <Label>New Vehicle Type</Label>
                         <Select
                             value={selectedVehicle}
-                            onValueChange={(v: VehicleType) => setSelectedVehicle(v)}
+                            onValueChange={(v: string) => setSelectedVehicle(v)}
                         >
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="STANDARD">Standard Vehicle</SelectItem>
-                                <SelectItem value="7_TON">7-Ton Truck</SelectItem>
-                                <SelectItem value="10_TON">10-Ton Truck</SelectItem>
+                                {vehicleTypes?.data?.map((vehicleType) => (
+                                    <SelectItem key={vehicleType.id} value={vehicleType.id}>
+                                        {vehicleType.name} ({vehicleType.vehicle_size} m³)
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -114,25 +115,30 @@ export function VehicleUpgradeSelector({
                         </p>
                     </div>
 
-                    {selectedVehicle !== currentVehicle && reason.trim().length >= 10 && (
-                        <Button
-                            onClick={handleSaveVehicleChange}
-                            disabled={updateVehicle.isPending}
-                            className="w-full"
-                        >
-                            {updateVehicle.isPending
-                                ? "Updating..."
-                                : "Update Vehicle & Recalculate Rate"}
-                        </Button>
-                    )}
+                    <Button
+                        onClick={handleSaveVehicleChange}
+                        disabled={
+                            updateVehicle.isPending ||
+                            selectedVehicle === currentVehicle ||
+                            reason.trim().length < 10
+                        }
+                        className="w-full"
+
+                    >
+                        {updateVehicle.isPending
+                            ? "Updating..."
+                            : "Update Vehicle & Recalculate Rate"}
+                    </Button>
 
                     {selectedVehicle !== currentVehicle && (
-                        <div className="bg-blue-50 border border-blue-300 rounded-md p-3">
-                            <p className="text-xs text-blue-500">
-                                ℹ️ System will automatically look up the new transport rate for
-                                upgraded vehicle type.
-                            </p>
-                        </div>
+                        <Card className="border-2 border-primary/20 bg-primary/5">
+                            <CardContent className="pt-6">
+                                <p className="text-xs">
+                                    ℹ️ System will automatically look up the new transport rate for
+                                    upgraded vehicle type.
+                                </p>
+                            </CardContent>
+                        </Card>
                     )}
                 </div>
             )}

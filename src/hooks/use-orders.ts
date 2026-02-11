@@ -14,6 +14,7 @@ import type {
     OrderWithDetails,
     SubmitOrderRequest,
     SubmitOrderResponse,
+    TruckDetailsData,
 } from "@/types/order";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoiceKeys } from "./use-invoices";
@@ -684,9 +685,76 @@ export function useUpdateOrderVehicle() {
         }) => {
             try {
                 const response = await apiClient.patch(`/client/v1/order/${orderId}/vehicle`, {
-                    vehicle_type: vehicleType,
+                    vehicle_type_id: vehicleType,
                     reason,
                 });
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: ["orders", "admin-detail", variables.orderId],
+            });
+            queryClient.invalidateQueries({ queryKey: ["orders", "pricing-review"] });
+        },
+    });
+}
+
+/**
+ * Update order vehicle type (Logistics)
+ */
+export function useAddTruckDetails() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            orderId,
+            truckType,
+            payload
+        }: {
+            orderId: string;
+            truckType: "DELIVERY" | "PICKUP";
+            payload: TruckDetailsData;
+        }) => {
+            try {
+                const details = {
+                    truck_plate: payload.truckPlate,
+                    driver_name: payload.driverName,
+                    driver_contact: payload.driverContact,
+                    truck_size: payload.truckSize,
+                    tailgate_required: payload.tailgateRequired,
+                    manpower: payload.manpower,
+                    notes: payload.notes,
+                };
+
+                const requestBody = truckType === "DELIVERY"
+                    ? { delivery_truck_details: details }
+                    : { pickup_truck_details: details };
+
+                const response = await apiClient.patch(`/client/v1/order/${orderId}/truck-details`, requestBody);
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: ["orders", "admin-detail", variables.orderId],
+            });
+            queryClient.invalidateQueries({ queryKey: ["orders", "pricing-review"] });
+        },
+    });
+}
+
+export function useUpdateOrderPricing() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({orderId, pricingId, rate}: {orderId: string, pricingId: string, rate: number}) => {
+            try {
+                const response = await apiClient.patch(`/operations/v1/price/transport/${pricingId}`, {transport_rate: rate});
                 return response.data;
             } catch (error) {
                 throwApiError(error);
