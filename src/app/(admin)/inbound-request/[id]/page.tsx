@@ -142,7 +142,7 @@ export default function InboundRequestDetailsPage({ params }: { params: Promise<
                                             Mark inbound request completed
                                         </h3>
                                         <p className="text-sm text-muted-foreground">
-                                            Create assets for each item and generate invoice
+                                            Create assets for each item
                                         </p>
                                     </div>
                                 </div>
