@@ -104,7 +104,9 @@ export function useDeleteServiceType() {
     return useMutation({
         mutationFn: async (id: string) => {
             try {
-                const response = await apiClient.delete(`/operations/v1/pricing/service-types/${id}`);
+                const response = await apiClient.delete(
+                    `/operations/v1/pricing/service-types/${id}`
+                );
                 return response.data;
             } catch (error) {
                 throwApiError(error);

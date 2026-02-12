@@ -83,7 +83,9 @@ export default function InboundScanningPage() {
     const [lastScannedQR, setLastScannedQR] = useState<string | null>(null);
     const [manualQRInput, setManualQRInput] = useState("");
     const [isScanning, setIsScanning] = useState(false);
-    const [transformedAssetInfo, setTransformedAssetInfo] = useState<TransformedAssetInfo | null>(null);
+    const [transformedAssetInfo, setTransformedAssetInfo] = useState<TransformedAssetInfo | null>(
+        null
+    );
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);

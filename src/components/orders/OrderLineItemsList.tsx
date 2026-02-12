@@ -15,7 +15,11 @@ interface OrderLineItemsListProps {
     purposeType?: "ORDER" | "INBOUND_REQUEST";
 }
 
-export function OrderLineItemsList({ targetId, canManage = false, purposeType = "ORDER" }: OrderLineItemsListProps) {
+export function OrderLineItemsList({
+    targetId,
+    canManage = false,
+    purposeType = "ORDER",
+}: OrderLineItemsListProps) {
     const { data: lineItems, isLoading } = useListLineItems(targetId, purposeType);
     const voidLineItem = useVoidLineItem(targetId, purposeType);
 
@@ -98,16 +102,19 @@ export function OrderLineItemsList({ targetId, canManage = false, purposeType = 
                                     <span className="font-mono font-semibold">
                                         {item.total.toFixed(2)} AED
                                     </span>
-                                    {canManage && ['PRICING_REVIEW', "PENDING_APPROVAL", "QUOTED"].includes(item.request_status) && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => openVoidDialog(item)}
-                                            disabled={voidLineItem.isPending}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    )}
+                                    {canManage &&
+                                        ["PRICING_REVIEW", "PENDING_APPROVAL", "QUOTED"].includes(
+                                            item.request_status
+                                        ) && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => openVoidDialog(item)}
+                                                disabled={voidLineItem.isPending}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                 </div>
                             </div>
                         ))}
@@ -149,16 +156,19 @@ export function OrderLineItemsList({ targetId, canManage = false, purposeType = 
                                     <span className="font-mono font-semibold">
                                         {item.total.toFixed(2)} AED
                                     </span>
-                                    {canManage && ['PRICING_REVIEW', "PENDING_APPROVAL", "QUOTED"].includes(item.request_status) && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => openVoidDialog(item)}
-                                            disabled={voidLineItem.isPending}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    )}
+                                    {canManage &&
+                                        ["PRICING_REVIEW", "PENDING_APPROVAL", "QUOTED"].includes(
+                                            item.request_status
+                                        ) && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => openVoidDialog(item)}
+                                                disabled={voidLineItem.isPending}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                 </div>
                             </div>
                         ))}

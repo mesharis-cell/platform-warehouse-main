@@ -64,7 +64,9 @@ export default function OutboundScanningPage() {
         assetId: string;
     } | null>(null);
     const [batchQuantityInput, setBatchQuantityInput] = useState("");
-    const [transformedAssetInfo, setTransformedAssetInfo] = useState<TransformedAssetInfo | null>(null);
+    const [transformedAssetInfo, setTransformedAssetInfo] = useState<TransformedAssetInfo | null>(
+        null
+    );
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);

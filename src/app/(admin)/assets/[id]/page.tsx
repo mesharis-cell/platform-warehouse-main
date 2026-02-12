@@ -36,6 +36,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Printer,
+    Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -811,25 +812,48 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                             return (
                                                 <div key={v.id} className="flex gap-3 py-2">
                                                     <div className="flex flex-col items-center">
-                                                        <div className={`w-3 h-3 rounded-full shrink-0 mt-1.5 ${isFirst ? "bg-primary ring-4 ring-primary/20" : "bg-muted-foreground/40"}`} />
-                                                        {idx < versions.length - 1 && <div className="w-px flex-1 bg-border min-h-[20px]" />}
+                                                        <div
+                                                            className={`w-3 h-3 rounded-full shrink-0 mt-1.5 ${isFirst ? "bg-primary ring-4 ring-primary/20" : "bg-muted-foreground/40"}`}
+                                                        />
+                                                        {idx < versions.length - 1 && (
+                                                            <div className="w-px flex-1 bg-border min-h-[20px]" />
+                                                        )}
                                                     </div>
                                                     <div className="flex-1 pb-2">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-xs font-mono font-bold text-muted-foreground">v{v.version_number}</span>
-                                                            <span className="text-sm font-semibold">{v.reason}</span>
-                                                            {snap.condition && snap.condition !== "GREEN" && (
-                                                                <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${snap.condition === "RED" ? "bg-destructive/10 text-destructive" : "bg-orange-500/10 text-orange-600"}`}>
-                                                                    {snap.condition}
-                                                                </span>
-                                                            )}
+                                                            <span className="text-xs font-mono font-bold text-muted-foreground">
+                                                                v{v.version_number}
+                                                            </span>
+                                                            <span className="text-sm font-semibold">
+                                                                {v.reason}
+                                                            </span>
+                                                            {snap.condition &&
+                                                                snap.condition !== "GREEN" && (
+                                                                    <span
+                                                                        className={`text-xs font-mono px-1.5 py-0.5 rounded ${snap.condition === "RED" ? "bg-destructive/10 text-destructive" : "bg-orange-500/10 text-orange-600"}`}
+                                                                    >
+                                                                        {snap.condition}
+                                                                    </span>
+                                                                )}
                                                         </div>
                                                         <p className="text-xs text-muted-foreground mt-0.5">
-                                                            {new Date(v.created_at).toLocaleDateString()} {new Date(v.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                            {new Date(
+                                                                v.created_at
+                                                            ).toLocaleDateString()}{" "}
+                                                            {new Date(
+                                                                v.created_at
+                                                            ).toLocaleTimeString([], {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            })}
                                                         </p>
                                                         {snap.images?.[0] && (
                                                             <div className="mt-2 w-16 h-12 rounded overflow-hidden bg-muted">
-                                                                <img src={snap.images[0]} alt="Snapshot" className="w-full h-full object-cover" />
+                                                                <img
+                                                                    src={snap.images[0]}
+                                                                    alt="Snapshot"
+                                                                    className="w-full h-full object-cover"
+                                                                />
                                                             </div>
                                                         )}
                                                     </div>
@@ -838,7 +862,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                         })}
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-muted-foreground py-4 text-center">No version history yet</p>
+                                    <p className="text-xs text-muted-foreground py-4 text-center">
+                                        No version history yet
+                                    </p>
                                 )}
                             </CardContent>
                         </Card>

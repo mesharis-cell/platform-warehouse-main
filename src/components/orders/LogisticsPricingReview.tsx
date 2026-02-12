@@ -22,7 +22,11 @@ interface LogisticsPricingReviewProps {
     onSubmitSuccess?: () => void;
 }
 
-export function LogisticsPricingReview({ orderId, order, onSubmitSuccess }: LogisticsPricingReviewProps) {
+export function LogisticsPricingReview({
+    orderId,
+    order,
+    onSubmitSuccess,
+}: LogisticsPricingReviewProps) {
     const [addCatalogOpen, setAddCatalogOpen] = useState(false);
 
     const pricing = order?.order_pricing as OrderPricing | undefined;
@@ -44,8 +48,6 @@ export function LogisticsPricingReview({ orderId, order, onSubmitSuccess }: Logi
                     </CardContent>
                 </Card>
             )}
-
-
 
             {/* Vehicle Type (Optional Upgrade) */}
             <Card>
