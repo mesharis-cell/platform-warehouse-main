@@ -4,6 +4,16 @@ import { AdminHeader } from "@/components/admin-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -20,15 +30,27 @@ import {
 } from "@/components/ui/table";
 import { useCompanies } from "@/hooks/use-companies";
 import { useWarehouses } from "@/hooks/use-warehouses";
-import { useZones } from "@/hooks/use-zones";
-import { Box, Building2, Filter, Grid3x3, Trash2, Warehouse } from "lucide-react";
+import { useCreateZone, useZones } from "@/hooks/use-zones";
+import { hasPermission } from "@/lib/auth/permissions";
+import { useToken } from "@/lib/auth/use-token";
+import { Box, Building2, Filter, Grid3x3, Plus, Trash2, Warehouse } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export default function ZonesPage() {
+    const { user } = useToken();
     const [warehouseFilter, setWarehouseFilter] = useState("all");
     const [companyFilter, setCompanyFilter] = useState("all");
     const [includeDeleted, setIncludeDeleted] = useState(false);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [formData, setFormData] = useState({
+        warehouse_id: "",
+        company_id: "",
+        name: "",
+        description: "",
+        capacity: "",
+    });
+    const canCreateZone = hasPermission(user, "zones:create");
 
     // Fetch reference data
     const { data: warehousesData } = useWarehouses({ limit: "100" });
@@ -52,6 +74,34 @@ export default function ZonesPage() {
     const { data, isLoading: loading } = useZones(queryParams);
     const zones = data?.data || [];
     const total = data?.meta?.total || 0;
+    const createMutation = useCreateZone();
+
+    const resetForm = () =>
+        setFormData({
+            warehouse_id: "",
+            company_id: "",
+            name: "",
+            description: "",
+            capacity: "",
+        });
+
+    const handleCreateZone = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await createMutation.mutateAsync({
+                warehouse_id: formData.warehouse_id,
+                company_id: formData.company_id,
+                name: formData.name,
+                description: formData.description || undefined,
+                capacity: formData.capacity ? Number(formData.capacity) : undefined,
+            } as any);
+            toast.success("Zone created");
+            setIsCreateOpen(false);
+            resetForm();
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to create zone");
+        }
+    };
 
     return (
         <div className="min-h-screen bg-background">
@@ -60,6 +110,157 @@ export default function ZonesPage() {
                 title="ZONE MANAGEMENT"
                 description="Storage Areas · Company Assignment · Organization"
                 stats={{ label: "ALLOCATED ZONES", value: total }}
+                actions={
+                    canCreateZone ? (
+                        <Dialog
+                            open={isCreateOpen}
+                            onOpenChange={(open) => {
+                                setIsCreateOpen(open);
+                                if (!open) resetForm();
+                            }}
+                        >
+                            <DialogTrigger asChild>
+                                <Button className="gap-2 font-mono">
+                                    <Plus className="h-4 w-4" />
+                                    NEW ZONE
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl">
+                                <DialogHeader>
+                                    <DialogTitle className="font-mono">CREATE NEW ZONE</DialogTitle>
+                                    <DialogDescription className="font-mono text-xs">
+                                        Allocate a company zone inside a warehouse
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleCreateZone} className="space-y-6">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="font-mono text-xs">WAREHOUSE *</Label>
+                                            <Select
+                                                value={formData.warehouse_id}
+                                                onValueChange={(value) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        warehouse_id: value,
+                                                    })
+                                                }
+                                            >
+                                                <SelectTrigger className="font-mono text-sm">
+                                                    <SelectValue placeholder="Select warehouse" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {warehouses.map((wh) => (
+                                                        <SelectItem
+                                                            key={wh.id}
+                                                            value={wh.id}
+                                                            className="font-mono"
+                                                        >
+                                                            {wh.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="font-mono text-xs">COMPANY *</Label>
+                                            <Select
+                                                value={formData.company_id}
+                                                onValueChange={(value) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        company_id: value,
+                                                    })
+                                                }
+                                            >
+                                                <SelectTrigger className="font-mono text-sm">
+                                                    <SelectValue placeholder="Select company" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {companies.map((co) => (
+                                                        <SelectItem
+                                                            key={co.id}
+                                                            value={co.id}
+                                                            className="font-mono"
+                                                        >
+                                                            {co.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="font-mono text-xs">ZONE NAME *</Label>
+                                        <Input
+                                            value={formData.name}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    name: e.target.value,
+                                                })
+                                            }
+                                            placeholder="e.g., Zone A - Premium Bar"
+                                            className="font-mono"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="font-mono text-xs">CAPACITY</Label>
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                value={formData.capacity}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        capacity: e.target.value,
+                                                    })
+                                                }
+                                                className="font-mono"
+                                                placeholder="e.g., 120"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="font-mono text-xs">DESCRIPTION</Label>
+                                            <Input
+                                                value={formData.description}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        description: e.target.value,
+                                                    })
+                                                }
+                                                className="font-mono"
+                                                placeholder="Optional"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end gap-3 pt-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => {
+                                                setIsCreateOpen(false);
+                                                resetForm();
+                                            }}
+                                            className="font-mono"
+                                        >
+                                            CANCEL
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            className="font-mono"
+                                            disabled={createMutation.isPending}
+                                        >
+                                            {createMutation.isPending ? "CREATING..." : "CREATE"}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    ) : undefined
+                }
             />
 
             {/* Control Panel */}

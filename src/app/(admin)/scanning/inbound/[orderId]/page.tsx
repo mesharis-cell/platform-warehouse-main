@@ -380,6 +380,18 @@ export default function InboundScanningPage() {
         setDamagePhotoCameraActive(false);
     };
 
+    const resumeQrScanner = async (context: string) => {
+        if (!qrScannerRef.current) return;
+        try {
+            if (qrScannerRef.current.getState() === 2) {
+                await qrScannerRef.current.resume();
+                console.log(`📸 QR scanner resumed (${context})`);
+            }
+        } catch (error) {
+            console.error("Error resuming QR scanner:", error);
+        }
+    };
+
     const captureDamagePhoto = () => {
         if (!canvasRef.current || !videoRef.current || !currentInspection) return;
 
@@ -427,8 +439,11 @@ export default function InboundScanningPage() {
             return;
         }
 
-        // Validate photos required for ALL conditions
-        if (currentInspection.photos.length === 0) {
+        const isDamagedCondition =
+            currentInspection.condition === "ORANGE" || currentInspection.condition === "RED";
+
+        // Require photos for damaged conditions only.
+        if (isDamagedCondition && currentInspection.photos.length === 0) {
             toast.error("Photo required", {
                 description: "Please take at least one photo of the item",
             });
@@ -459,9 +474,13 @@ export default function InboundScanningPage() {
                 qrCode: currentInspection.qrCode,
                 condition: currentInspection.condition,
                 notes: currentInspection.notes || undefined,
-                photos: currentInspection.photos,
-                refurbDaysEstimate: currentInspection.refurbDaysEstimate || undefined, // Feedback #2
-                discrepancyReason: currentInspection.discrepancyReason || undefined,
+                photos: isDamagedCondition ? currentInspection.photos : undefined,
+                refurbDaysEstimate: isDamagedCondition
+                    ? currentInspection.refurbDaysEstimate || undefined
+                    : undefined,
+                discrepancyReason: isDamagedCondition
+                    ? currentInspection.discrepancyReason || undefined
+                    : undefined,
                 quantity: currentInspection.quantity || undefined,
             },
             {
@@ -493,20 +512,13 @@ export default function InboundScanningPage() {
                         toast.warning("Asset has been transformed", {
                             description: "Please scan the new QR code",
                         });
+                        await resumeQrScanner("transformed-asset redirect");
                         return;
                     }
 
                     setLastScannedQR(scannedQrCode);
 
-                    // Resume QR scanner
-                    if (qrScannerRef.current && qrScannerRef.current.getState() === 2) {
-                        try {
-                            await qrScannerRef.current.resume();
-                            console.log("📸 QR scanner resumed");
-                        } catch (error) {
-                            console.error("Error resuming QR scanner:", error);
-                        }
-                    }
+                    await resumeQrScanner("inspection success");
 
                     toast.success(`Scanned: ${scannedAssetName}`, {
                         description: `Condition: ${asset?.condition || "Updated"} | Status: ${asset?.status || "Updated"}`,
@@ -521,6 +533,7 @@ export default function InboundScanningPage() {
                 },
                 onError: (error) => {
                     setIsScanning(false);
+                    void resumeQrScanner("inspection error");
                     toast.error("Scan failed", {
                         description: error.message,
                     });
@@ -823,6 +836,7 @@ export default function InboundScanningPage() {
                                                 setCurrentInspection({
                                                     ...currentInspection,
                                                     condition: "GREEN",
+                                                    discrepancyReason: null,
                                                 })
                                             }
                                         >
@@ -1028,75 +1042,79 @@ export default function InboundScanningPage() {
                                 )}
 
                                 {/* Discrepancy reason */}
-                                {currentInspection?.condition && (
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-mono font-bold">
-                                            DISCREPANCY REASON (Optional)
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <Button
-                                                variant={
-                                                    currentInspection.discrepancyReason === "BROKEN"
-                                                        ? "default"
-                                                        : "outline"
-                                                }
-                                                size="sm"
-                                                onClick={() =>
-                                                    setCurrentInspection({
-                                                        ...currentInspection,
-                                                        discrepancyReason:
-                                                            currentInspection.discrepancyReason ===
-                                                            "BROKEN"
-                                                                ? null
-                                                                : "BROKEN",
-                                                    })
-                                                }
-                                            >
-                                                BROKEN
-                                            </Button>
-                                            <Button
-                                                variant={
-                                                    currentInspection.discrepancyReason === "LOST"
-                                                        ? "default"
-                                                        : "outline"
-                                                }
-                                                size="sm"
-                                                onClick={() =>
-                                                    setCurrentInspection({
-                                                        ...currentInspection,
-                                                        discrepancyReason:
-                                                            currentInspection.discrepancyReason ===
-                                                            "LOST"
-                                                                ? null
-                                                                : "LOST",
-                                                    })
-                                                }
-                                            >
-                                                LOST
-                                            </Button>
-                                            <Button
-                                                variant={
-                                                    currentInspection.discrepancyReason === "OTHER"
-                                                        ? "default"
-                                                        : "outline"
-                                                }
-                                                size="sm"
-                                                onClick={() =>
-                                                    setCurrentInspection({
-                                                        ...currentInspection,
-                                                        discrepancyReason:
-                                                            currentInspection.discrepancyReason ===
-                                                            "OTHER"
-                                                                ? null
-                                                                : "OTHER",
-                                                    })
-                                                }
-                                            >
-                                                OTHER
-                                            </Button>
+                                {currentInspection?.condition &&
+                                    currentInspection.condition !== "GREEN" && (
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-mono font-bold">
+                                                DISCREPANCY REASON (Optional)
+                                            </label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <Button
+                                                    variant={
+                                                        currentInspection.discrepancyReason ===
+                                                        "BROKEN"
+                                                            ? "default"
+                                                            : "outline"
+                                                    }
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setCurrentInspection({
+                                                            ...currentInspection,
+                                                            discrepancyReason:
+                                                                currentInspection.discrepancyReason ===
+                                                                "BROKEN"
+                                                                    ? null
+                                                                    : "BROKEN",
+                                                        })
+                                                    }
+                                                >
+                                                    BROKEN
+                                                </Button>
+                                                <Button
+                                                    variant={
+                                                        currentInspection.discrepancyReason ===
+                                                        "LOST"
+                                                            ? "default"
+                                                            : "outline"
+                                                    }
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setCurrentInspection({
+                                                            ...currentInspection,
+                                                            discrepancyReason:
+                                                                currentInspection.discrepancyReason ===
+                                                                "LOST"
+                                                                    ? null
+                                                                    : "LOST",
+                                                        })
+                                                    }
+                                                >
+                                                    LOST
+                                                </Button>
+                                                <Button
+                                                    variant={
+                                                        currentInspection.discrepancyReason ===
+                                                        "OTHER"
+                                                            ? "default"
+                                                            : "outline"
+                                                    }
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setCurrentInspection({
+                                                            ...currentInspection,
+                                                            discrepancyReason:
+                                                                currentInspection.discrepancyReason ===
+                                                                "OTHER"
+                                                                    ? null
+                                                                    : "OTHER",
+                                                        })
+                                                    }
+                                                >
+                                                    OTHER
+                                                </Button>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
                             </div>
 
                             <DialogFooter className="flex-col sm:flex-col gap-2">
@@ -1120,19 +1138,7 @@ export default function InboundScanningPage() {
                                         setInspectionDialogOpen(false);
                                         setCurrentInspection(null);
                                         stopDamagePhotoCamera();
-
-                                        // Resume QR scanner when dialog is closed
-                                        if (
-                                            qrScannerRef.current &&
-                                            qrScannerRef.current.getState() === 2
-                                        ) {
-                                            try {
-                                                await qrScannerRef.current.resume();
-                                                console.log("📸 QR scanner resumed after cancel");
-                                            } catch (error) {
-                                                console.error("Error resuming QR scanner:", error);
-                                            }
-                                        }
+                                        await resumeQrScanner("inspection cancel");
                                     }}
                                     variant="outline"
                                     className="w-full"
@@ -1157,6 +1163,7 @@ export default function InboundScanningPage() {
                             newQrCode={transformedAssetInfo.newQrCode}
                             onScanNewQr={() => {
                                 setTransformedAssetInfo(null);
+                                void resumeQrScanner("transformed warning closed");
                             }}
                         />
                     </div>

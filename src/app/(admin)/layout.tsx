@@ -50,13 +50,14 @@ import Providers from "@/providers";
 import { toast } from "sonner";
 import { useToken } from "@/lib/auth/use-token";
 import { usePlatform } from "@/contexts/platform-context";
+import { hasAnyPermission } from "@/lib/auth/permissions";
 
 type NavItem = {
     name: string;
     href: string;
     icon: React.ComponentType<{ className?: string }>;
     badge?: string;
-    requiredPermission?: string;
+    requiredAnyPermission?: string[];
 };
 
 const navigation: NavItem[] = [
@@ -64,66 +65,83 @@ const navigation: NavItem[] = [
         name: "Orders",
         href: "/orders",
         icon: ShoppingCart,
+        requiredAnyPermission: ["orders:read"],
     },
     {
         name: "Pricing Review",
         href: "/orders/pricing-review",
         icon: DollarSign,
+        requiredAnyPermission: ["pricing:review", "pricing:approve_standard", "pricing:adjust"],
     },
     {
         name: "Scanning",
         href: "/scanning",
         icon: ScanLine,
+        requiredAnyPermission: ["scanning:scan_out", "scanning:scan_in"],
     },
     {
         name: "Conditions",
         href: "/conditions",
         icon: AlertCircle,
+        requiredAnyPermission: [
+            "conditions:view_history",
+            "conditions:update",
+            "conditions:view_items_needing_attention",
+        ],
     },
     {
         name: "Event Calendar",
         href: "/event-calendar",
         icon: Calendar,
+        requiredAnyPermission: ["orders:read"],
     },
     {
         name: "Companies",
         href: "/companies",
         icon: Users,
+        requiredAnyPermission: ["companies:read"],
     },
     {
         name: "Warehouses",
         href: "/warehouses",
         icon: Warehouse,
+        requiredAnyPermission: ["warehouses:read"],
     },
     {
         name: "Zones",
         href: "/zones",
         icon: Grid3x3,
+        requiredAnyPermission: ["zones:read", "zones:create", "zones:update", "zones:delete"],
     },
     {
         name: "Brands",
         href: "/brands",
         icon: Tag,
+        requiredAnyPermission: ["brands:read"],
     },
     {
         name: "Assets",
         href: "/assets",
         icon: Package,
+        requiredAnyPermission: ["assets:read"],
     },
     {
         name: "Collections",
         href: "/collections",
         icon: Layers,
+        requiredAnyPermission: ["collections:read"],
     },
     {
         name: "Inbound Requests",
         href: "/inbound-request",
         icon: Package,
+        requiredAnyPermission: ["orders:read"],
     },
     {
         name: "Reset Password",
         href: "/reset-password",
         icon: Lock,
+        requiredAnyPermission: ["auth:reset_password"],
     },
 ];
 
@@ -141,6 +159,9 @@ function AdminSidebarContent() {
     };
 
     const isCollapsed = state === "collapsed";
+    const visibleNavigation = navigation.filter(
+        (item) => !item.requiredAnyPermission || hasAnyPermission(user, item.requiredAnyPermission)
+    );
 
     return (
         <>
@@ -172,10 +193,10 @@ function AdminSidebarContent() {
 
             <SidebarContent className="p-3 space-y-0.5 overflow-y-auto bg-background">
                 <SidebarMenu>
-                    {navigation.map((item) => {
+                    {visibleNavigation.map((item) => {
                         const Icon = item.icon;
                         // Find the most specific matching route
-                        const matchingRoutes = navigation.filter(
+                        const matchingRoutes = visibleNavigation.filter(
                             (navItem) =>
                                 pathname === navItem.href || pathname.startsWith(navItem.href + "/")
                         );
