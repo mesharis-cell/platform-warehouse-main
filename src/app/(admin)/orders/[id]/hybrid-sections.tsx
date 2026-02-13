@@ -9,6 +9,9 @@ import { CancelOrderModal } from "@/components/orders/CancelOrderModal";
 import { LogisticsPricingReview } from "@/components/orders/LogisticsPricingReview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToken } from "@/lib/auth/use-token";
+import { hasPermission } from "@/lib/auth/permissions";
+import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
 import { useState } from "react";
 
 interface HybridPricingSectionProps {
@@ -54,6 +57,7 @@ export function AwaitingFabricationSection({ order, orderId }: HybridPricingSect
  * Cancel Order Button (shows if order can be cancelled)
  */
 export function CancelOrderButton({ order, orderId }: HybridPricingSectionProps) {
+    const { user } = useToken();
     const [cancelOpen, setCancelOpen] = useState(false);
 
     const CANCELLABLE_STATUSES = [
@@ -68,8 +72,9 @@ export function CancelOrderButton({ order, orderId }: HybridPricingSectionProps)
     ];
 
     const canCancel = CANCELLABLE_STATUSES.includes(order.order_status);
+    const canCancelOrder = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.ordersCancel);
 
-    if (!canCancel) return null;
+    if (!canCancel || !canCancelOrder) return null;
 
     return (
         <>

@@ -33,6 +33,7 @@ import { useWarehouses } from "@/hooks/use-warehouses";
 import { useCreateZone, useZones } from "@/hooks/use-zones";
 import { hasPermission } from "@/lib/auth/permissions";
 import { useToken } from "@/lib/auth/use-token";
+import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
 import { Box, Building2, Filter, Grid3x3, Plus, Trash2, Warehouse } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -50,7 +51,7 @@ export default function ZonesPage() {
         description: "",
         capacity: "",
     });
-    const canCreateZone = hasPermission(user, "zones:create");
+    const canCreateZone = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.zonesCreate);
 
     // Fetch reference data
     const { data: warehousesData } = useWarehouses({ limit: "100" });

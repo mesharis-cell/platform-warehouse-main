@@ -11,14 +11,16 @@
  * - Timeline visualization with connection lines
  */
 
-import { use, useState } from "react";
+import { type ChangeEvent, use, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
     useAdminOrderDetails,
     useAdminOrderStatusHistory,
     useDownloadGoodsForm,
     useUpdateJobNumber,
 } from "@/hooks/use-orders";
+import { useUploadImage } from "@/hooks/use-assets";
 import { ScanActivityTimeline } from "@/components/scanning/scan-activity-timeline";
 import {
     PricingReviewSection,
@@ -65,8 +67,10 @@ import {
     ScanLine,
     CheckCircle,
     Loader2,
+    ImagePlus,
     PlusCircle,
     Pencil,
+    Trash2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -79,6 +83,9 @@ import { OrderApprovalRequestSubmitBtn } from "@/components/orders/OrderApproval
 import { LogisticsPricing } from "@/components/orders/LogisticsPricing";
 import { OrderLineItemsList } from "@/components/orders/OrderLineItemsList";
 import { canManageLineItems } from "@/lib/order-helpers";
+import { useToken } from "@/lib/auth/use-token";
+import { hasPermission } from "@/lib/auth/permissions";
+import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
 
 const getTruckDetailsInitialData = (details: any) => {
     if (!details) return undefined;
@@ -229,6 +236,7 @@ const STATUS_CONFIG: Record<
 
 export default function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const { user } = useToken();
     const [progressLoading, setProgressLoading] = useState(false);
     const { data: order, isLoading, refetch } = useAdminOrderDetails(id);
     const [processModalOpen, setProcessModalOpen] = useState(false);
@@ -240,12 +248,15 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
 
     const updateJobNumber = useUpdateJobNumber();
     const downloadGoodsForm = useDownloadGoodsForm();
+    const uploadImage = useUploadImage();
 
     const [isEditingJobNumber, setIsEditingJobNumber] = useState(false);
     const [jobNumber, setJobNumber] = useState("");
     const [statusDialogOpen, setStatusDialogOpen] = useState(false);
     const [selectedNextStatus, setSelectedNextStatus] = useState("");
     const [statusNotes, setStatusNotes] = useState("");
+    const [deliveryPhotoFiles, setDeliveryPhotoFiles] = useState<File[]>([]);
+    const [deliveryPhotoPreviews, setDeliveryPhotoPreviews] = useState<string[]>([]);
     const [timeWindowsOpen, setTimeWindowsOpen] = useState(false);
     const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
     const [updateTimeWindowsLoading, setUpdateTimeWindowsLoading] = useState(false);
@@ -271,6 +282,24 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     // Truck details modal states
     const [deliveryTruckDialogOpen, setDeliveryTruckDialogOpen] = useState(false);
     const [pickupTruckDialogOpen, setPickupTruckDialogOpen] = useState(false);
+    const canDownloadGoodsForm = hasPermission(
+        user,
+        WAREHOUSE_ACTION_PERMISSIONS.ordersDownloadGoodsForm
+    );
+    const canProgressOrderStatus = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.ordersUpdate);
+    const canEditJobNumber = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.ordersAddJobNumber);
+    const canEditTimeWindows = hasPermission(
+        user,
+        WAREHOUSE_ACTION_PERMISSIONS.ordersAddTimeWindows
+    );
+    const canSubmitForApproval = hasPermission(
+        user,
+        WAREHOUSE_ACTION_PERMISSIONS.ordersSubmitForApproval
+    );
+    const canAdjustPricing = hasPermission(
+        user,
+        WAREHOUSE_ACTION_PERMISSIONS.ordersPricingAdjust
+    );
 
     // Initialize states when order loads
     if (order) {
@@ -328,22 +357,70 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         }
     };
 
+    const resetDeliveryPhotoState = () => {
+        setDeliveryPhotoFiles([]);
+        setDeliveryPhotoPreviews((prev) => {
+            prev.forEach((url) => URL.revokeObjectURL(url));
+            return [];
+        });
+    };
+
+    const resetStatusDialogState = () => {
+        setSelectedNextStatus("");
+        setStatusNotes("");
+        resetDeliveryPhotoState();
+    };
+
+    const handleStatusDialogToggle = (open: boolean) => {
+        setStatusDialogOpen(open);
+        if (!open) resetStatusDialogState();
+    };
+
+    const handleDeliveryPhotoSelect = (e: ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []).filter((file) =>
+            file.type.startsWith("image/")
+        );
+        if (files.length === 0) return;
+        const previewUrls = files.map((file) => URL.createObjectURL(file));
+        setDeliveryPhotoFiles((prev) => [...prev, ...files]);
+        setDeliveryPhotoPreviews((prev) => [...prev, ...previewUrls]);
+        e.target.value = "";
+    };
+
+    const handleDeliveryPhotoRemove = (index: number) => {
+        setDeliveryPhotoFiles((prev) => prev.filter((_, idx) => idx !== index));
+        setDeliveryPhotoPreviews((prev) => {
+            const target = prev[index];
+            if (target) URL.revokeObjectURL(target);
+            return prev.filter((_, idx) => idx !== index);
+        });
+    };
+
     const handleStatusProgression = async () => {
         if (!order?.data || !selectedNextStatus) return;
         try {
             setProgressLoading(true);
+            let deliveryPhotos: string[] | undefined;
+            if (selectedNextStatus === "DELIVERED" && deliveryPhotoFiles.length > 0) {
+                const formData = new FormData();
+                deliveryPhotoFiles.forEach((file) => formData.append("files", file));
+                const uploadResult = await uploadImage.mutateAsync(formData);
+                deliveryPhotos = uploadResult.data?.imageUrls?.filter(Boolean) || [];
+            }
             await apiClient.patch(`/client/v1/order/${order.data.id}/status`, {
                 new_status: selectedNextStatus,
                 notes: statusNotes || undefined,
+                delivery_photos: selectedNextStatus === "DELIVERED" ? deliveryPhotos : undefined,
             });
 
             toast.success(`Status updated to ${STATUS_CONFIG[selectedNextStatus]?.label}`);
             setStatusDialogOpen(false);
-            setSelectedNextStatus("");
-            setStatusNotes("");
+            resetStatusDialogState();
             window.location.reload();
         } catch (error: any) {
-            toast.error(error.response.data.message);
+            toast.error(
+                error?.response?.data?.message || error?.message || "Failed to update status"
+            );
         } finally {
             setProgressLoading(false);
         }
@@ -465,21 +542,23 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                 {removeUnderScore(currentStatusConfig.label)}
                             </Badge>
 
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-2 font-mono text-xs"
-                                onClick={() => handleDownloadGoodsForm("AUTO")}
-                                disabled={downloadGoodsForm.isPending}
-                            >
-                                <FileText className="h-3.5 w-3.5" />
-                                {downloadGoodsForm.isPending
-                                    ? "DOWNLOADING..."
-                                    : "DOWNLOAD GOODS FORM"}
-                            </Button>
+                            {canDownloadGoodsForm ? (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-2 font-mono text-xs"
+                                    onClick={() => handleDownloadGoodsForm("AUTO")}
+                                    disabled={downloadGoodsForm.isPending}
+                                >
+                                    <FileText className="h-3.5 w-3.5" />
+                                    {downloadGoodsForm.isPending
+                                        ? "DOWNLOADING..."
+                                        : "DOWNLOAD GOODS FORM"}
+                                </Button>
+                            ) : null}
 
-                            {allowedNextStates.length > 0 && (
-                                <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+                            {allowedNextStates.length > 0 && canProgressOrderStatus && (
+                                <Dialog open={statusDialogOpen} onOpenChange={handleStatusDialogToggle}>
                                     <DialogTrigger asChild>
                                         <Button
                                             size="sm"
@@ -520,9 +599,12 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                 <select
                                                     className="w-full border rounded px-3 py-2 bg-background font-mono text-sm"
                                                     value={selectedNextStatus}
-                                                    onChange={(e) =>
-                                                        setSelectedNextStatus(e.target.value)
-                                                    }
+                                                    onChange={(e) => {
+                                                        const nextStatus = e.target.value;
+                                                        setSelectedNextStatus(nextStatus);
+                                                        if (nextStatus !== "DELIVERED")
+                                                            resetDeliveryPhotoState();
+                                                    }}
                                                 >
                                                     <option value="">Select...</option>
                                                     {allowedNextStates.map((status) => (
@@ -545,13 +627,69 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                     rows={3}
                                                 />
                                             </div>
+                                            {selectedNextStatus === "DELIVERED" && (
+                                                <div className="space-y-2">
+                                                    <Label className="font-mono text-xs">
+                                                        DELIVERY PROOF PHOTOS (Optional)
+                                                    </Label>
+                                                    <div className="rounded-md border border-dashed p-3 space-y-3">
+                                                        <input
+                                                            id="delivery-proof-photos"
+                                                            type="file"
+                                                            accept="image/*"
+                                                            multiple
+                                                            className="hidden"
+                                                            onChange={handleDeliveryPhotoSelect}
+                                                        />
+                                                        <label
+                                                            htmlFor="delivery-proof-photos"
+                                                            className="inline-flex items-center gap-2 text-xs font-mono px-3 py-2 border rounded cursor-pointer hover:bg-muted"
+                                                        >
+                                                            <ImagePlus className="h-3.5 w-3.5" />
+                                                            ADD DELIVERY PHOTOS
+                                                        </label>
+                                                        {deliveryPhotoPreviews.length > 0 && (
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                {deliveryPhotoPreviews.map(
+                                                                    (preview, idx) => (
+                                                                        <div
+                                                                            key={preview}
+                                                                            className="relative aspect-square rounded border overflow-hidden"
+                                                                        >
+                                                                            <Image
+                                                                                src={preview}
+                                                                                alt={`Delivery proof ${idx + 1}`}
+                                                                                fill
+                                                                                className="object-cover"
+                                                                            />
+                                                                            <Button
+                                                                                type="button"
+                                                                                size="icon"
+                                                                                variant="destructive"
+                                                                                className="absolute top-1 right-1 h-6 w-6"
+                                                                                onClick={() =>
+                                                                                    handleDeliveryPhotoRemove(
+                                                                                        idx
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                <Trash2 className="h-3 w-3" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    )
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <DialogFooter>
                                             <Button
                                                 variant="outline"
-                                                onClick={() => setStatusDialogOpen(false)}
-                                                disabled={progressLoading}
+                                                onClick={() => handleStatusDialogToggle(false)}
+                                                disabled={progressLoading || uploadImage.isPending}
                                                 className="font-mono text-xs"
                                             >
                                                 CANCEL
@@ -561,6 +699,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                 disabled={
                                                     !selectedNextStatus ||
                                                     progressLoading ||
+                                                    uploadImage.isPending ||
                                                     order.data.order_status === "IN_PREPARATION" ||
                                                     order.data.order_status === "AWAITING_RETURN" ||
                                                     order.data.order_status === "QUOTED" ||
@@ -755,7 +894,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                             <Label className="font-mono text-xs text-muted-foreground">
                                                 PLATFORM JOB NUMBER
                                             </Label>
-                                            {isEditingJobNumber ? (
+                                            {isEditingJobNumber && canEditJobNumber ? (
                                                 <Input
                                                     value={jobNumber}
                                                     onChange={(e) => setJobNumber(e.target.value)}
@@ -769,7 +908,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                             )}
                                         </div>
                                         <div className="flex items-center justify-center gap-2">
-                                            {isEditingJobNumber ? (
+                                            {isEditingJobNumber && canEditJobNumber ? (
                                                 <>
                                                     <Button
                                                         size="icon"
@@ -790,7 +929,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                         )}
                                                     </Button>
                                                 </>
-                                            ) : (
+                                            ) : canEditJobNumber ? (
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"
@@ -798,7 +937,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
-                                            )}
+                                            ) : null}
                                         </div>
                                     </div>
                                 </CardContent>
@@ -827,7 +966,8 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    className="font-mono text-xs"
+                                                    className={`font-mono text-xs ${!canEditTimeWindows ? "hidden" : ""}`}
+                                                    disabled={!canEditTimeWindows}
                                                 >
                                                     <Edit className="h-3 w-3 mr-2" />
                                                     EDIT
@@ -1352,7 +1492,10 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                 <CardContent>
                                     <OrderLineItemsList
                                         targetId={order?.data?.id}
-                                        canManage={canManageLineItems(order?.data?.order_status)}
+                                        canManage={
+                                            canManageLineItems(order?.data?.order_status) &&
+                                            canAdjustPricing
+                                        }
                                     />
                                     <p className="text-xs text-muted-foreground mt-3">
                                         Add services like assembly, equipment rental, etc. Custom
@@ -1373,7 +1516,10 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                         <OrderApprovalRequestSubmitBtn
                             orderId={order.data.id}
                             onSubmitSuccess={refetch}
-                            isVisible={order?.data?.order_status === "PRICING_REVIEW"}
+                            isVisible={
+                                order?.data?.order_status === "PRICING_REVIEW" &&
+                                canSubmitForApproval
+                            }
                         />
                     </div>
 
