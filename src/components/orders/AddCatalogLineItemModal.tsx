@@ -26,18 +26,21 @@ import { useCreateCatalogLineItem } from "@/hooks/use-order-line-items";
 interface AddCatalogLineItemModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    targetId: string;
-    purposeType?: "ORDER" | "INBOUND_REQUEST";
+    targetId?: string;
+    orderId?: string;
+    purposeType?: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST";
 }
 
 export function AddCatalogLineItemModal({
     open,
     onOpenChange,
     targetId,
+    orderId,
     purposeType = "ORDER",
 }: AddCatalogLineItemModalProps) {
+    const resolvedTargetId = targetId || orderId || "";
     const { data: serviceTypes } = useListServiceTypes({});
-    const createLineItem = useCreateCatalogLineItem(targetId, purposeType);
+    const createLineItem = useCreateCatalogLineItem(resolvedTargetId, purposeType);
 
     const [serviceTypeId, setServiceTypeId] = useState("");
     const [quantity, setQuantity] = useState<number | string>(1);
@@ -53,6 +56,10 @@ export function AddCatalogLineItemModal({
     const handleAdd = async () => {
         const qty = Number(quantity);
 
+        if (!resolvedTargetId) {
+            toast.error("Missing target ID");
+            return;
+        }
         if (!serviceTypeId || isNaN(qty) || qty <= 0) {
             toast.error("Please select a service and enter a valid quantity");
             return;

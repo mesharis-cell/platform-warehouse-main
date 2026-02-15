@@ -31,7 +31,6 @@ const STATUS_COLORS: Record<InboundRequestStatus, string> = {
     QUOTED: "bg-purple-500/10 text-purple-500 border-purple-500/20",
     CONFIRMED: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
     DECLINED: "bg-rose-500/10 text-rose-500 border-rose-500/20",
-    IN_PROGRESS: "bg-purple-500/10 text-purple-500 border-purple-500/20",
     COMPLETED: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
     CANCELLED: "bg-red-500/10 text-red-500 border-red-500/20",
 };
@@ -42,7 +41,6 @@ const STATUS_LABELS: Record<InboundRequestStatus, string> = {
     QUOTED: "Quoted",
     CONFIRMED: "Confirmed",
     DECLINED: "Declined",
-    IN_PROGRESS: "In Progress",
     COMPLETED: "Completed",
     CANCELLED: "Cancelled",
 };
@@ -53,7 +51,6 @@ const STATUS_DESCRIPTIONS: Record<InboundRequestStatus, string> = {
     QUOTED: "Quote has been sent and is awaiting confirmation.",
     CONFIRMED: "Order has been confirmed.",
     DECLINED: "Order has been declined.",
-    IN_PROGRESS: "Items are currently being processed.",
     COMPLETED: "All items have been successfully processed.",
     CANCELLED: "This request has been cancelled.",
 };
@@ -142,11 +139,9 @@ export function RequestHeader({ requestId, status, request, onRefresh }: Request
                                             ? "bg-purple-500"
                                             : status === "PENDING_APPROVAL"
                                               ? "bg-blue-500"
-                                              : status === "IN_PROGRESS"
-                                                ? "bg-purple-500"
-                                                : status === "PRICING_REVIEW"
-                                                  ? "bg-yellow-500"
-                                                  : "bg-gray-500"
+                                              : status === "PRICING_REVIEW"
+                                                ? "bg-yellow-500"
+                                                : "bg-gray-500"
                             }`}
                         >
                             <Package className="w-10 h-10 text-white" />

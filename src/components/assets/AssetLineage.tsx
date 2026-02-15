@@ -5,9 +5,10 @@
  * Shows transformation history for reskinned assets
  */
 
-import { ArrowRight, History } from "lucide-react";
+import { History } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PrintQrAction } from "@/components/qr/PrintQrAction";
 import Link from "next/link";
 
 interface AssetLineageProps {
@@ -43,9 +44,15 @@ export function AssetLineage({ transformedFrom, transformedTo }: AssetLineagePro
                         <div className="flex items-center gap-2 p-2 bg-background rounded-md">
                             <div className="flex-1">
                                 <p className="font-semibold text-sm">{transformedFrom.name}</p>
-                                <p className="text-xs font-mono text-muted-foreground">
-                                    {transformedFrom.qrCode}
-                                </p>
+                                <div className="flex items-center gap-1">
+                                    <p className="text-xs font-mono text-muted-foreground">
+                                        {transformedFrom.qrCode}
+                                    </p>
+                                    <PrintQrAction
+                                        qrCode={transformedFrom.qrCode}
+                                        assetName={transformedFrom.name}
+                                    />
+                                </div>
                             </div>
                             <Button asChild variant="outline" size="sm">
                                 <Link href={`/assets/${transformedFrom.id}`}>View</Link>
@@ -60,9 +67,15 @@ export function AssetLineage({ transformedFrom, transformedTo }: AssetLineagePro
                         <div className="flex items-center gap-2 p-2 bg-background rounded-md">
                             <div className="flex-1">
                                 <p className="font-semibold text-sm">{transformedTo.name}</p>
-                                <p className="text-xs font-mono text-muted-foreground">
-                                    {transformedTo.qrCode}
-                                </p>
+                                <div className="flex items-center gap-1">
+                                    <p className="text-xs font-mono text-muted-foreground">
+                                        {transformedTo.qrCode}
+                                    </p>
+                                    <PrintQrAction
+                                        qrCode={transformedTo.qrCode}
+                                        assetName={transformedTo.name}
+                                    />
+                                </div>
                             </div>
                             <Button asChild variant="outline" size="sm">
                                 <Link href={`/assets/${transformedTo.id}`}>View</Link>

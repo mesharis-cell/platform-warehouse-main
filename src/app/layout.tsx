@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/providers";
-import { ServiceWorkerRegister } from "@/components/sw-register";
 import { headers } from "next/headers";
 
 const geistSans = Geist({
@@ -68,12 +67,6 @@ export async function generateMetadata(): Promise<Metadata> {
                     },
                 ],
             },
-            manifest: "/site.webmanifest",
-            appleWebApp: {
-                capable: true,
-                statusBarStyle: "default",
-                title: `${data.data.platform_name || "Logistic"}`,
-            },
             formatDetection: {
                 telephone: false,
             },
@@ -105,12 +98,6 @@ export async function generateMetadata(): Promise<Metadata> {
                     },
                 ],
             },
-            manifest: "/site.webmanifest",
-            appleWebApp: {
-                capable: true,
-                statusBarStyle: "default",
-                title: "Logistic",
-            },
             formatDetection: {
                 telephone: false,
             },
@@ -125,13 +112,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <head>
-                <link rel="manifest" href="/site.webmanifest" />
-                <meta name="mobile-web-app-capable" content="yes" />
-                <meta name="apple-mobile-web-app-capable" content="yes" />
-            </head>
             <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-                <ServiceWorkerRegister />
                 <Providers>{children}</Providers>
             </body>
         </html>

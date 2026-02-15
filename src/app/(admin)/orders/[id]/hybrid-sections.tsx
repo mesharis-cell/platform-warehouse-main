@@ -7,6 +7,7 @@
 
 import { CancelOrderModal } from "@/components/orders/CancelOrderModal";
 import { LogisticsPricingReview } from "@/components/orders/LogisticsPricingReview";
+import { ReskinRequestsList } from "@/components/orders/ReskinRequestsList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToken } from "@/lib/auth/use-token";
@@ -43,12 +44,17 @@ export function AwaitingFabricationSection({ order, orderId }: HybridPricingSect
                 </CardHeader>
                 <CardContent>
                     <p className="text-sm text-blue-500">
-                        This order is confirmed but waiting for custom rebranding work to complete.
-                        Once all fabrication is done, the order will automatically move to
-                        IN_PREPARATION.
+                        Complete pending reskin/fabrication requests. When all requests are
+                        resolved, the order auto-progresses to IN_PREPARATION.
+                    </p>
+                    <p className="text-xs text-blue-500 mt-2">
+                        Process/complete actions are available to Admin and Logistics. Cancellation
+                        remains Admin-only.
                     </p>
                 </CardContent>
             </Card>
+
+            <ReskinRequestsList orderId={orderId} orderStatus={order.order_status} />
         </div>
     );
 }

@@ -30,6 +30,7 @@ import {
     Box,
     Lock,
     Calendar,
+    ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,7 @@ type NavItem = {
     href: string;
     icon: React.ComponentType<{ className?: string }>;
     badge?: string;
-    requiredAnyPermission?: string[];
+    requiredAnyPermission?: readonly string[];
 };
 
 const navigation: NavItem[] = [
@@ -67,6 +68,12 @@ const navigation: NavItem[] = [
         href: "/orders",
         icon: ShoppingCart,
         requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.orders,
+    },
+    {
+        name: "Service Requests",
+        href: "/service-requests",
+        icon: ClipboardList,
+        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.serviceRequests,
     },
     {
         name: "Pricing Review",

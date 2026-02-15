@@ -2,7 +2,7 @@
 
 import { apiClient } from "@/lib/api/api-client";
 import { throwApiError } from "@/lib/utils/throw-api-error";
-import { mapArraySnakeToCamel } from "@/lib/utils/helper";
+import { mapArraySnakeToCamel, mapCamelToSnake } from "@/lib/utils/helper";
 import type {
     ReskinRequest,
     ProcessReskinRequestRequest,
@@ -103,15 +103,18 @@ export function useCancelReskinRequest() {
     return useMutation({
         mutationFn: async ({
             reskinId,
+            orderId,
             data,
         }: {
             reskinId: string;
+            orderId: string;
             data: CancelReskinRequestRequest;
         }) => {
             try {
+                const apiData = mapCamelToSnake(data as unknown as Record<string, unknown>);
                 const response = await apiClient.post(
-                    `/client/v1/reskin-requests/${reskinId}/cancel`,
-                    data
+                    `/client/v1/order/${orderId}/reskin-requests/${reskinId}/cancel`,
+                    apiData
                 );
                 return response.data.data;
             } catch (error) {

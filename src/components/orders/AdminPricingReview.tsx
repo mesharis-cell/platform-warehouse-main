@@ -41,6 +41,9 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
     const [marginReason, setMarginReason] = useState("");
 
     const pricing = order?.pricing as OrderPricing | undefined;
+    const rawVehicleType = pricing?.transport?.vehicle_type;
+    const vehicleTypeLabel =
+        typeof rawVehicleType === "string" ? rawVehicleType : rawVehicleType?.name || "N/A";
 
     // Calculate totals
     const catalogTotal =
@@ -146,7 +149,7 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
                                     {pricing.transport.trip_type === "ROUND_TRIP"
                                         ? "Round-trip"
                                         : "One-way"}{" "}
-                                    ({pricing.transport.vehicle_type})
+                                    ({vehicleTypeLabel})
                                 </span>
                                 <span className="font-mono font-semibold">
                                     {pricing.transport.final_rate.toFixed(2)} AED
@@ -183,7 +186,7 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
                                 </Button>
                             </div>
                         </div>
-                        <OrderLineItemsList orderId={orderId} canManage={true} />
+                        <OrderLineItemsList targetId={orderId} canManage={true} />
                     </div>
 
                     <Separator />

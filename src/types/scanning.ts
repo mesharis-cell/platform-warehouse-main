@@ -29,6 +29,7 @@ export interface ScanEvent {
     condition: "GREEN" | "ORANGE" | "RED";
     notes: string | null;
     photos: string[]; // Array of photo URLs
+    damage_report_entries?: Array<{ url: string; description?: string }>;
     discrepancyReason: DiscrepancyReason | null;
     scannedBy: string; // userId
     scannedAt: Date;
@@ -41,6 +42,7 @@ export interface ScanEventWithDetails {
     condition: "GREEN" | "ORANGE" | "RED";
     notes: string | null;
     photos: string[]; // Array of photo URLs
+    damage_report_entries?: Array<{ url: string; description?: string }>;
     discrepancy_reason: DiscrepancyReason | null;
     scanned_by: string; // userId
     scanned_at: Date;
@@ -174,7 +176,11 @@ export interface InboundScanRequest {
     quantity?: number; // Required for BATCH tracking
     condition: "GREEN" | "ORANGE" | "RED";
     notes?: string; // Required if condition is ORANGE or RED
-    photos?: string[]; // Base64-encoded images (required if RED)
+    latestReturnImages: string[]; // Base64-encoded latest return images (min 2)
+    damageReportEntries?: Array<{
+        url: string;
+        description?: string;
+    }>;
     refurbDaysEstimate?: number; // Feedback #2: Required for ORANGE/RED
     discrepancyReason?: DiscrepancyReason; // If quantity < expected
 }
