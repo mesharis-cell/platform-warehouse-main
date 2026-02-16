@@ -1,6 +1,12 @@
 export const WAREHOUSE_NAV_PERMISSIONS = {
     orders: ["orders:read"],
-    serviceRequests: ["orders:read"],
+    serviceRequests: [
+        "orders:read",
+        "orders:update",
+        "pricing:review",
+        "pricing:approve_standard",
+        "pricing:adjust",
+    ],
     pricingReview: ["pricing:review", "pricing:approve_standard", "pricing:adjust"],
     scanning: ["scanning:scan_out", "scanning:scan_in"],
     conditions: [

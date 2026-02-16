@@ -193,3 +193,25 @@ export function useUpdateServiceRequestCommercialStatus() {
         },
     });
 }
+
+export function useDownloadServiceRequestCostEstimate() {
+    return useMutation({
+        mutationFn: async ({
+            requestId,
+            platformId,
+        }: {
+            requestId: string;
+            platformId: string;
+        }) => {
+            try {
+                const response = await apiClient.get(
+                    `/operations/v1/invoice/download-sr-cost-estimate-pdf/${requestId}?pid=${platformId}`,
+                    { responseType: "blob" }
+                );
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+    });
+}
