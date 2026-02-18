@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -19,9 +19,11 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { useListServiceTypes } from "@/hooks/use-service-types";
 import { useCreateCatalogLineItem } from "@/hooks/use-order-line-items";
+import { useListServiceTypes } from "@/hooks/use-service-types";
+import type { LineItemBillingMode, TransportLineItemMetadata } from "@/types/hybrid-pricing";
 
 interface AddCatalogLineItemModalProps {
     open: boolean;
@@ -43,39 +45,79 @@ export function AddCatalogLineItemModal({
     const createLineItem = useCreateCatalogLineItem(resolvedTargetId, purposeType);
 
     const [serviceTypeId, setServiceTypeId] = useState("");
+    const [billingMode, setBillingMode] = useState<LineItemBillingMode>("BILLABLE");
     const [quantity, setQuantity] = useState<number | string>(1);
     const [notes, setNotes] = useState("");
 
-    const selectedService = serviceTypes?.data?.find((s: any) => s.id === serviceTypeId);
+    const [tripDirection, setTripDirection] = useState<
+        "DELIVERY" | "PICKUP" | "ACCESS" | "TRANSFER"
+    >("DELIVERY");
+    const [truckPlate, setTruckPlate] = useState("");
+    const [driverName, setDriverName] = useState("");
+    const [driverContact, setDriverContact] = useState("");
+    const [truckSize, setTruckSize] = useState("");
+    const [tailgateRequired, setTailgateRequired] = useState(false);
+    const [manpower, setManpower] = useState("");
+    const [transportNotes, setTransportNotes] = useState("");
+
+    const selectedService = serviceTypes?.data?.find((service: any) => service.id === serviceTypeId);
+    const isTransportService = selectedService?.category === "TRANSPORT";
+
+    const resetTransportMetadata = () => {
+        setTripDirection("DELIVERY");
+        setTruckPlate("");
+        setDriverName("");
+        setDriverContact("");
+        setTruckSize("");
+        setTailgateRequired(false);
+        setManpower("");
+        setTransportNotes("");
+    };
 
     const handleServiceChange = (id: string) => {
         setServiceTypeId(id);
         setQuantity(1);
+        resetTransportMetadata();
     };
 
     const handleAdd = async () => {
         const qty = Number(quantity);
+        if (!resolvedTargetId) return toast.error("Missing target ID");
+        if (!serviceTypeId || isNaN(qty) || qty <= 0)
+            return toast.error("Please select a service and enter a valid quantity");
 
-        if (!resolvedTargetId) {
-            toast.error("Missing target ID");
-            return;
-        }
-        if (!serviceTypeId || isNaN(qty) || qty <= 0) {
-            toast.error("Please select a service and enter a valid quantity");
-            return;
+        let metadata: TransportLineItemMetadata | undefined;
+        if (isTransportService) {
+            const manpowerValue = manpower.trim() ? Number(manpower) : undefined;
+            if (manpowerValue !== undefined && (!Number.isInteger(manpowerValue) || manpowerValue < 0))
+                return toast.error("Manpower must be a non-negative integer");
+            metadata = {
+                trip_direction: tripDirection,
+                truck_plate: truckPlate.trim() || undefined,
+                driver_name: driverName.trim() || undefined,
+                driver_contact: driverContact.trim() || undefined,
+                truck_size: truckSize.trim() || undefined,
+                tailgate_required: tailgateRequired,
+                manpower: manpowerValue,
+                notes: transportNotes.trim() || undefined,
+            };
         }
 
         try {
             await createLineItem.mutateAsync({
                 service_type_id: serviceTypeId,
                 quantity: qty,
+                billing_mode: billingMode,
                 notes: notes || undefined,
+                metadata,
             });
             toast.success("Service line item added");
             onOpenChange(false);
             setServiceTypeId("");
+            setBillingMode("BILLABLE");
             setQuantity(1);
             setNotes("");
+            resetTransportMetadata();
         } catch (error: any) {
             toast.error(error.message || "Failed to add line item");
         }
@@ -107,20 +149,24 @@ export function AddCatalogLineItemModal({
                         </Select>
                     </div>
 
-                    {selectedService && (
-                        <div className="p-3 bg-muted rounded-md text-sm">
-                            <p>
-                                <strong>Category:</strong> {selectedService.category}
-                            </p>
-                            <p>
-                                <strong>Unit:</strong> {selectedService.unit} (
-                                {selectedService.default_rate} AED)
-                                <br />
-                                <strong>Total Price:</strong>{" "}
-                                {selectedService.default_rate * Number(quantity)}
-                            </p>
-                        </div>
-                    )}
+                    <div>
+                        <Label>
+                            Billing Mode <span className="text-destructive">*</span>
+                        </Label>
+                        <Select
+                            value={billingMode}
+                            onValueChange={(value) => setBillingMode(value as LineItemBillingMode)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select billing mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="BILLABLE">BILLABLE</SelectItem>
+                                <SelectItem value="NON_BILLABLE">NON-BILLABLE</SelectItem>
+                                <SelectItem value="COMPLIMENTARY">COMPLIMENTARY</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     <div>
                         <Label>
@@ -129,25 +175,97 @@ export function AddCatalogLineItemModal({
                         <Input
                             type="number"
                             step="1"
-                            // min="1
                             value={quantity}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === "") {
-                                    setQuantity("");
-                                } else {
-                                    setQuantity(Number(val));
-                                }
-                            }}
+                            onChange={(event) =>
+                                event.target.value === ""
+                                    ? setQuantity("")
+                                    : setQuantity(Number(event.target.value))
+                            }
                             placeholder="4"
                         />
                     </div>
+
+                    {isTransportService && (
+                        <div className="space-y-3 rounded-md border border-border p-4">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                Transport Metadata
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <Label>Trip Direction</Label>
+                                    <Select
+                                        value={tripDirection}
+                                        onValueChange={(value) =>
+                                            setTripDirection(
+                                                value as "DELIVERY" | "PICKUP" | "ACCESS" | "TRANSFER"
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="DELIVERY">Delivery</SelectItem>
+                                            <SelectItem value="PICKUP">Pickup</SelectItem>
+                                            <SelectItem value="ACCESS">Access</SelectItem>
+                                            <SelectItem value="TRANSFER">Transfer</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label>Truck License Plate</Label>
+                                    <Input value={truckPlate} onChange={(e) => setTruckPlate(e.target.value)} />
+                                </div>
+                                <div>
+                                    <Label>Driver Name</Label>
+                                    <Input value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+                                </div>
+                                <div>
+                                    <Label>Driver Contact Number</Label>
+                                    <Input
+                                        value={driverContact}
+                                        onChange={(e) => setDriverContact(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <Label>Truck Size</Label>
+                                    <Input value={truckSize} onChange={(e) => setTruckSize(e.target.value)} />
+                                </div>
+                                <div>
+                                    <Label>Manpower</Label>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        value={manpower}
+                                        onChange={(e) => setManpower(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Checkbox
+                                    id="catalog-transport-tailgate"
+                                    checked={tailgateRequired}
+                                    onCheckedChange={(value) => setTailgateRequired(!!value)}
+                                />
+                                <Label htmlFor="catalog-transport-tailgate">Tailgate Required</Label>
+                            </div>
+                            <div>
+                                <Label>Transport Notes</Label>
+                                <Textarea
+                                    value={transportNotes}
+                                    onChange={(e) => setTransportNotes(e.target.value)}
+                                    rows={2}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div>
                         <Label>Notes (Optional)</Label>
                         <Textarea
                             value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
+                            onChange={(event) => setNotes(event.target.value)}
                             placeholder="Additional notes..."
                             rows={2}
                         />

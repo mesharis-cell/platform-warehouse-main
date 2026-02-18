@@ -29,7 +29,6 @@ import {
 } from "./hybrid-sections";
 import { ProcessReskinModal } from "@/components/orders/ProcessReskinModal";
 import { OrderItemCard } from "@/components/orders/OrderItemCard";
-import { OrderTransportUnitsCard } from "@/components/orders/OrderTransportUnitsCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -205,6 +204,11 @@ const STATUS_CONFIG: Record<
     AWAITING_RETURN: {
         label: "AWAITING RET.",
         color: "bg-rose-500/10 text-rose-700 border-rose-500/20",
+        nextStates: ["RETURN_IN_TRANSIT", "CLOSED"],
+    },
+    RETURN_IN_TRANSIT: {
+        label: "RETURN TRANSIT",
+        color: "bg-orange-500/10 text-orange-700 border-orange-500/20",
         nextStates: ["CLOSED"],
     },
     CLOSED: {
@@ -1153,8 +1157,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                 </CardContent>
                             </Card>
                         )}
-
-                        <OrderTransportUnitsCard orderId={id} canManage={canProgressOrderStatus} />
 
                         {/* Event & Venue */}
                         <Card>

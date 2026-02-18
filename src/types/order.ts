@@ -447,8 +447,6 @@ export type NotificationStatus = "QUEUED" | "SENT" | "FAILED" | "RETRYING";
 
 export type NotificationType =
     | "ORDER_SUBMITTED"
-    | "A2_APPROVED_STANDARD"
-    | "A2_ADJUSTED_PRICING"
     | "QUOTE_SENT"
     | "QUOTE_APPROVED"
     | "QUOTE_DECLINED"
@@ -607,65 +605,3 @@ export interface APIOrdersResponse {
     success: boolean;
 }
 
-// ============================================================
-// Truck details types
-// ============================================================
-export interface TruckDetailsData {
-    truckPlate: string;
-    driverName: string;
-    driverContact: string;
-    truckSize: string;
-    tailgateRequired: boolean;
-    manpower: number;
-    notes: string;
-}
-
-export type OrderTransportUnitKind = "DELIVERY_BILLABLE" | "PICKUP_OPS" | "OTHER_ACCESS";
-
-export interface OrderTransportUnitDetailsData {
-    truck_plate?: string | null;
-    driver_name?: string | null;
-    driver_contact?: string | null;
-    truck_size?: string | null;
-    tailgate_required?: boolean;
-    manpower?: number;
-    pickup_notes?: string | null;
-    delivery_notes?: string | null;
-    notes?: string | null;
-    metadata?: Record<string, unknown>;
-}
-
-export interface OrderTransportUnit {
-    id: string;
-    kind: OrderTransportUnitKind;
-    vehicle_type_id: string | null;
-    label: string | null;
-    is_default: boolean;
-    is_billable: boolean;
-    billable_rate: string | null;
-    vehicle_type?: {
-        id: string;
-        name: string;
-    } | null;
-    details?: OrderTransportUnitDetailsData | null;
-}
-
-export interface CreateOrderTransportUnitPayload {
-    kind: OrderTransportUnitKind;
-    vehicle_type_id?: string;
-    label?: string;
-    is_default?: boolean;
-    is_billable?: boolean;
-    billable_rate?: number;
-    detail?: OrderTransportUnitDetailsData;
-}
-
-export interface UpdateOrderTransportUnitPayload {
-    kind?: OrderTransportUnitKind;
-    vehicle_type_id?: string | null;
-    label?: string;
-    is_default?: boolean;
-    is_billable?: boolean;
-    billable_rate?: number | null;
-    detail?: OrderTransportUnitDetailsData;
-}

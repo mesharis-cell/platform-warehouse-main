@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { DollarSign, Plus, Truck, Package } from "lucide-react";
+import { DollarSign, Plus, Package } from "lucide-react";
 import { ReskinRequestsList } from "./ReskinRequestsList";
 import { OrderLineItemsList } from "./OrderLineItemsList";
 import { AddCatalogLineItemModal } from "./AddCatalogLineItemModal";
@@ -41,9 +41,6 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
     const [marginReason, setMarginReason] = useState("");
 
     const pricing = order?.pricing as OrderPricing | undefined;
-    const rawVehicleType = pricing?.transport?.vehicle_type;
-    const vehicleTypeLabel =
-        typeof rawVehicleType === "string" ? rawVehicleType : rawVehicleType?.name || "N/A";
 
     // Calculate totals
     const catalogTotal =
@@ -136,33 +133,6 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
                         </div>
                     )}
 
-                    {/* Transport */}
-                    {pricing?.transport && (
-                        <div className="space-y-2">
-                            <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                                <Truck className="h-4 w-4" />
-                                TRANSPORT
-                            </h4>
-                            <div className="flex justify-between text-sm p-3 bg-muted/30 rounded-md">
-                                <span>
-                                    {pricing.transport.emirate},{" "}
-                                    {pricing.transport.trip_type === "ROUND_TRIP"
-                                        ? "Round-trip"
-                                        : "One-way"}{" "}
-                                    ({vehicleTypeLabel})
-                                </span>
-                                <span className="font-mono font-semibold">
-                                    {pricing.transport.final_rate.toFixed(2)} AED
-                                </span>
-                            </div>
-                            {pricing.transport.vehicle_changed && (
-                                <p className="text-xs text-amber-600 ml-3">
-                                    Vehicle upgraded: {pricing.transport.vehicle_change_reason}
-                                </p>
-                            )}
-                        </div>
-                    )}
-
                     <Separator />
 
                     {/* Service Line Items */}
@@ -198,7 +168,6 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
                             <span className="font-mono font-semibold">
                                 {(
                                     (pricing?.base_operations?.total || 0) +
-                                    (pricing?.transport?.final_rate || 0) +
                                     catalogTotal
                                 ).toFixed(2)}{" "}
                                 AED
@@ -212,7 +181,6 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
                             <span className="font-mono">
                                 {(
                                     ((pricing?.base_operations?.total || 0) +
-                                        (pricing?.transport?.final_rate || 0) +
                                         catalogTotal) *
                                     ((marginOverride
                                         ? marginPercent
@@ -236,7 +204,6 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
                             <span className="text-xl font-bold font-mono text-primary">
                                 {(
                                     ((pricing?.base_operations?.total || 0) +
-                                        (pricing?.transport?.final_rate || 0) +
                                         catalogTotal) *
                                         (1 +
                                             (marginOverride

@@ -72,6 +72,10 @@ const ORDER_STATUS_CONFIG = {
         label: "Awaiting Return",
         color: "bg-rose-100 text-rose-700 border-rose-300",
     },
+    RETURN_IN_TRANSIT: {
+        label: "Return in Transit",
+        color: "bg-orange-100 text-orange-700 border-orange-300",
+    },
     CLOSED: { label: "Closed", color: "bg-slate-100 text-slate-700 border-slate-300" },
 };
 
@@ -418,135 +422,207 @@ export default function AdminOrdersPage() {
                                     </div>
                                 ) : (
                                     <>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                                                    <TableHead className="font-semibold">
-                                                        Order ID
-                                                    </TableHead>
-                                                    <TableHead className="font-semibold">
-                                                        Company
-                                                    </TableHead>
-                                                    <TableHead className="font-semibold">
-                                                        Contact
-                                                    </TableHead>
-                                                    <TableHead className="font-semibold">
-                                                        Event Date
-                                                    </TableHead>
-                                                    <TableHead className="font-semibold">
-                                                        Venue
-                                                    </TableHead>
-                                                    <TableHead className="font-semibold">
-                                                        Items
-                                                    </TableHead>
-                                                    <TableHead className="font-semibold">
-                                                        Status
-                                                    </TableHead>
-                                                    <TableHead className="font-semibold text-right">
-                                                        Actions
-                                                    </TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {!isLoading &&
-                                                    data?.data &&
-                                                    data?.data?.map((order) => (
-                                                        <TableRow
-                                                            key={order.id}
-                                                            className="group hover:bg-slate-50/50"
-                                                        >
-                                                            <TableCell className="font-mono text-xs font-medium">
-                                                                {order?.order_id}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <div>
-                                                                    <p className="font-medium text-slate-900 text-sm">
-                                                                        {order?.company?.name}
-                                                                    </p>
-                                                                    {order.brand && (
-                                                                        <p className="text-xs text-slate-500">
-                                                                            {order.brand.name}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <div className="flex items-start gap-2">
-                                                                    <User className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                                        <div className="lg:hidden p-4 space-y-3">
+                                            {data?.data?.map((order) => (
+                                                <Card
+                                                    key={order.id}
+                                                    className="border border-slate-200 shadow-sm"
+                                                >
+                                                    <CardContent className="p-4 space-y-3">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <p className="font-mono text-xs font-semibold">
+                                                                {order.order_id}
+                                                            </p>
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={`${ORDER_STATUS_CONFIG[order.order_status as keyof typeof ORDER_STATUS_CONFIG]?.color || "bg-gray-100 text-gray-700 border-gray-300"} font-medium border whitespace-nowrap`}
+                                                            >
+                                                                {ORDER_STATUS_CONFIG[
+                                                                    order.order_status as keyof typeof ORDER_STATUS_CONFIG
+                                                                ]?.label || order.order_status}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-sm font-semibold text-slate-900">
+                                                                {order.company?.name}
+                                                            </p>
+                                                            {order.brand?.name && (
+                                                                <p className="text-xs text-slate-500">
+                                                                    {order.brand.name}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-start gap-2 text-sm">
+                                                            <Calendar className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                                                            <span>
+                                                                {new Date(
+                                                                    order.event_start_date
+                                                                ).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-start gap-2 text-sm">
+                                                            <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                                                            <span className="line-clamp-1">
+                                                                {order.venue_name}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-start gap-2 text-sm">
+                                                            <User className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                                                            <div>
+                                                                <p>{order.contact_name}</p>
+                                                                <p className="text-xs text-slate-500">
+                                                                    {order.contact_email}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-xs text-slate-600 font-medium">
+                                                            {order.item_count} items
+                                                        </div>
+                                                        <Link href={`/orders/${order.id}`}>
+                                                            <Button
+                                                                variant="outline"
+                                                                className="w-full font-mono"
+                                                            >
+                                                                View Details
+                                                            </Button>
+                                                        </Link>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </div>
+
+                                        <div className="hidden lg:block">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                                                        <TableHead className="font-semibold">
+                                                            Order ID
+                                                        </TableHead>
+                                                        <TableHead className="font-semibold">
+                                                            Company
+                                                        </TableHead>
+                                                        <TableHead className="font-semibold">
+                                                            Contact
+                                                        </TableHead>
+                                                        <TableHead className="font-semibold">
+                                                            Event Date
+                                                        </TableHead>
+                                                        <TableHead className="font-semibold">
+                                                            Venue
+                                                        </TableHead>
+                                                        <TableHead className="font-semibold">
+                                                            Items
+                                                        </TableHead>
+                                                        <TableHead className="font-semibold">
+                                                            Status
+                                                        </TableHead>
+                                                        <TableHead className="font-semibold text-right">
+                                                            Actions
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {!isLoading &&
+                                                        data?.data &&
+                                                        data?.data?.map((order) => (
+                                                            <TableRow
+                                                                key={order.id}
+                                                                className="group hover:bg-slate-50/50"
+                                                            >
+                                                                <TableCell className="font-mono text-xs font-medium">
+                                                                    {order?.order_id}
+                                                                </TableCell>
+                                                                <TableCell>
                                                                     <div>
-                                                                        <p className="text-sm font-medium text-slate-900">
-                                                                            {order.contact_name}
+                                                                        <p className="font-medium text-slate-900 text-sm">
+                                                                            {order?.company?.name}
                                                                         </p>
-                                                                        <p className="text-xs text-slate-500">
-                                                                            {order.contact_email}
-                                                                        </p>
+                                                                        {order.brand && (
+                                                                            <p className="text-xs text-slate-500">
+                                                                                {order.brand.name}
+                                                                            </p>
+                                                                        )}
                                                                     </div>
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <div className="flex items-center gap-2">
-                                                                    <Calendar className="h-4 w-4 text-slate-400" />
-                                                                    <span className="text-sm">
-                                                                        {new Date(
-                                                                            order.event_start_date
-                                                                        ).toLocaleDateString()}
-                                                                    </span>
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <div className="flex items-start gap-2">
-                                                                    <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                                                                    <div>
-                                                                        <p className="text-sm font-medium text-slate-900">
-                                                                            {order.venue_name}
-                                                                        </p>
-                                                                        <p className="text-xs text-slate-500">
-                                                                            {order.venue_city},{" "}
-                                                                            {order.venue_country}
-                                                                        </p>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex items-start gap-2">
+                                                                        <User className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                                                                        <div>
+                                                                            <p className="text-sm font-medium text-slate-900">
+                                                                                {order.contact_name}
+                                                                            </p>
+                                                                            <p className="text-xs text-slate-500">
+                                                                                {order.contact_email}
+                                                                            </p>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <div className="space-y-1">
-                                                                    <p className="text-sm font-semibold text-slate-900">
-                                                                        {order.item_count} items
-                                                                    </p>
-                                                                    {order.item_preview.length >
-                                                                        0 && (
-                                                                        <p className="text-xs text-slate-500 line-clamp-1">
-                                                                            {order.item_preview.join(
-                                                                                ", "
-                                                                            )}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Calendar className="h-4 w-4 text-slate-400" />
+                                                                        <span className="text-sm">
+                                                                            {new Date(
+                                                                                order.event_start_date
+                                                                            ).toLocaleDateString()}
+                                                                        </span>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="flex items-start gap-2">
+                                                                        <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                                                                        <div>
+                                                                            <p className="text-sm font-medium text-slate-900">
+                                                                                {order.venue_name}
+                                                                            </p>
+                                                                            <p className="text-xs text-slate-500">
+                                                                                {order.venue_city},{" "}
+                                                                                {order.venue_country}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <div className="space-y-1">
+                                                                        <p className="text-sm font-semibold text-slate-900">
+                                                                            {order.item_count} items
                                                                         </p>
-                                                                    )}
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Badge
-                                                                    variant="outline"
-                                                                    className={`${ORDER_STATUS_CONFIG[order.order_status as keyof typeof ORDER_STATUS_CONFIG]?.color || "bg-gray-100 text-gray-700 border-gray-300"} font-medium border whitespace-nowrap`}
-                                                                >
-                                                                    {ORDER_STATUS_CONFIG[
-                                                                        order.order_status as keyof typeof ORDER_STATUS_CONFIG
-                                                                    ]?.label || order.order_status}
-                                                                </Badge>
-                                                            </TableCell>
-                                                            <TableCell className="text-right">
-                                                                <Link href={`/orders/${order.id}`}>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        {order.item_preview.length >
+                                                                            0 && (
+                                                                            <p className="text-xs text-slate-500 line-clamp-1">
+                                                                                {order.item_preview.join(
+                                                                                    ", "
+                                                                                )}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className={`${ORDER_STATUS_CONFIG[order.order_status as keyof typeof ORDER_STATUS_CONFIG]?.color || "bg-gray-100 text-gray-700 border-gray-300"} font-medium border whitespace-nowrap`}
                                                                     >
-                                                                        View Details
-                                                                    </Button>
-                                                                </Link>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                            </TableBody>
-                                        </Table>
+                                                                        {ORDER_STATUS_CONFIG[
+                                                                            order.order_status as keyof typeof ORDER_STATUS_CONFIG
+                                                                        ]?.label ||
+                                                                            order.order_status}
+                                                                    </Badge>
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    <Link href={`/orders/${order.id}`}>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        >
+                                                                            View Details
+                                                                        </Button>
+                                                                    </Link>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
 
                                         {/* Pagination */}
                                         {totalPages > 1 && (

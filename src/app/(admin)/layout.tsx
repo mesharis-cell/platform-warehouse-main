@@ -33,7 +33,6 @@ import {
     ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
     Sidebar,
@@ -47,6 +46,14 @@ import {
     SidebarProvider,
     useSidebar,
 } from "@/components/ui/sidebar";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Providers from "@/providers";
 import { toast } from "sonner";
 import { useToken } from "@/lib/auth/use-token";
@@ -136,16 +143,37 @@ const navigation: NavItem[] = [
         requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.collections,
     },
     {
-        name: "Inbound Requests",
+        name: "New Stock Requests",
         href: "/inbound-request",
         icon: Package,
         requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.inboundRequest,
     },
+];
+
+const mobileTabs: NavItem[] = [
     {
-        name: "Reset Password",
-        href: "/reset-password",
-        icon: Lock,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.resetPassword,
+        name: "Scan",
+        href: "/scanning",
+        icon: ScanLine,
+        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.scanning,
+    },
+    {
+        name: "Orders",
+        href: "/orders",
+        icon: ShoppingCart,
+        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.orders,
+    },
+    {
+        name: "Assets",
+        href: "/assets",
+        icon: Package,
+        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.assets,
+    },
+    {
+        name: "Requests",
+        href: "/service-requests",
+        icon: ClipboardList,
+        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.serviceRequests,
     },
 ];
 
@@ -278,14 +306,43 @@ function AdminSidebarContent() {
                     </div>
                 )}
 
-                {/* User Profile & Sign Out */}
+                {/* User Profile Menu */}
                 <>
                     <div className="flex items-center gap-3 px-2 py-1">
-                        <Avatar className="h-10 w-10 border-2 border-primary/20 shrink-0">
-                            <AvatarFallback className="bg-primary/10 text-primary font-mono text-sm font-bold">
-                                {user?.name?.charAt(0).toUpperCase() || "A"}
-                            </AvatarFallback>
-                        </Avatar>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    className="rounded-full border-2 border-primary/20 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    <Avatar className="h-10 w-10">
+                                        <AvatarFallback className="bg-primary/10 text-primary font-mono text-sm font-bold">
+                                            {user?.name?.charAt(0).toUpperCase() || "A"}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side="top" align={isCollapsed ? "center" : "start"}>
+                                <DropdownMenuLabel className="font-mono text-xs uppercase tracking-wide">
+                                    {user?.name || "Admin User"}
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    onSelect={() => router.push("/reset-password")}
+                                    className="font-mono text-xs uppercase tracking-wide"
+                                >
+                                    <Lock className="h-3.5 w-3.5 mr-2" />
+                                    Reset Password
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onSelect={handleSignOut}
+                                    className="font-mono text-xs uppercase tracking-wide text-destructive focus:text-destructive"
+                                >
+                                    <LogOut className="h-3.5 w-3.5 mr-2" />
+                                    Sign Out
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         {!isCollapsed && (
                             <div className="flex-1 min-w-0">
                                 <p className="text-sm font-mono font-semibold truncate">
@@ -298,17 +355,6 @@ function AdminSidebarContent() {
                             </div>
                         )}
                     </div>
-                    {!isCollapsed && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleSignOut}
-                            className="w-full font-mono text-xs uppercase tracking-wide hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
-                        >
-                            <LogOut className="h-3.5 w-3.5 mr-2" />
-                            Sign Out
-                        </Button>
-                    )}
                 </>
 
                 {/* Bottom zone marker */}
@@ -322,6 +368,47 @@ function AdminSidebarContent() {
     );
 }
 
+function MobileBottomTabs() {
+    const pathname = usePathname();
+    const { user } = useToken();
+    const visibleTabs = mobileTabs.filter(
+        (item) => !item.requiredAnyPermission || hasAnyPermission(user, item.requiredAnyPermission)
+    );
+
+    if (visibleTabs.length === 0) return null;
+
+    return (
+        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+            <div
+                className="grid px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+                style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}
+            >
+                {visibleTabs.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                    const isScanTab = item.href === "/scanning";
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={cn(
+                                "flex flex-col items-center justify-center gap-1 rounded-md py-2 text-[10px] font-mono uppercase tracking-wide transition-colors",
+                                isActive
+                                    ? "text-primary bg-primary/10"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+                                isScanTab && "font-semibold"
+                            )}
+                        >
+                            <Icon className={cn("h-4 w-4", isScanTab && isActive && "scale-110")} />
+                            <span>{item.name}</span>
+                        </Link>
+                    );
+                })}
+            </div>
+        </nav>
+    );
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     return (
         <Providers>
@@ -331,7 +418,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <Sidebar
                         collapsible="icon"
                         variant="sidebar"
-                        className="border-r border-border bg-muted/30 sticky top-0"
+                        className="hidden lg:flex border-r border-border bg-muted/30 sticky top-0"
                     >
                         {/* Grid pattern overlay */}
                         <div
@@ -349,8 +436,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </Sidebar>
 
                     {/* Main Content */}
-                    <SidebarInset>{children}</SidebarInset>
+                    <SidebarInset className="pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
+                        {children}
+                    </SidebarInset>
                 </div>
+                <MobileBottomTabs />
             </SidebarProvider>
         </Providers>
     );

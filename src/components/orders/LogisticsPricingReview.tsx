@@ -12,9 +12,8 @@ import { DollarSign, Plus } from "lucide-react";
 import { OrderLineItemsList } from "./OrderLineItemsList";
 import { AddCatalogLineItemModal } from "./AddCatalogLineItemModal";
 import { AddCustomLineItemModal } from "./AddCustomLineItemModal";
-import { VehicleUpgradeSelector } from "./VehicleUpgradeSelector";
 import { canManageLineItems } from "@/lib/order-helpers";
-import type { OrderPricing, VehicleType } from "@/types/hybrid-pricing";
+import type { OrderPricing } from "@/types/hybrid-pricing";
 import { LogisticsPricing } from "./LogisticsPricing";
 import { useToken } from "@/lib/auth/use-token";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -30,7 +29,7 @@ interface LogisticsPricingReviewProps {
 export function LogisticsPricingReview({
     orderId,
     order,
-    onSubmitSuccess,
+    onSubmitSuccess: _onSubmitSuccess,
 }: LogisticsPricingReviewProps) {
     const { user } = useToken();
     const [addCatalogOpen, setAddCatalogOpen] = useState(false);
@@ -62,27 +61,6 @@ export function LogisticsPricingReview({
                     </CardContent>
                 </Card>
             )}
-
-            {/* Vehicle Type (Optional Upgrade) */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Transport Vehicle</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {canManagePricing ? (
-                        <VehicleUpgradeSelector
-                            orderId={orderId}
-                            currentVehicle={order?.vehicle_type_id}
-                            currentTripType={order?.trip_type}
-                            onSuccess={onSubmitSuccess}
-                        />
-                    ) : (
-                        <p className="text-xs text-muted-foreground">
-                            You can view pricing details but cannot modify transport settings.
-                        </p>
-                    )}
-                </CardContent>
-            </Card>
 
             {/* Service Line Items */}
             <MaintenancePromptCard

@@ -30,12 +30,10 @@ export const LogisticsPricing = ({ pricing, order }: { pricing: OrderPricing; or
                                 ⚠️ Pricing calculation failed
                             </p>
                             <p className="text-xs text-muted-foreground mb-3">
-                                This order may be missing required configuration (e.g., transport
-                                rate for the emirate, trip type, or vehicle type).
+                                This order may be missing required pricing configuration.
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                Please contact your Platform Admin to add the missing transport rate
-                                configuration.
+                                Please contact your Platform Admin to complete pricing setup.
                             </p>
                         </div>
                     )}
@@ -46,15 +44,6 @@ export const LogisticsPricing = ({ pricing, order }: { pricing: OrderPricing; or
                                     Base Operations ({order?.calculated_totals?.volume || 0} m³)
                                 </span>
                                 <span className="font-mono">{pricing.base_ops_total || 0} AED</span>
-                            </div>
-                            <div className="flex justify-between p-2 bg-muted/30 rounded">
-                                <span className="text-muted-foreground">
-                                    Transport ({order?.venue_city},{" "}
-                                    {order?.trip_type === "ROUND_TRIP" ? "Round-trip" : "One-way"})
-                                </span>
-                                <span className="font-mono">
-                                    {pricing.transport?.final_rate?.toFixed(2) || 0} AED
-                                </span>
                             </div>
                             {pricing.line_items?.catalog_total ? (
                                 <div className="flex justify-between p-2 bg-muted/30 rounded">
