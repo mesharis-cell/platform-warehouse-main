@@ -103,71 +103,50 @@ export default function InboundScanningPage() {
     const completeScan = useCompleteInboundScan();
     const progress = useInboundScanProgress(orderId);
 
+    // Shared QR scanner init — called on permission grant and after inspection dialog closes
+    const startQrScanner = async () => {
+        if (qrScannerRef.current) return; // already running
+        const scannerId = "qr-reader-inbound";
+        const scannerDiv = document.getElementById(scannerId);
+        if (!scannerDiv) {
+            toast.error("Scanner initialization failed", { description: "Please refresh and try again" });
+            return;
+        }
+        try {
+            qrScannerRef.current = new Html5Qrcode(scannerId);
+            await qrScannerRef.current.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    const now = Date.now();
+                    if (now - lastScanTimeRef.current < 2000) return;
+                    if (isScanningRef.current) return;
+                    lastScanTimeRef.current = now;
+                    handleCameraScanRef.current(decodedText);
+                },
+                undefined
+            );
+            setCameraActive(true);
+            toast.success("Scanner ready", { description: "Point camera at QR code" });
+        } catch (error) {
+            console.error("Scanner initialization error:", error);
+            toast.error("Failed to start scanner", {
+                description: error instanceof Error ? error.message : "Unknown error",
+            });
+        }
+    };
+
+    // Stable refs so the QR callback closure doesn't go stale
+    const isScanningRef = useRef(isScanning);
+    useEffect(() => { isScanningRef.current = isScanning; }, [isScanning]);
+    const handleCameraScanRef = useRef(handleCameraScan);
+    useEffect(() => { handleCameraScanRef.current = handleCameraScan; });
+
     // Initialize scanner when permission is granted
     useEffect(() => {
-        if (!cameraPermissionGranted || qrScannerRef.current) return;
-
-        const initializeScanner = async () => {
-            try {
-                const scannerId = "qr-reader-inbound";
-                const scannerDiv = document.getElementById(scannerId);
-
-                if (!scannerDiv) {
-                    console.error("Scanner div not found");
-                    toast.error("Scanner initialization failed", {
-                        description: "Please refresh and try again",
-                    });
-                    return;
-                }
-
-                // Initialize Html5Qrcode
-                qrScannerRef.current = new Html5Qrcode(scannerId);
-
-                // Start scanning
-                await qrScannerRef.current.start(
-                    { facingMode: "environment" },
-                    {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 },
-                    },
-                    (decodedText) => {
-                        // Debounce: Only allow one scan every 2 seconds
-                        const now = Date.now();
-                        if (now - lastScanTimeRef.current < 2000) {
-                            console.log("⏱️ Scan debounced - too soon after last scan");
-                            return;
-                        }
-
-                        // Prevent duplicate scans while processing
-                        if (isScanning) {
-                            console.log("⏱️ Scan ignored - already processing");
-                            return;
-                        }
-
-                        lastScanTimeRef.current = now;
-                        handleCameraScan(decodedText);
-                    },
-                    undefined
-                );
-
-                setCameraActive(true);
-                toast.success("Scanner ready", {
-                    description: "Point camera at QR code",
-                });
-            } catch (error) {
-                console.error("Scanner initialization error:", error);
-                toast.error("Failed to start scanner", {
-                    description: error instanceof Error ? error.message : "Unknown error",
-                });
-            }
-        };
-
-        initializeScanner();
-
-        // Cleanup on unmount
-        return () => {
-            stopCamera();
-        };
+        if (!cameraPermissionGranted) return;
+        startQrScanner();
+        return () => { stopCamera(); };
     }, [cameraPermissionGranted]);
 
     const requestCameraPermission = async () => {
@@ -260,13 +239,15 @@ export default function InboundScanningPage() {
             return;
         }
 
-        // Pause QR scanner when opening inspection dialog
-        if (qrScannerRef.current && qrScannerRef.current.isScanning) {
+        // Fully stop QR scanner before opening dialog so the camera is free for photos
+        if (qrScannerRef.current) {
             try {
-                await qrScannerRef.current.pause(true);
-                console.log("📸 QR scanner paused for inspection");
+                if (qrScannerRef.current.isScanning) await qrScannerRef.current.stop();
+                qrScannerRef.current.clear();
+                qrScannerRef.current = null;
+                setCameraActive(false);
             } catch (error) {
-                console.error("Error pausing QR scanner:", error);
+                console.error("Error stopping QR scanner:", error);
             }
         }
 
@@ -304,10 +285,9 @@ export default function InboundScanningPage() {
         try {
             if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera API not available");
 
-            // Request back camera with specific constraints
             const photoStream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: { exact: "environment" },
+                    facingMode: "environment",
                     width: { ideal: 1920 },
                     height: { ideal: 1080 },
                 },
@@ -385,15 +365,8 @@ export default function InboundScanningPage() {
     };
 
     const resumeQrScanner = async (context: string) => {
-        if (!qrScannerRef.current) return;
-        try {
-            if (qrScannerRef.current.getState() === 2) {
-                await qrScannerRef.current.resume();
-                console.log(`📸 QR scanner resumed (${context})`);
-            }
-        } catch (error) {
-            console.error("Error resuming QR scanner:", error);
-        }
+        console.log(`📸 Restarting QR scanner (${context})`);
+        await startQrScanner();
     };
 
     const capturePhoto = () => {
@@ -613,55 +586,43 @@ export default function InboundScanningPage() {
     const progressData = scanData.data;
 
     return (
-        <div className="min-h-screen bg-black text-white relative overflow-hidden">
-            {/* Tactical grid background */}
-            <div className="absolute inset-0 opacity-10">
-                <div
-                    className="absolute inset-0"
-                    style={{
-                        backgroundImage: `
-              linear-gradient(hsl(var(--primary)) 1px, transparent 1px),
-              linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)
-            `,
-                        backgroundSize: "20px 20px",
-                    }}
-                />
-            </div>
-
-            {/* Header HUD */}
-            <div className="relative z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <div className="text-xs text-primary font-mono mb-1">
-                            INBOUND SCAN + INSPECTION
+        <div className="min-h-screen bg-background">
+            {/* Header */}
+            <div className="border-b border-border bg-background sticky top-0 z-10">
+                <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-[10px] text-primary font-mono tracking-[0.15em] uppercase mb-0.5">
+                                Inbound Scan + Inspection
+                            </div>
+                            <div className="text-lg font-bold font-mono">
+                                Order #{progressData.order_id}
+                            </div>
                         </div>
-                        <div className="text-lg font-bold font-mono">
-                            ORDER #{progressData.order_id}
-                        </div>
+                        <Badge variant="outline" className="text-primary border-primary font-mono">
+                            {step.toUpperCase()}
+                        </Badge>
                     </div>
-                    <Badge variant="outline" className="text-primary border-primary">
-                        {step.toUpperCase()}
-                    </Badge>
-                </div>
 
-                {/* Progress bar */}
-                <div className="space-y-2">
-                    <div className="flex justify-between text-xs font-mono">
-                        <span>PROGRESS</span>
-                        <span className="text-primary">
-                            {progressData.items_scanned}/{progressData.total_items} UNITS
-                        </span>
-                    </div>
-                    <Progress value={progressData.percent_complete} className="h-2" />
-                    <div className="text-right text-xs text-primary font-bold font-mono">
-                        {progressData.percent_complete}%
+                    {/* Progress bar */}
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-mono text-muted-foreground">
+                            <span>Progress</span>
+                            <span className="text-primary font-semibold">
+                                {progressData.items_scanned}/{progressData.total_items} units
+                            </span>
+                        </div>
+                        <Progress value={progressData.percent_complete} className="h-2" />
+                        <div className="text-right text-xs text-primary font-bold font-mono">
+                            {progressData.percent_complete}%
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Scanning Step */}
             {step === "scanning" && (
-                <div className="relative z-10 p-4 space-y-4">
+                <div className="p-4 space-y-4 max-w-2xl mx-auto">
                     {/* Camera Permission / QR Scanner */}
                     {!cameraPermissionGranted ? (
                         <div className="space-y-4">
@@ -1301,8 +1262,8 @@ export default function InboundScanningPage() {
 
             {/* Complete Step */}
             {step === "complete" && (
-                <div className="relative z-10 p-4 h-full flex items-center justify-center">
-                    <Card className="p-8 text-center space-y-6 bg-card/95 backdrop-blur max-w-md">
+                <div className="p-4 flex items-center justify-center min-h-[60vh]">
+                    <Card className="p-8 text-center space-y-6 max-w-md w-full">
                         <div className="w-20 h-20 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
                             <CheckCircle2 className="w-12 h-12 text-primary" />
                         </div>

@@ -623,53 +623,41 @@ export default function OutboundScanningPage() {
     const progressData = scanData.data;
 
     return (
-        <div className="min-h-screen bg-black text-white relative overflow-hidden">
-            {/* Tactical grid background */}
-            <div className="absolute inset-0 opacity-10">
-                <div
-                    className="absolute inset-0"
-                    style={{
-                        backgroundImage: `
-              linear-gradient(hsl(var(--primary)) 1px, transparent 1px),
-              linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)
-            `,
-                        backgroundSize: "20px 20px",
-                    }}
-                />
-            </div>
-
-            {/* Header HUD */}
-            <div className="relative z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <div className="text-xs text-primary font-mono mb-1">OUTBOUND SCAN</div>
-                        <div className="text-lg font-bold font-mono">
-                            ORDER #{progressData.order_id}
+        <div className="min-h-screen bg-background">
+            {/* Header */}
+            <div className="border-b border-border bg-background sticky top-0 z-10">
+                <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-[10px] text-primary font-mono tracking-[0.15em] uppercase mb-0.5">Outbound Scan</div>
+                            <div className="text-lg font-bold font-mono">
+                                Order #{progressData.order_id}
+                            </div>
                         </div>
+                        <Badge variant="outline" className="text-primary border-primary font-mono">
+                            {step.toUpperCase()}
+                        </Badge>
                     </div>
-                    <Badge variant="outline" className="text-primary border-primary">
-                        {step.toUpperCase()}
-                    </Badge>
-                </div>
 
-                {/* Progress bar */}
-                <div className="space-y-2">
-                    <div className="flex justify-between text-xs font-mono">
-                        <span>PROGRESS</span>
-                        <span className="text-primary">
-                            {progressData.items_scanned}/{progressData.total_items} UNITS
-                        </span>
-                    </div>
-                    <Progress value={progressData.percent_complete} className="h-2" />
-                    <div className="text-right text-xs text-primary font-bold font-mono">
-                        {progressData.percent_complete}%
+                    {/* Progress bar */}
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-mono text-muted-foreground">
+                            <span>Progress</span>
+                            <span className="text-primary font-semibold">
+                                {progressData.items_scanned}/{progressData.total_items} units
+                            </span>
+                        </div>
+                        <Progress value={progressData.percent_complete} className="h-2" />
+                        <div className="text-right text-xs text-primary font-bold font-mono">
+                            {progressData.percent_complete}%
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Scanning Step */}
             {step === "scanning" && (
-                <div className="relative z-10 p-4 space-y-4">
+                <div className="p-4 space-y-4 max-w-2xl mx-auto">
                     {/* Camera Permission / QR Scanner */}
                     {!cameraPermissionGranted ? (
                         <div className="space-y-4">
@@ -928,8 +916,8 @@ export default function OutboundScanningPage() {
 
             {/* Truck Photos Step */}
             {step === "photos" && (
-                <div className="relative z-10 p-4 space-y-4">
-                    <Card className="p-6 bg-card/95 backdrop-blur">
+                <div className="p-4 space-y-4 max-w-2xl mx-auto">
+                    <Card className="p-6">
                         <div className="space-y-4">
                             <div>
                                 <h2 className="text-xl font-bold font-mono mb-2">
@@ -941,7 +929,7 @@ export default function OutboundScanningPage() {
                             </div>
 
                             {/* Camera view for photos - always rendered */}
-                            <div className="relative aspect-[4/3] bg-black rounded-lg overflow-hidden border-2 border-primary/30">
+                            <div className="relative aspect-4/3 bg-black rounded-lg overflow-hidden border-2 border-primary/30">
                                 <video
                                     ref={videoRef}
                                     autoPlay
@@ -1068,8 +1056,8 @@ export default function OutboundScanningPage() {
 
             {/* Complete Step */}
             {step === "complete" && (
-                <div className="relative z-10 p-4 h-full flex items-center justify-center">
-                    <Card className="p-8 text-center space-y-6 bg-card/95 backdrop-blur max-w-md">
+                <div className="p-4 flex items-center justify-center min-h-[60vh]">
+                    <Card className="p-8 text-center space-y-6 max-w-md w-full">
                         <div className="w-20 h-20 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
                             <CheckCircle2 className="w-12 h-12 text-primary" />
                         </div>
