@@ -60,7 +60,9 @@ export function AddCatalogLineItemModal({
     const [manpower, setManpower] = useState("");
     const [transportNotes, setTransportNotes] = useState("");
 
-    const selectedService = serviceTypes?.data?.find((service: any) => service.id === serviceTypeId);
+    const selectedService = serviceTypes?.data?.find(
+        (service: any) => service.id === serviceTypeId
+    );
     const isTransportService = selectedService?.category === "TRANSPORT";
 
     const resetTransportMetadata = () => {
@@ -89,7 +91,10 @@ export function AddCatalogLineItemModal({
         let metadata: TransportLineItemMetadata | undefined;
         if (isTransportService) {
             const manpowerValue = manpower.trim() ? Number(manpower) : undefined;
-            if (manpowerValue !== undefined && (!Number.isInteger(manpowerValue) || manpowerValue < 0))
+            if (
+                manpowerValue !== undefined &&
+                (!Number.isInteger(manpowerValue) || manpowerValue < 0)
+            )
                 return toast.error("Manpower must be a non-negative integer");
             metadata = {
                 trip_direction: tripDirection,
@@ -197,7 +202,11 @@ export function AddCatalogLineItemModal({
                                         value={tripDirection}
                                         onValueChange={(value) =>
                                             setTripDirection(
-                                                value as "DELIVERY" | "PICKUP" | "ACCESS" | "TRANSFER"
+                                                value as
+                                                    | "DELIVERY"
+                                                    | "PICKUP"
+                                                    | "ACCESS"
+                                                    | "TRANSFER"
                                             )
                                         }
                                     >
@@ -214,11 +223,17 @@ export function AddCatalogLineItemModal({
                                 </div>
                                 <div>
                                     <Label>Truck License Plate</Label>
-                                    <Input value={truckPlate} onChange={(e) => setTruckPlate(e.target.value)} />
+                                    <Input
+                                        value={truckPlate}
+                                        onChange={(e) => setTruckPlate(e.target.value)}
+                                    />
                                 </div>
                                 <div>
                                     <Label>Driver Name</Label>
-                                    <Input value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+                                    <Input
+                                        value={driverName}
+                                        onChange={(e) => setDriverName(e.target.value)}
+                                    />
                                 </div>
                                 <div>
                                     <Label>Driver Contact Number</Label>
@@ -229,7 +244,10 @@ export function AddCatalogLineItemModal({
                                 </div>
                                 <div>
                                     <Label>Truck Size</Label>
-                                    <Input value={truckSize} onChange={(e) => setTruckSize(e.target.value)} />
+                                    <Input
+                                        value={truckSize}
+                                        onChange={(e) => setTruckSize(e.target.value)}
+                                    />
                                 </div>
                                 <div>
                                     <Label>Manpower</Label>
@@ -248,7 +266,9 @@ export function AddCatalogLineItemModal({
                                     checked={tailgateRequired}
                                     onCheckedChange={(value) => setTailgateRequired(!!value)}
                                 />
-                                <Label htmlFor="catalog-transport-tailgate">Tailgate Required</Label>
+                                <Label htmlFor="catalog-transport-tailgate">
+                                    Tailgate Required
+                                </Label>
                             </div>
                             <div>
                                 <Label>Transport Notes</Label>

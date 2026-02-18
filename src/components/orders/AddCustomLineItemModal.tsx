@@ -83,7 +83,10 @@ export function AddCustomLineItemModal({
         let metadata: TransportLineItemMetadata | undefined;
         if (isTransportCategory) {
             const manpowerValue = manpower.trim() ? Number(manpower) : undefined;
-            if (manpowerValue !== undefined && (!Number.isInteger(manpowerValue) || manpowerValue < 0))
+            if (
+                manpowerValue !== undefined &&
+                (!Number.isInteger(manpowerValue) || manpowerValue < 0)
+            )
                 return toast.error("Manpower must be a non-negative integer");
             metadata = {
                 trip_direction: tripDirection,
@@ -251,7 +254,11 @@ export function AddCustomLineItemModal({
                                         value={tripDirection}
                                         onValueChange={(value) =>
                                             setTripDirection(
-                                                value as "DELIVERY" | "PICKUP" | "ACCESS" | "TRANSFER"
+                                                value as
+                                                    | "DELIVERY"
+                                                    | "PICKUP"
+                                                    | "ACCESS"
+                                                    | "TRANSFER"
                                             )
                                         }
                                     >
@@ -346,8 +353,8 @@ export function AddCustomLineItemModal({
 
                     <div className="bg-primary/10 border border-primary/20 rounded-md p-3">
                         <p className="text-xs text-primary">
-                            Custom and reskin amounts are treated as base cost inputs, then margin is
-                            applied once by the pricing engine.
+                            Custom and reskin amounts are treated as base cost inputs, then margin
+                            is applied once by the pricing engine.
                         </p>
                     </div>
                 </div>

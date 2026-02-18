@@ -166,10 +166,7 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Logistics Subtotal</span>
                             <span className="font-mono font-semibold">
-                                {(
-                                    (pricing?.base_operations?.total || 0) +
-                                    catalogTotal
-                                ).toFixed(2)}{" "}
+                                {((pricing?.base_operations?.total || 0) + catalogTotal).toFixed(2)}{" "}
                                 AED
                             </span>
                         </div>
@@ -180,8 +177,7 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
                             </span>
                             <span className="font-mono">
                                 {(
-                                    ((pricing?.base_operations?.total || 0) +
-                                        catalogTotal) *
+                                    ((pricing?.base_operations?.total || 0) + catalogTotal) *
                                     ((marginOverride
                                         ? marginPercent
                                         : pricing?.margin?.percent || 25) /
@@ -203,8 +199,7 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
                             <span className="font-bold">CLIENT TOTAL</span>
                             <span className="text-xl font-bold font-mono text-primary">
                                 {(
-                                    ((pricing?.base_operations?.total || 0) +
-                                        catalogTotal) *
+                                    ((pricing?.base_operations?.total || 0) + catalogTotal) *
                                         (1 +
                                             (marginOverride
                                                 ? marginPercent

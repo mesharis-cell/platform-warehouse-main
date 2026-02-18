@@ -552,7 +552,9 @@ export default function AdminOrdersPage() {
                                                                                 {order.contact_name}
                                                                             </p>
                                                                             <p className="text-xs text-slate-500">
-                                                                                {order.contact_email}
+                                                                                {
+                                                                                    order.contact_email
+                                                                                }
                                                                             </p>
                                                                         </div>
                                                                     </div>
@@ -576,7 +578,9 @@ export default function AdminOrdersPage() {
                                                                             </p>
                                                                             <p className="text-xs text-slate-500">
                                                                                 {order.venue_city},{" "}
-                                                                                {order.venue_country}
+                                                                                {
+                                                                                    order.venue_country
+                                                                                }
                                                                             </p>
                                                                         </div>
                                                                     </div>
@@ -608,7 +612,9 @@ export default function AdminOrdersPage() {
                                                                     </Badge>
                                                                 </TableCell>
                                                                 <TableCell className="text-right">
-                                                                    <Link href={`/orders/${order.id}`}>
+                                                                    <Link
+                                                                        href={`/orders/${order.id}`}
+                                                                    >
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="sm"

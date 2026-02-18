@@ -322,7 +322,10 @@ function AdminSidebarContent() {
                                     </Avatar>
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent side="top" align={isCollapsed ? "center" : "start"}>
+                            <DropdownMenuContent
+                                side="top"
+                                align={isCollapsed ? "center" : "start"}
+                            >
                                 <DropdownMenuLabel className="font-mono text-xs uppercase tracking-wide">
                                     {user?.name || "Admin User"}
                                 </DropdownMenuLabel>
