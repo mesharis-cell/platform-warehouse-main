@@ -629,7 +629,9 @@ export default function OutboundScanningPage() {
                 <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
                         <div>
-                            <div className="text-[10px] text-primary font-mono tracking-[0.15em] uppercase mb-0.5">Outbound Scan</div>
+                            <div className="text-[10px] text-primary font-mono tracking-[0.15em] uppercase mb-0.5">
+                                Outbound Scan
+                            </div>
                             <div className="text-lg font-bold font-mono">
                                 Order #{progressData.order_id}
                             </div>

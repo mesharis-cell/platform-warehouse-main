@@ -40,7 +40,8 @@ const EXPORT_CARDS: ExportCardConfig[] = [
     {
         id: "stockReport",
         title: "Stock Report",
-        description: "Current inventory — all assets with quantity, condition, warehouse, and zone.",
+        description:
+            "Current inventory — all assets with quantity, condition, warehouse, and zone.",
         endpoint: "/operations/v1/export/stock-report",
         filename: "stock-report.csv",
     },
@@ -90,7 +91,9 @@ export default function WarehouseReportsPage() {
     return (
         <div className="p-6 space-y-6 max-w-5xl">
             <div>
-                <h1 className="text-2xl font-mono font-bold uppercase tracking-tight">Reports & Exports</h1>
+                <h1 className="text-2xl font-mono font-bold uppercase tracking-tight">
+                    Reports & Exports
+                </h1>
                 <p className="text-sm text-muted-foreground mt-1">
                     Download operational data as CSV. Apply date filters to scope results.
                 </p>
@@ -99,8 +102,12 @@ export default function WarehouseReportsPage() {
             {/* Global Date Filters */}
             <Card>
                 <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-mono uppercase tracking-wide">Date Range Filter</CardTitle>
-                    <CardDescription>Applied to all exports that support date filtering.</CardDescription>
+                    <CardTitle className="text-sm font-mono uppercase tracking-wide">
+                        Date Range Filter
+                    </CardTitle>
+                    <CardDescription>
+                        Applied to all exports that support date filtering.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex gap-4 flex-wrap">
@@ -109,7 +116,9 @@ export default function WarehouseReportsPage() {
                             <Input
                                 type="date"
                                 value={filters.dateFrom}
-                                onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+                                onChange={(e) =>
+                                    setFilters((f) => ({ ...f, dateFrom: e.target.value }))
+                                }
                                 className="w-44 font-mono text-sm"
                             />
                         </div>
@@ -118,7 +127,9 @@ export default function WarehouseReportsPage() {
                             <Input
                                 type="date"
                                 value={filters.dateTo}
-                                onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
+                                onChange={(e) =>
+                                    setFilters((f) => ({ ...f, dateTo: e.target.value }))
+                                }
                                 className="w-44 font-mono text-sm"
                             />
                         </div>

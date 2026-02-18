@@ -222,7 +222,9 @@ function AdminSidebarContent() {
         .map((section) => ({
             ...section,
             items: section.items.filter(
-                (item) => !item.requiredAnyPermission || hasAnyPermission(user, item.requiredAnyPermission)
+                (item) =>
+                    !item.requiredAnyPermission ||
+                    hasAnyPermission(user, item.requiredAnyPermission)
             ),
         }))
         .filter((section) => section.items.length > 0);
@@ -276,7 +278,9 @@ function AdminSidebarContent() {
                                 );
                                 const mostSpecificRoute = matchingRoutes.reduce(
                                     (longest, current) =>
-                                        current.href.length > longest.href.length ? current : longest,
+                                        current.href.length > longest.href.length
+                                            ? current
+                                            : longest,
                                     matchingRoutes[0]
                                 );
                                 const isActive = mostSpecificRoute?.href === item.href;

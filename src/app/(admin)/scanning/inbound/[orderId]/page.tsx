@@ -109,7 +109,9 @@ export default function InboundScanningPage() {
         const scannerId = "qr-reader-inbound";
         const scannerDiv = document.getElementById(scannerId);
         if (!scannerDiv) {
-            toast.error("Scanner initialization failed", { description: "Please refresh and try again" });
+            toast.error("Scanner initialization failed", {
+                description: "Please refresh and try again",
+            });
             return;
         }
         try {
@@ -136,17 +138,19 @@ export default function InboundScanningPage() {
         }
     };
 
-    // Stable refs so the QR callback closure doesn't go stale
+    // Stable ref so the QR callback closure doesn't go stale
     const isScanningRef = useRef(isScanning);
-    useEffect(() => { isScanningRef.current = isScanning; }, [isScanning]);
-    const handleCameraScanRef = useRef(handleCameraScan);
-    useEffect(() => { handleCameraScanRef.current = handleCameraScan; });
+    useEffect(() => {
+        isScanningRef.current = isScanning;
+    }, [isScanning]);
 
     // Initialize scanner when permission is granted
     useEffect(() => {
         if (!cameraPermissionGranted) return;
         startQrScanner();
-        return () => { stopCamera(); };
+        return () => {
+            stopCamera();
+        };
     }, [cameraPermissionGranted]);
 
     const requestCameraPermission = async () => {
@@ -269,6 +273,12 @@ export default function InboundScanningPage() {
         });
         setInspectionDialogOpen(true);
     };
+
+    // Stable ref so startQrScanner closure always calls the latest handler
+    const handleCameraScanRef = useRef(handleCameraScan);
+    useEffect(() => {
+        handleCameraScanRef.current = handleCameraScan;
+    });
 
     const handleManualScanSubmit = () => {
         if (!manualQRInput.trim()) {
