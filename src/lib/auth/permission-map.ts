@@ -16,6 +16,7 @@ export const WAREHOUSE_NAV_PERMISSIONS = {
     assets: ["assets:read"],
     collections: ["collections:read"],
     inboundRequest: ["orders:read"],
+    reports: ["orders:read", "orders:export", "assets:read"],
     resetPassword: ["auth:reset_password"],
 } as const;
 

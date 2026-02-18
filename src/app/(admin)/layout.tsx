@@ -31,6 +31,7 @@ import {
     Lock,
     Calendar,
     ClipboardList,
+    FileSpreadsheet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -69,84 +70,110 @@ type NavItem = {
     requiredAnyPermission?: readonly string[];
 };
 
-const navigation: NavItem[] = [
+type NavSection = {
+    title: string;
+    items: NavItem[];
+};
+
+const navigationSections: NavSection[] = [
     {
-        name: "Orders",
-        href: "/orders",
-        icon: ShoppingCart,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.orders,
+        title: "Operations",
+        items: [
+            {
+                name: "Orders",
+                href: "/orders",
+                icon: ShoppingCart,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.orders,
+            },
+            {
+                name: "Pricing Review",
+                href: "/orders/pricing-review",
+                icon: DollarSign,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.pricingReview,
+            },
+            {
+                name: "Service Requests",
+                href: "/service-requests",
+                icon: ClipboardList,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.serviceRequests,
+            },
+            {
+                name: "New Stock Requests",
+                href: "/inbound-request",
+                icon: Package,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.inboundRequest,
+            },
+            {
+                name: "Scanning",
+                href: "/scanning",
+                icon: ScanLine,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.scanning,
+            },
+            {
+                name: "Event Calendar",
+                href: "/event-calendar",
+                icon: Calendar,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.eventCalendar,
+            },
+            {
+                name: "Reports & Exports",
+                href: "/reports",
+                icon: FileSpreadsheet,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.reports,
+            },
+        ],
     },
     {
-        name: "Service Requests",
-        href: "/service-requests",
-        icon: ClipboardList,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.serviceRequests,
+        title: "Inventory",
+        items: [
+            {
+                name: "Assets",
+                href: "/assets",
+                icon: Package,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.assets,
+            },
+            {
+                name: "Collections",
+                href: "/collections",
+                icon: Layers,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.collections,
+            },
+            {
+                name: "Conditions",
+                href: "/conditions",
+                icon: AlertCircle,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.conditions,
+            },
+        ],
     },
     {
-        name: "Pricing Review",
-        href: "/orders/pricing-review",
-        icon: DollarSign,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.pricingReview,
-    },
-    {
-        name: "Scanning",
-        href: "/scanning",
-        icon: ScanLine,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.scanning,
-    },
-    {
-        name: "Conditions",
-        href: "/conditions",
-        icon: AlertCircle,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.conditions,
-    },
-    {
-        name: "Event Calendar",
-        href: "/event-calendar",
-        icon: Calendar,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.eventCalendar,
-    },
-    {
-        name: "Companies",
-        href: "/companies",
-        icon: Users,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.companies,
-    },
-    {
-        name: "Warehouses",
-        href: "/warehouses",
-        icon: Warehouse,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.warehouses,
-    },
-    {
-        name: "Zones",
-        href: "/zones",
-        icon: Grid3x3,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.zones,
-    },
-    {
-        name: "Brands",
-        href: "/brands",
-        icon: Tag,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.brands,
-    },
-    {
-        name: "Assets",
-        href: "/assets",
-        icon: Package,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.assets,
-    },
-    {
-        name: "Collections",
-        href: "/collections",
-        icon: Layers,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.collections,
-    },
-    {
-        name: "New Stock Requests",
-        href: "/inbound-request",
-        icon: Package,
-        requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.inboundRequest,
+        title: "Setup",
+        items: [
+            {
+                name: "Companies",
+                href: "/companies",
+                icon: Users,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.companies,
+            },
+            {
+                name: "Warehouses",
+                href: "/warehouses",
+                icon: Warehouse,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.warehouses,
+            },
+            {
+                name: "Zones",
+                href: "/zones",
+                icon: Grid3x3,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.zones,
+            },
+            {
+                name: "Brands",
+                href: "/brands",
+                icon: Tag,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.brands,
+            },
+        ],
     },
 ];
 
@@ -191,14 +218,20 @@ function AdminSidebarContent() {
     };
 
     const isCollapsed = state === "collapsed";
-    const visibleNavigation = navigation.filter(
-        (item) => !item.requiredAnyPermission || hasAnyPermission(user, item.requiredAnyPermission)
-    );
+    const visibleSections = navigationSections
+        .map((section) => ({
+            ...section,
+            items: section.items.filter(
+                (item) => !item.requiredAnyPermission || hasAnyPermission(user, item.requiredAnyPermission)
+            ),
+        }))
+        .filter((section) => section.items.length > 0);
+
+    const allVisibleItems = visibleSections.flatMap((section) => section.items);
 
     return (
         <>
             <SidebarHeader className="relative border-b border-border bg-white">
-                {/* Zone marker - top left */}
                 {!isCollapsed && (
                     <div className="absolute top-4 left-4 text-[10px] font-mono text-muted-foreground/40 tracking-[0.2em] uppercase z-0">
                         ADMIN-01
@@ -212,7 +245,7 @@ function AdminSidebarContent() {
                     </div>
                     {!isCollapsed && (
                         <div>
-                            <h2 className="text-16px font-mono font-bold tracking-tight uppercase">
+                            <h2 className="text-[16px] font-mono font-bold tracking-tight uppercase">
                                 {platform?.platform_name}
                             </h2>
                             <p className="text-[10px] font-mono text-muted-foreground tracking-[0.15em] uppercase">
@@ -223,72 +256,77 @@ function AdminSidebarContent() {
                 </div>
             </SidebarHeader>
 
-            <SidebarContent className="p-3 space-y-0.5 overflow-y-auto bg-background">
+            <SidebarContent className="p-3 overflow-y-auto bg-background">
                 <SidebarMenu>
-                    {visibleNavigation.map((item) => {
-                        const Icon = item.icon;
-                        // Find the most specific matching route
-                        const matchingRoutes = visibleNavigation.filter(
-                            (navItem) =>
-                                pathname === navItem.href || pathname.startsWith(navItem.href + "/")
-                        );
-                        // Highlight only the longest matching route (most specific)
-                        const mostSpecificRoute = matchingRoutes.reduce(
-                            (longest, current) =>
-                                current.href.length > longest.href.length ? current : longest,
-                            matchingRoutes[0]
-                        );
-                        const isActive = mostSpecificRoute?.href === item.href;
-                        return (
-                            <SidebarMenuItem key={item.name}>
-                                <SidebarMenuButton
-                                    asChild
-                                    isActive={isActive}
-                                    tooltip={isCollapsed ? item.name : undefined}
-                                    className={cn(
-                                        "group/nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-mono transition-all relative overflow-hidden",
-                                        isActive
-                                            ? "bg-primary text-primary-foreground font-semibold shadow-sm"
-                                            : "text-foreground/70 hover:text-foreground hover:bg-muted"
-                                    )}
-                                >
-                                    <Link href={item.href}>
-                                        {/* Active indicator bar */}
-                                        {isActive && (
-                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-foreground/30" />
-                                        )}
-
-                                        <Icon className="h-4 w-4 relative z-10 shrink-0" />
-                                        {!isCollapsed && (
-                                            <>
-                                                <span className="flex-1 relative z-10 uppercase tracking-wide text-xs">
-                                                    {item.name}
-                                                </span>
-
-                                                {"badge" in item && item.badge && (
-                                                    <span
-                                                        className={cn(
-                                                            "px-1.5 py-0.5 text-[10px] font-mono rounded uppercase tracking-wider relative z-10 shrink-0",
-                                                            isActive
-                                                                ? "bg-primary-foreground/20 text-primary-foreground"
-                                                                : "bg-primary/10 text-primary border border-primary/20"
-                                                        )}
-                                                    >
-                                                        {item.badge}
-                                                    </span>
+                    {visibleSections.map((section) => (
+                        <div key={section.title}>
+                            {!isCollapsed && (
+                                <li className="px-3 pb-1 pt-3 first:pt-0 list-none">
+                                    <div className="text-[10px] font-mono text-muted-foreground tracking-[0.18em] uppercase">
+                                        {section.title}
+                                    </div>
+                                </li>
+                            )}
+                            {section.items.map((item) => {
+                                const Icon = item.icon;
+                                const matchingRoutes = allVisibleItems.filter(
+                                    (navItem) =>
+                                        pathname === navItem.href ||
+                                        pathname.startsWith(navItem.href + "/")
+                                );
+                                const mostSpecificRoute = matchingRoutes.reduce(
+                                    (longest, current) =>
+                                        current.href.length > longest.href.length ? current : longest,
+                                    matchingRoutes[0]
+                                );
+                                const isActive = mostSpecificRoute?.href === item.href;
+                                return (
+                                    <SidebarMenuItem key={item.name}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            isActive={isActive}
+                                            tooltip={isCollapsed ? item.name : undefined}
+                                            className={cn(
+                                                "group/nav-item flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-mono transition-all relative overflow-hidden",
+                                                isActive
+                                                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                                                    : "text-foreground/70 hover:text-foreground hover:bg-muted"
+                                            )}
+                                        >
+                                            <Link href={item.href}>
+                                                {isActive && (
+                                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-foreground/30" />
                                                 )}
-                                            </>
-                                        )}
-
-                                        {/* Hover glow effect */}
-                                        {!isActive && (
-                                            <div className="absolute inset-0 bg-primary/0 group-hover/nav-item:bg-primary/5 transition-colors" />
-                                        )}
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        );
-                    })}
+                                                <Icon className="h-4 w-4 relative z-10 shrink-0" />
+                                                {!isCollapsed && (
+                                                    <>
+                                                        <span className="flex-1 relative z-10 uppercase tracking-wide text-xs">
+                                                            {item.name}
+                                                        </span>
+                                                        {item.badge && (
+                                                            <span
+                                                                className={cn(
+                                                                    "px-1.5 py-0.5 text-[10px] font-mono rounded uppercase tracking-wider relative z-10 shrink-0",
+                                                                    isActive
+                                                                        ? "bg-primary-foreground/20 text-primary-foreground"
+                                                                        : "bg-primary/10 text-primary border border-primary/20"
+                                                                )}
+                                                            >
+                                                                {item.badge}
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {!isActive && (
+                                                    <div className="absolute inset-0 bg-primary/0 group-hover/nav-item:bg-primary/5 transition-colors" />
+                                                )}
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                );
+                            })}
+                        </div>
+                    ))}
                 </SidebarMenu>
             </SidebarContent>
 
