@@ -168,6 +168,7 @@ export interface User {
         name: string;
     } | null;
     permission_template: PermissionTemplate | null;
+    is_super_admin: boolean;
     is_active: boolean;
     last_login_at: Date | null;
     created_at: Date;
