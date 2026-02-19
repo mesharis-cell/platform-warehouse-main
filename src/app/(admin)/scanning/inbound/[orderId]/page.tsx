@@ -294,73 +294,63 @@ export default function InboundScanningPage() {
 
     const startCamera = async (target: PhotoCaptureTarget) => {
         setPhotoCaptureTarget(target);
+        setDamagePhotoCameraActive(true);
+
+        const waitForVideoElement = async () => {
+            for (let attempt = 0; attempt < 10; attempt += 1) {
+                if (videoRef.current) return videoRef.current;
+                await new Promise<void>((resolve) => setTimeout(resolve, 50));
+            }
+            if (!videoRef.current) throw new Error("Camera preview failed to initialize");
+            return videoRef.current;
+        };
+
+        const attachStreamToPreview = async (stream: MediaStream) => {
+            const videoElement = await waitForVideoElement();
+            videoElement.srcObject = stream;
+
+            await new Promise<void>((resolve, reject) => {
+                videoElement.onloadedmetadata = () => resolve();
+                videoElement.onerror = () => reject(new Error("Video load error"));
+                setTimeout(() => reject(new Error("Video load timeout")), 5000);
+            });
+
+            await videoElement.play();
+        };
+
         try {
             if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera API not available");
 
             const photoStream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: "environment",
+                    facingMode: { ideal: "environment" },
                     width: { ideal: 1920 },
                     height: { ideal: 1080 },
                 },
             });
 
-            if (videoRef.current) {
-                videoRef.current.srcObject = photoStream;
-
-                // Wait for metadata to load before playing
-                await new Promise<void>((resolve, reject) => {
-                    if (!videoRef.current) {
-                        reject(new Error("Video ref not available"));
-                        return;
-                    }
-
-                    videoRef.current.onloadedmetadata = () => resolve();
-                    videoRef.current.onerror = () => reject(new Error("Video load error"));
-
-                    // Timeout after 5 seconds
-                    setTimeout(() => reject(new Error("Video load timeout")), 5000);
-                });
-
-                // Now play the video
-                await videoRef.current.play();
-
-                // Set state to trigger re-render and show controls
-                setDamagePhotoCameraActive(true);
-
-                console.log("📸 Damage photo camera started successfully");
-                toast.success("Camera activated");
-            }
+            await attachStreamToPreview(photoStream);
+            console.log("📸 Damage photo camera started successfully");
+            toast.success("Camera activated");
         } catch (error) {
             console.error("Camera start error:", error);
 
-            // If exact back camera fails, try without exact constraint
             if (error instanceof Error && error.name === "OverconstrainedError") {
                 try {
                     console.log("📸 Retrying with relaxed constraints...");
                     const photoStream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: "environment",
-                            width: { ideal: 1920 },
-                            height: { ideal: 1080 },
-                        },
+                        video: true,
                     });
 
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = photoStream;
-                        await videoRef.current.play();
-
-                        // Set state to trigger re-render and show controls
-                        setDamagePhotoCameraActive(true);
-
-                        toast.success("Camera activated");
-                        return;
-                    }
+                    await attachStreamToPreview(photoStream);
+                    toast.success("Camera activated");
+                    return;
                 } catch (retryError) {
                     console.error("Retry failed:", retryError);
                 }
             }
 
+            stopDamagePhotoCamera();
             toast.error("Failed to start camera", {
                 description: error instanceof Error ? error.message : "Unknown error",
             });
