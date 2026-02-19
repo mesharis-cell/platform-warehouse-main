@@ -79,10 +79,6 @@ export const apiClient = axios.create({
 
 // Add request interceptor to dynamically inject platform_id header and access token
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    config.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-    config.headers["Pragma"] = "no-cache";
-    config.headers["Expires"] = "0";
-
     // Inject platform ID if available
     if (currentPlatformId) {
         config.headers["x-platform"] = currentPlatformId;
