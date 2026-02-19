@@ -1,9 +1,14 @@
 "use client";
 
 /**
- * In-memory cart utilities (non-persistent)
+ * LocalStorage utilities for cart persistence
+ * Pure frontend cart management without backend dependencies
  */
-let inMemoryCart: LocalCartItem[] = [];
+
+import { toast } from "sonner";
+
+const CART_KEY = "asset-cart-v1";
+const CART_VERSION = 1;
 
 export interface LocalCartItem {
     assetId: string;
@@ -22,25 +27,88 @@ export interface LocalCartItem {
     addedAt: number;
 }
 
+interface LocalCart {
+    items: LocalCartItem[];
+    version: number;
+    lastUpdated: number;
+}
+
 /**
- * Save cart to in-memory store
+ * Save cart to localStorage
  */
 export function saveCart(items: LocalCartItem[]): void {
-    inMemoryCart = [...items];
+    if (typeof window === "undefined") return;
+
+    try {
+        const cart: LocalCart = {
+            items,
+            version: CART_VERSION,
+            lastUpdated: Date.now(),
+        };
+        localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    } catch (error) {
+        console.error("Failed to save cart:", error);
+        if (error instanceof Error && error.name === "QuotaExceededError") {
+            toast.error("Cart storage limit exceeded. Please remove some items.");
+        } else {
+            toast.error("Failed to save cart");
+        }
+    }
 }
 
 /**
- * Load cart from in-memory store
+ * Load cart from localStorage with validation
  */
 export function loadCart(): LocalCartItem[] {
-    return [...inMemoryCart];
+    if (typeof window === "undefined") return [];
+
+    try {
+        const data = localStorage.getItem(CART_KEY);
+        if (!data) return [];
+
+        const cart = JSON.parse(data) as LocalCart;
+
+        // Validate version
+        if (cart.version !== CART_VERSION) {
+            console.warn("Cart version mismatch, clearing cart");
+            clearCart();
+            return [];
+        }
+
+        // Validate structure
+        if (!cart.items || !Array.isArray(cart.items)) {
+            throw new Error("Invalid cart structure");
+        }
+
+        // Validate each item
+        for (const item of cart.items) {
+            if (!item.assetId || typeof item.assetId !== "string") {
+                throw new Error("Invalid assetId");
+            }
+            if (!item.quantity || typeof item.quantity !== "number" || item.quantity < 1) {
+                throw new Error("Invalid quantity");
+            }
+            if (!item.assetName) {
+                throw new Error("Missing assetName");
+            }
+        }
+
+        return cart.items;
+    } catch (error) {
+        console.error("Failed to load cart:", error);
+        clearCart();
+        toast.error("Cart data corrupted, cart has been cleared");
+        return [];
+    }
 }
 
 /**
- * Clear cart from in-memory store
+ * Clear cart from localStorage
  */
 export function clearCart(): void {
-    inMemoryCart = [];
+    if (typeof window === "undefined") return;
+
+    localStorage.removeItem(CART_KEY);
 }
 
 /**

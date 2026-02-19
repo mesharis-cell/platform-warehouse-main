@@ -48,14 +48,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const [isInitialized, setIsInitialized] = useState(false);
     const [addingItems, setAddingItems] = useState<Set<string>>(new Set());
 
-    // Load cart from non-persistent in-memory store on mount
+    // Load cart from localStorage on mount
     useEffect(() => {
         const savedItems = loadCart();
         setItems(savedItems);
         setIsInitialized(true);
     }, []);
 
-    // Save to in-memory store whenever items change (skip on initial mount)
+    // Save to localStorage whenever items change (skip on initial mount)
     useEffect(() => {
         if (!isInitialized) return;
 

@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import NextTopLoader from "nextjs-toploader";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { PlatformProvider } from "@/contexts/platform-context";
 import { AuthProvider } from "@/contexts/user-context";
 
@@ -15,8 +15,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 defaultOptions: {
                     queries: {
                         staleTime: 0,
-                        gcTime: 0,
+                        gcTime: 60 * 1000,
                         retry: 1,
+                        networkMode: "online",
                         refetchOnWindowFocus: true,
                         refetchOnReconnect: true,
                         refetchOnMount: "always",
@@ -24,30 +25,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 },
             })
     );
-
-    useEffect(() => {
-        const disableOfflineArtifacts = async () => {
-            if (typeof window === "undefined") return;
-
-            try {
-                if ("serviceWorker" in navigator) {
-                    const registrations = await navigator.serviceWorker.getRegistrations();
-                    await Promise.all(
-                        registrations.map((registration) => registration.unregister())
-                    );
-                }
-
-                if ("caches" in window) {
-                    const cacheKeys = await caches.keys();
-                    await Promise.all(cacheKeys.map((key) => caches.delete(key)));
-                }
-            } catch (error) {
-                console.error("Failed to clear offline artifacts", error);
-            }
-        };
-
-        void disableOfflineArtifacts();
-    }, []);
 
     return (
         <>

@@ -69,7 +69,6 @@ export const setPlatformId = (platformId: string | null) => {
 };
 
 export const apiClient = axios.create({
-    // baseURL: "http://localhost:6001/api",
     baseURL: process.env.NEXT_PUBLIC_API_URL,
     headers: {
         "Content-Type": "application/json",
@@ -141,8 +140,10 @@ apiClient.interceptors.response.use(
 
             try {
                 // Attempt to refresh the token
+                const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+                if (!apiBaseUrl) throw new Error("API URL is not configured");
                 const response = await axios.post(
-                    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:6001/api"}/auth/refresh`,
+                    `${apiBaseUrl}/auth/refresh`,
                     { refresh_token: refreshToken },
                     { headers: { "Content-Type": "application/json" } }
                 );

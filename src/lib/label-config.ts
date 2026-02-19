@@ -102,6 +102,18 @@ export const LABEL_SIZES: Record<string, LabelSize> = {
         fonts: { assetName: 5.5, qrCode: 4.5, meta: 4 },
         maxAssetNameChars: 18,
     },
+    a4: {
+        id: "a4",
+        name: "A4 (210 × 297mm)",
+        widthMm: 210,
+        heightMm: 297,
+        orientation: "portrait",
+        printableArea: { widthMm: 190, heightMm: 277 },
+        layout: "qr-top-text-bottom",
+        qrSizeMm: 100,
+        fonts: { assetName: 18, qrCode: 11, meta: 10 },
+        maxAssetNameChars: 80,
+    },
 } as const;
 
 export const DEFAULT_LABEL_SIZE = "50x30";
@@ -122,10 +134,16 @@ export function truncateAssetName(name: string, maxChars: number): string {
     return name.substring(0, maxChars - 1) + "…";
 }
 
+const LABEL_SIZE_STORAGE_KEY = "kadence_preferred_label_size";
+
 export function getPreferredLabelSize(): string {
-    return DEFAULT_LABEL_SIZE;
+    if (typeof window === "undefined") return DEFAULT_LABEL_SIZE;
+    // eslint-disable-next-line creatr/no-browser-globals-in-ssr
+    return localStorage.getItem(LABEL_SIZE_STORAGE_KEY) || DEFAULT_LABEL_SIZE;
 }
 
 export function setPreferredLabelSize(sizeId: string): void {
-    void sizeId;
+    if (typeof window === "undefined") return;
+    // eslint-disable-next-line creatr/no-browser-globals-in-ssr
+    localStorage.setItem(LABEL_SIZE_STORAGE_KEY, sizeId);
 }
