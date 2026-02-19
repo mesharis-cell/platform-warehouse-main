@@ -122,16 +122,10 @@ export function truncateAssetName(name: string, maxChars: number): string {
     return name.substring(0, maxChars - 1) + "…";
 }
 
-const LABEL_SIZE_STORAGE_KEY = "kadence_preferred_label_size";
-
 export function getPreferredLabelSize(): string {
-    if (typeof window === "undefined") return DEFAULT_LABEL_SIZE;
-    // eslint-disable-next-line creatr/no-browser-globals-in-ssr
-    return localStorage.getItem(LABEL_SIZE_STORAGE_KEY) || DEFAULT_LABEL_SIZE;
+    return DEFAULT_LABEL_SIZE;
 }
 
 export function setPreferredLabelSize(sizeId: string): void {
-    if (typeof window === "undefined") return;
-    // eslint-disable-next-line creatr/no-browser-globals-in-ssr
-    localStorage.setItem(LABEL_SIZE_STORAGE_KEY, sizeId);
+    void sizeId;
 }
