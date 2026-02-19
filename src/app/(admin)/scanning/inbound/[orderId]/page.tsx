@@ -31,6 +31,7 @@ import {
     useScanInboundItem,
     useCompleteInboundScan,
 } from "@/hooks/use-scanning";
+import { useCreateServiceRequest } from "@/hooks/use-service-requests";
 import { APIInboundProgressResponse } from "@/types/scanning";
 import {
     Camera,
@@ -101,6 +102,7 @@ export default function InboundScanningPage() {
 
     const scanItem = useScanInboundItem();
     const completeScan = useCompleteInboundScan();
+    const createServiceRequest = useCreateServiceRequest();
     const progress = useInboundScanProgress(orderId);
 
     // Shared QR scanner init — called on permission grant and after inspection dialog closes
@@ -502,6 +504,7 @@ export default function InboundScanningPage() {
 
                     const scannedAssetName = currentInspection.assetName;
                     const scannedQrCode = currentInspection.qrCode;
+                    const inspectionSnapshot = currentInspection;
 
                     setInspectionDialogOpen(false);
                     setCurrentInspection(null);
@@ -532,6 +535,47 @@ export default function InboundScanningPage() {
                     toast.success(`Scanned: ${scannedAssetName}`, {
                         description: `Condition: ${asset?.condition || "Updated"} | Status: ${asset?.status || "Updated"}`,
                     });
+
+                    if (
+                        inspectionSnapshot &&
+                        (inspectionSnapshot.condition === "ORANGE" ||
+                            inspectionSnapshot.condition === "RED")
+                    ) {
+                        try {
+                            const created = await createServiceRequest.mutateAsync({
+                                request_type: "MAINTENANCE",
+                                billing_mode: "INTERNAL_ONLY",
+                                link_mode: "SEPARATE_CHANGE_REQUEST",
+                                blocks_fulfillment: inspectionSnapshot.condition === "RED",
+                                title: `Flagged ${inspectionSnapshot.condition} during inbound scan`,
+                                description: inspectionSnapshot.notes || undefined,
+                                related_asset_id: asset?.id || inspectionSnapshot.assetId,
+                                related_order_id: orderId,
+                                items: [
+                                    {
+                                        asset_id: asset?.id || inspectionSnapshot.assetId,
+                                        asset_name:
+                                            asset?.name ||
+                                            inspectionSnapshot.assetName ||
+                                            "Scanned asset",
+                                        quantity: inspectionSnapshot.quantity || 1,
+                                        notes: inspectionSnapshot.notes || undefined,
+                                        refurb_days_estimate:
+                                            inspectionSnapshot.refurbDaysEstimate || undefined,
+                                    },
+                                ],
+                            });
+                            toast.success("Linked service request created", {
+                                description:
+                                    created?.data?.service_request_id || "Damage handoff logged",
+                            });
+                        } catch (error: any) {
+                            toast.error("Scan saved but SR creation failed", {
+                                description:
+                                    error?.message || "Please create the service request manually",
+                            });
+                        }
+                    }
 
                     setTimeout(() => setLastScannedQR(null), 2000);
 
