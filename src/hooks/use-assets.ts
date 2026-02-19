@@ -127,7 +127,7 @@ export function useSearchAssets(searchTerm: string, companyId?: string) {
         queryKey: [...assetKeys.lists(), "search", searchTerm, companyId] as const,
         queryFn: () => fetchAssets(params),
         enabled: !!searchTerm && searchTerm.length >= 2 && !!companyId,
-        staleTime: 30000, // Cache for 30 seconds
+        staleTime: 0,
     });
 }
 

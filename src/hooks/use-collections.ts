@@ -48,7 +48,7 @@ export function useCollections(params: CollectionListParams = {}) {
                 throw new Error("Failed to fetch collections");
             }
         },
-        staleTime: 30000, // 30 seconds
+        staleTime: 0,
     });
 }
 
@@ -68,7 +68,7 @@ export function useCollection(id: string | undefined) {
             }
         },
         enabled: !!id,
-        staleTime: 30000,
+        staleTime: 0,
     });
 }
 
@@ -99,7 +99,7 @@ export function useCollectionAvailability(
             }
         },
         enabled: !!id && !!eventStartDate && !!eventEndDate,
-        staleTime: 10000, // 10 seconds (fresher data for availability)
+        staleTime: 0,
     });
 }
 

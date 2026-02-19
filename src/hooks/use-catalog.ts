@@ -37,7 +37,7 @@ export function useCatalog(params: CatalogListParams = {}) {
 
             return response.json() as Promise<CatalogListResponse>;
         },
-        staleTime: 30000, // 30 seconds
+        staleTime: 0,
     });
 }
 
@@ -57,7 +57,7 @@ export function useCatalogAsset(id: string | undefined) {
             return response.json() as Promise<CatalogAssetDetailsResponse>;
         },
         enabled: !!id,
-        staleTime: 30000,
+        staleTime: 0,
     });
 }
 
@@ -77,6 +77,6 @@ export function useCatalogCollection(id: string | undefined) {
             return response.json() as Promise<CatalogCollectionDetailsResponse>;
         },
         enabled: !!id,
-        staleTime: 30000,
+        staleTime: 0,
     });
 }

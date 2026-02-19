@@ -55,9 +55,6 @@ export default function HomePage() {
                     description: "Welcome to the fulfillment platform.",
                 });
 
-                const { access_token, refresh_token, ...user } = res.data;
-                localStorage.setItem("user", JSON.stringify(user));
-
                 router.push("/orders");
             } else {
                 // User is not an admin, sign out and invalidate token

@@ -44,7 +44,7 @@ export function useRevenueSummary(params: RevenueQueryParams = {}) {
                 throwApiError(error);
             }
         },
-        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        staleTime: 0,
     });
 }
 
@@ -72,7 +72,7 @@ export function useMarginSummary(params: MarginQueryParams = {}) {
                 throwApiError(error);
             }
         },
-        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        staleTime: 0,
     });
 }
 
@@ -101,7 +101,7 @@ export function useCompanyBreakdown(params: CompanyBreakdownQueryParams = {}) {
                 throwApiError(error);
             }
         },
-        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        staleTime: 0,
     });
 }
 
@@ -130,7 +130,7 @@ export function useTimeSeries(params: TimeSeriesQueryParams) {
                 throwApiError(error);
             }
         },
-        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        staleTime: 0,
         enabled: !!params.groupBy, // Only run query if groupBy is provided
     });
 }
