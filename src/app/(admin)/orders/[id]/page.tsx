@@ -27,7 +27,6 @@ import {
     AwaitingFabricationSection,
     CancelOrderButton,
 } from "./hybrid-sections";
-import { ProcessReskinModal } from "@/components/orders/ProcessReskinModal";
 import { OrderItemCard } from "@/components/orders/OrderItemCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -228,8 +227,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     const { user } = useToken();
     const [progressLoading, setProgressLoading] = useState(false);
     const { data: order, isLoading, refetch } = useAdminOrderDetails(id);
-    const [processModalOpen, setProcessModalOpen] = useState(false);
-    const [selectedReskinData, setSelectedReskinData] = useState<any>(null);
 
     const { data: statusHistory, isLoading: statusHistoryLoading } = useAdminOrderStatusHistory(
         order?.data?.id ? order?.data?.id : ""
@@ -1253,17 +1250,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                         item={item}
                                         orderId={order?.data?.id}
                                         orderStatus={order?.data?.order_status}
-                                        onProcessReskin={(reskinData) => {
-                                            setSelectedReskinData(reskinData);
-                                            setProcessModalOpen(true);
-                                        }}
-                                        onRejectReskin={(orderItemId) => {
-                                            // TODO: Implement reject and contact client logic
-                                            console.log(
-                                                "Reject reskin for order item:",
-                                                orderItemId
-                                            );
-                                        }}
                                         onRefresh={refetch}
                                     />
                                 ))}

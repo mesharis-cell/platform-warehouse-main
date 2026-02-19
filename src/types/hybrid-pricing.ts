@@ -194,7 +194,6 @@ export interface OrderLineItem {
     platformId: string;
     orderId: string;
     serviceTypeId: string | null;
-    reskinRequestId: string | null;
     request_status: string;
     lineItemType: LineItemType;
     category: ServiceCategory;
@@ -241,7 +240,6 @@ export interface CreateCustomLineItemRequest {
     notes?: string;
     billing_mode?: LineItemBillingMode;
     metadata?: Record<string, unknown>;
-    reskin_request_id?: string;
 }
 
 export interface UpdateLineItemRequest {

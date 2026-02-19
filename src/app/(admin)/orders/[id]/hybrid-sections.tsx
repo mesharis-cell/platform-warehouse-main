@@ -7,7 +7,6 @@
 
 import { CancelOrderModal } from "@/components/orders/CancelOrderModal";
 import { LogisticsPricingReview } from "@/components/orders/LogisticsPricingReview";
-import { ReskinRequestsList } from "@/components/orders/ReskinRequestsList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToken } from "@/lib/auth/use-token";
@@ -40,21 +39,18 @@ export function AwaitingFabricationSection({ order, orderId }: HybridPricingSect
         <div className="space-y-6">
             <Card className="border-blue-500 bg-blue-50">
                 <CardHeader>
-                    <CardTitle className="text-blue-500">⏳ Order Awaiting Fabrication</CardTitle>
+                    <CardTitle className="text-blue-500">⏳ Linked Service Requests</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-sm text-blue-500">
-                        Complete pending reskin/fabrication requests. When all requests are
-                        resolved, the order auto-progresses to IN_PREPARATION.
+                        Review linked service requests before progressing this order to fulfillment
+                        readiness states.
                     </p>
                     <p className="text-xs text-blue-500 mt-2">
-                        Process/complete actions are available to Admin and Logistics. Cancellation
-                        remains Admin-only.
+                        Blocking linked requests must be commercially cleared or completed first.
                     </p>
                 </CardContent>
             </Card>
-
-            <ReskinRequestsList orderId={orderId} orderStatus={order.order_status} />
         </div>
     );
 }
@@ -96,9 +92,7 @@ export function CancelOrderButton({ order, orderId }: HybridPricingSectionProps)
                 companyName={order.company?.name}
                 currentStatus={order.order_status}
                 itemCount={order.items?.length || 0}
-                pendingReskinCount={
-                    order.reskin_requests?.filter((r: any) => r.status === "pending").length || 0
-                }
+                pendingReskinCount={0}
             />
         </>
     );

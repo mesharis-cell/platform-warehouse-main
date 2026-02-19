@@ -542,10 +542,21 @@ export default function InboundScanningPage() {
                             inspectionSnapshot.condition === "RED")
                     ) {
                         try {
+                            const currentOrderStatus =
+                                (progress.data as APIInboundProgressResponse | undefined)?.data
+                                    ?.order_status || "";
+                            const preQuoteStatuses = [
+                                "DRAFT",
+                                "PRICING_REVIEW",
+                                "PENDING_APPROVAL",
+                                "QUOTED",
+                            ];
                             const created = await createServiceRequest.mutateAsync({
                                 request_type: "MAINTENANCE",
                                 billing_mode: "INTERNAL_ONLY",
-                                link_mode: "SEPARATE_CHANGE_REQUEST",
+                                link_mode: preQuoteStatuses.includes(currentOrderStatus)
+                                    ? "BUNDLED_WITH_ORDER"
+                                    : "SEPARATE_CHANGE_REQUEST",
                                 blocks_fulfillment: inspectionSnapshot.condition === "RED",
                                 title: `Flagged ${inspectionSnapshot.condition} during inbound scan`,
                                 description: inspectionSnapshot.notes || undefined,

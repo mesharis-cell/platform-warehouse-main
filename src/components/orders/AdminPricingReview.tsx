@@ -15,8 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { DollarSign, Plus, Package } from "lucide-react";
-import { ReskinRequestsList } from "./ReskinRequestsList";
+import { DollarSign, Plus } from "lucide-react";
 import { OrderLineItemsList } from "./OrderLineItemsList";
 import { AddCatalogLineItemModal } from "./AddCatalogLineItemModal";
 import { AddCustomLineItemModal } from "./AddCustomLineItemModal";
@@ -41,7 +40,6 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
     const [marginReason, setMarginReason] = useState("");
 
     const pricing = order?.pricing as OrderPricing | undefined;
-
     // Calculate totals
     const catalogTotal =
         lineItems
@@ -87,22 +85,6 @@ export function AdminPricingReview({ orderId, order }: AdminPricingReviewProps) 
 
     return (
         <div className="space-y-6">
-            {/* Reskin Requests Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Package className="h-5 w-5" />
-                        Rebrand Requests
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ReskinRequestsList
-                        orderId={orderId}
-                        orderStatus={order?.orderStatus || order?.order_status}
-                    />
-                </CardContent>
-            </Card>
-
             {/* Pricing Breakdown */}
             <Card>
                 <CardHeader>
