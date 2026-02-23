@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Asset, AssetsDetails, AssetWithDetails, CreateAssetRequest } from "@/types/asset";
 import { apiClient } from "@/lib/api/api-client";
 import { throwApiError } from "@/lib/utils/throw-api-error";
+import { useCompanyFilter } from "@/contexts/company-filter-context";
 
 // Query keys
 export const assetKeys = {
@@ -25,13 +27,14 @@ async function fetchAssets(params?: Record<string, string>): Promise<{
     };
 }> {
     try {
-        for (const [key, value] of Object.entries(params)) {
-            if (value === undefined) {
-                delete params[key];
+        const cleanedParams = { ...(params || {}) };
+        for (const [key, value] of Object.entries(cleanedParams)) {
+            if (value === undefined || value === "" || value === "all" || value === "_all_") {
+                delete cleanedParams[key];
             }
         }
 
-        const searchParams = new URLSearchParams(params);
+        const searchParams = new URLSearchParams(cleanedParams);
         const response = await apiClient.get(`/operations/v1/asset?${searchParams}`);
         return response.data;
     } catch (error) {
@@ -99,8 +102,8 @@ async function uploadImage(
 // Generate QR code
 async function generateQRCode(qrCode: string): Promise<{ qrCodeImage: string }> {
     try {
-        const response = await apiClient.post("/api/assets/qr-code/generate", {
-            qrCode,
+        const response = await apiClient.post("/operations/v1/asset/generate-qr-code", {
+            qr_code: qrCode,
         });
 
         return response.data;
@@ -111,22 +114,38 @@ async function generateQRCode(qrCode: string): Promise<{ qrCodeImage: string }> 
 
 // Hooks
 export function useAssets(params?: Record<string, string>) {
+    const { selectedCompanyId } = useCompanyFilter();
+    const effectiveParams = useMemo(() => {
+        const nextParams = { ...(params || {}) };
+        const hasExplicitCompany = nextParams.company_id !== undefined;
+        if (!hasExplicitCompany && selectedCompanyId) {
+            nextParams.company_id = selectedCompanyId;
+        }
+        return nextParams;
+    }, [params, selectedCompanyId]);
+
     return useQuery({
-        queryKey: assetKeys.list(params),
-        queryFn: () => fetchAssets(params),
+        queryKey: assetKeys.list(effectiveParams),
+        queryFn: () => fetchAssets(effectiveParams),
     });
 }
 
 // Search assets hook with enabled control for debounced searching
 export function useSearchAssets(searchTerm: string, companyId?: string) {
-    const params: Record<string, string> = {};
-    if (searchTerm) params.search_term = searchTerm;
-    if (companyId) params.company_id = companyId;
+    const { selectedCompanyId } = useCompanyFilter();
+    const effectiveCompanyId =
+        companyId !== undefined ? companyId || undefined : selectedCompanyId || undefined;
+    const params = useMemo(() => {
+        const nextParams: Record<string, string> = {};
+        if (searchTerm) nextParams.search_term = searchTerm;
+        if (effectiveCompanyId) nextParams.company_id = effectiveCompanyId;
+        return nextParams;
+    }, [searchTerm, effectiveCompanyId]);
 
     return useQuery({
-        queryKey: [...assetKeys.lists(), "search", searchTerm, companyId] as const,
+        queryKey: [...assetKeys.lists(), "search", searchTerm, effectiveCompanyId] as const,
         queryFn: () => fetchAssets(params),
-        enabled: !!searchTerm && searchTerm.length >= 2 && !!companyId,
+        enabled: !!searchTerm && searchTerm.length >= 2 && !!effectiveCompanyId,
         staleTime: 0,
     });
 }

@@ -2,6 +2,7 @@
 
 import { apiClient } from "@/lib/api/api-client";
 import { throwApiError } from "@/lib/utils/throw-api-error";
+import { useCompanyFilter } from "@/contexts/company-filter-context";
 import type {
     ApplyServiceRequestConcessionPayload,
     CancelServiceRequestPayload,
@@ -14,6 +15,7 @@ import type {
     UpdateServiceRequestStatusPayload,
 } from "@/types/service-request";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 export const serviceRequestKeys = {
     all: () => ["service-requests"] as const,
@@ -35,11 +37,23 @@ function buildQueryString(params: ListServiceRequestsParams) {
 }
 
 export function useListServiceRequests(filters: ListServiceRequestsParams = {}) {
+    const { selectedCompanyId } = useCompanyFilter();
+    const hasExplicitCompany = filters.company_id !== undefined;
+    const effectiveFilters = useMemo(
+        () => ({
+            ...filters,
+            company_id: hasExplicitCompany
+                ? filters.company_id || undefined
+                : selectedCompanyId || undefined,
+        }),
+        [filters, hasExplicitCompany, selectedCompanyId]
+    );
+
     return useQuery({
-        queryKey: serviceRequestKeys.list(filters),
+        queryKey: serviceRequestKeys.list(effectiveFilters),
         queryFn: async (): Promise<ServiceRequestListResponse> => {
             try {
-                const query = buildQueryString(filters);
+                const query = buildQueryString(effectiveFilters);
                 const response = await apiClient.get(`/operations/v1/service-request?${query}`);
                 return response.data;
             } catch (error) {

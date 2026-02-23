@@ -46,6 +46,7 @@ import { useCompanies } from "@/hooks/use-companies";
 import { useToken } from "@/lib/auth/use-token";
 import { hasPermission } from "@/lib/auth/permissions";
 import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function AssetsPage() {
     const { user } = useToken();
@@ -63,6 +64,7 @@ export default function AssetsPage() {
     const { data: companies } = useCompanies();
     const canCreateAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsCreate);
     const canBulkUploadAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsBulkUpload);
+    const isMobile = useIsMobile();
 
     // Build query params
     const queryParams = useMemo(() => {
@@ -119,7 +121,7 @@ export default function AssetsPage() {
                 actions={
                     canCreateAsset || canBulkUploadAsset ? (
                         <div className="flex gap-2">
-                            {canBulkUploadAsset && (
+                            {canBulkUploadAsset && !isMobile && (
                                 <Button
                                     variant="outline"
                                     size="lg"
@@ -130,7 +132,7 @@ export default function AssetsPage() {
                                     Bulk Upload
                                 </Button>
                             )}
-                            {canCreateAsset && (
+                            {canCreateAsset && !isMobile && (
                                 <CreateAssetDialog
                                     open={showCreateDialog}
                                     onOpenChange={setShowCreateDialog}
@@ -443,6 +445,18 @@ export default function AssetsPage() {
                     </div>
                 )}
             </div>
+
+            {isMobile && canCreateAsset && (
+                <Link href="/assets/create" className="fixed right-4 bottom-24 z-40">
+                    <Button
+                        size="icon"
+                        className="h-14 w-14 rounded-full shadow-lg border border-primary/30"
+                        title="Create asset"
+                    >
+                        <Plus className="w-6 h-6" />
+                    </Button>
+                </Link>
+            )}
         </div>
     );
 }

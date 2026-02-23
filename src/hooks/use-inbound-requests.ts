@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import type {
     InboundRequestDetails,
     CreateInboundRequestPayload,
@@ -10,6 +11,7 @@ import type {
 } from "@/types/inbound-request";
 import { apiClient } from "@/lib/api/api-client";
 import { throwApiError } from "@/lib/utils/throw-api-error";
+import { useCompanyFilter } from "@/contexts/company-filter-context";
 
 // Query keys
 export const inboundRequestKeys = {
@@ -170,9 +172,19 @@ async function completeInboundRequest(
 
 // Hooks
 export function useInboundRequests(params?: Record<string, string>) {
+    const { selectedCompanyId } = useCompanyFilter();
+    const effectiveParams = useMemo(() => {
+        const nextParams = { ...(params || {}) };
+        const hasExplicitCompany = nextParams.company_id !== undefined;
+        if (!hasExplicitCompany && selectedCompanyId) {
+            nextParams.company_id = selectedCompanyId;
+        }
+        return nextParams;
+    }, [params, selectedCompanyId]);
+
     return useQuery({
-        queryKey: inboundRequestKeys.list(params),
-        queryFn: () => fetchInboundRequests(params),
+        queryKey: inboundRequestKeys.list(effectiveParams),
+        queryFn: () => fetchInboundRequests(effectiveParams),
     });
 }
 //...

@@ -10,9 +10,7 @@ import { throwApiError } from "@/lib/utils/throw-api-error";
 import type {
     CompleteOutboundScanResponse,
     GetAssetScanHistoryResponse,
-    GetInventoryAvailabilityResponse,
     GetScanEventsResponse,
-    InventoryAvailabilityParams,
     OutboundScanResponse,
     UploadTruckPhotosResponse,
     APIOutboundProgressResponse,
@@ -244,18 +242,7 @@ const getOrderScanEvents = async (orderId: string): Promise<GetScanEventsRespons
 
 const getAssetScanHistory = async (assetId: string): Promise<GetAssetScanHistoryResponse> => {
     try {
-        const response = await apiClient.get(`/operations/v1/assets/${assetId}/scan-history`);
-        return response.data;
-    } catch (error) {
-        return throwApiError(error);
-    }
-};
-
-const getInventoryAvailability = async (
-    params: InventoryAvailabilityParams
-): Promise<GetInventoryAvailabilityResponse> => {
-    try {
-        const response = await apiClient.get("/operations/v1/inventory/availability", { params });
+        const response = await apiClient.get(`/operations/v1/asset/${assetId}/scan-history`);
         return response.data;
     } catch (error) {
         return throwApiError(error);
@@ -279,17 +266,5 @@ export function useAssetScanHistory(assetId: string) {
         queryKey: ["assetScanHistory", assetId],
         queryFn: () => getAssetScanHistory(assetId),
         enabled: !!assetId,
-    });
-}
-
-// ============================================================
-// Inventory Tracking Hooks
-// ============================================================
-
-export function useInventoryAvailability(params: InventoryAvailabilityParams) {
-    return useQuery({
-        queryKey: ["inventoryAvailability", params],
-        queryFn: () => getInventoryAvailability(params),
-        refetchInterval: 10000,
     });
 }

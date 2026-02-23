@@ -3,6 +3,7 @@
 // Phase 4: Collections React Query Hooks
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import type {
     Collection,
     CollectionWithDetails,
@@ -14,29 +15,44 @@ import type {
     CollectionAvailabilityResponse,
 } from "@/types/collection";
 import { apiClient } from "@/lib/api/api-client";
-import { error } from "console";
 import { throwApiError } from "@/lib/utils/throw-api-error";
+import { useCompanyFilter } from "@/contexts/company-filter-context";
 
 // ========================================
 // Collection Query Hooks
 // ========================================
 
 export function useCollections(params: CollectionListParams = {}) {
+    const { selectedCompanyId } = useCompanyFilter();
+    const hasExplicitCompany = params.company_id !== undefined;
+    const effectiveParams = useMemo(
+        () => ({
+            ...params,
+            company_id: hasExplicitCompany
+                ? params.company_id || undefined
+                : selectedCompanyId || undefined,
+        }),
+        [params, hasExplicitCompany, selectedCompanyId]
+    );
+
     return useQuery({
-        queryKey: ["collections", params],
+        queryKey: ["collections", effectiveParams],
         queryFn: async () => {
             try {
                 const queryParams = new URLSearchParams();
 
-                if (params.company_id && params.company_id !== "_all_")
-                    queryParams.set("company_id", params.company_id);
-                if (params.brand_id && params.brand_id !== "_all_")
-                    queryParams.set("brand_id", params.brand_id);
-                if (params.category) queryParams.set("category", params.category);
-                if (params.search_term) queryParams.set("search_term", params.search_term);
-                if (params.includeDeleted) queryParams.set("includeDeleted", "true");
-                if (params.limit) queryParams.set("limit", params.limit.toString());
-                if (params.offset) queryParams.set("offset", params.offset.toString());
+                if (effectiveParams.company_id && effectiveParams.company_id !== "_all_")
+                    queryParams.set("company_id", effectiveParams.company_id);
+                if (effectiveParams.brand_id && effectiveParams.brand_id !== "_all_")
+                    queryParams.set("brand_id", effectiveParams.brand_id);
+                if (effectiveParams.category) queryParams.set("category", effectiveParams.category);
+                if (effectiveParams.search_term)
+                    queryParams.set("search_term", effectiveParams.search_term);
+                if (effectiveParams.includeDeleted) queryParams.set("includeDeleted", "true");
+                if (effectiveParams.limit)
+                    queryParams.set("limit", effectiveParams.limit.toString());
+                if (effectiveParams.offset)
+                    queryParams.set("offset", effectiveParams.offset.toString());
 
                 const response = await apiClient.get("/operations/v1/collection", {
                     params: queryParams,

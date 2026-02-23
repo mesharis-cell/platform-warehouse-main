@@ -8,6 +8,7 @@
 
 import { apiClient } from "@/lib/api/api-client";
 import { throwApiError } from "@/lib/utils/throw-api-error";
+import { useCompanyFilter } from "@/contexts/company-filter-context";
 import type {
     MyOrdersListParams,
     MyOrdersListResponse,
@@ -16,6 +17,7 @@ import type {
     SubmitOrderResponse,
 } from "@/types/order";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { invoiceKeys } from "./use-invoices";
 
 // ============================================================
@@ -151,20 +153,34 @@ export function useAdminOrders(
         sortOrder?: "asc" | "desc";
     } = {}
 ) {
+    const { selectedCompanyId } = useCompanyFilter();
+    const hasExplicitCompany = params.company !== undefined;
+    const effectiveCompanyId = hasExplicitCompany
+        ? params.company || undefined
+        : selectedCompanyId || undefined;
+    const effectiveParams = useMemo(
+        () => ({
+            ...params,
+            company: effectiveCompanyId,
+        }),
+        [params, effectiveCompanyId]
+    );
+
     const queryParams = new URLSearchParams();
-    if (params.page) queryParams.append("page", params.page.toString());
-    if (params.limit) queryParams.append("limit", params.limit.toString());
-    if (params.company) queryParams.append("company_id", params.company);
-    if (params.brand) queryParams.append("brand_id", params.brand);
-    if (params.order_status) queryParams.append("order_status", params.order_status);
-    if (params.dateFrom) queryParams.append("date_from", params.dateFrom);
-    if (params.dateTo) queryParams.append("date_to", params.dateTo);
-    if (params.search) queryParams.append("search_term", params.search);
-    if (params.sortBy) queryParams.append("sort_by", params.sortBy);
-    if (params.sortOrder) queryParams.append("sort_order", params.sortOrder);
+    if (effectiveParams.page) queryParams.append("page", effectiveParams.page.toString());
+    if (effectiveParams.limit) queryParams.append("limit", effectiveParams.limit.toString());
+    if (effectiveParams.company) queryParams.append("company_id", effectiveParams.company);
+    if (effectiveParams.brand) queryParams.append("brand_id", effectiveParams.brand);
+    if (effectiveParams.order_status)
+        queryParams.append("order_status", effectiveParams.order_status);
+    if (effectiveParams.dateFrom) queryParams.append("date_from", effectiveParams.dateFrom);
+    if (effectiveParams.dateTo) queryParams.append("date_to", effectiveParams.dateTo);
+    if (effectiveParams.search) queryParams.append("search_term", effectiveParams.search);
+    if (effectiveParams.sortBy) queryParams.append("sort_by", effectiveParams.sortBy);
+    if (effectiveParams.sortOrder) queryParams.append("sort_order", effectiveParams.sortOrder);
 
     return useQuery({
-        queryKey: ["orders", "admin-list", params],
+        queryKey: ["orders", "admin-list", effectiveParams],
         queryFn: async () => {
             try {
                 const response = await apiClient.get(`/client/v1/order?${queryParams}`);
@@ -274,6 +290,8 @@ export function useUpdateJobNumber() {
  * Export orders as CSV
  */
 export function useExportOrders() {
+    const { selectedCompanyId } = useCompanyFilter();
+
     return useMutation({
         mutationFn: async (params: {
             company?: string;
@@ -285,8 +303,12 @@ export function useExportOrders() {
             sortBy?: string;
             sortOrder?: "asc" | "desc";
         }) => {
+            const hasExplicitCompany = params.company !== undefined;
+            const effectiveCompanyId = hasExplicitCompany
+                ? params.company || undefined
+                : selectedCompanyId || undefined;
             const queryParams = new URLSearchParams();
-            if (params.company) queryParams.append("company_id", params.company);
+            if (effectiveCompanyId) queryParams.append("company_id", effectiveCompanyId);
             if (params.brand) queryParams.append("brand_id", params.brand);
             if (params.status) queryParams.append("order_status", params.status);
             if (params.dateFrom) queryParams.append("date_from", params.dateFrom);

@@ -5,6 +5,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import type {
     RevenueSummary,
     MarginSummary,
@@ -17,27 +18,41 @@ import type {
 } from "@/types/analytics";
 import { throwApiError } from "@/lib/utils/throw-api-error";
 import { apiClient } from "@/lib/api/api-client";
+import { useCompanyFilter } from "@/contexts/company-filter-context";
 
 /**
  * Fetch revenue summary
  */
 export function useRevenueSummary(params: RevenueQueryParams = {}) {
+    const { selectedCompanyId } = useCompanyFilter();
+    const hasExplicitCompany = params.companyId !== undefined;
+    const effectiveParams = useMemo(
+        () => ({
+            ...params,
+            companyId: hasExplicitCompany
+                ? params.companyId || undefined
+                : selectedCompanyId || undefined,
+        }),
+        [params, hasExplicitCompany, selectedCompanyId]
+    );
+
     return useQuery({
-        queryKey: ["analytics", "revenue", params],
+        queryKey: ["analytics", "revenue", effectiveParams],
         queryFn: async () => {
             try {
                 const searchParams = new URLSearchParams();
 
-                if (params.companyId) searchParams.set("company_id", params.companyId);
-                if (params.startDate) searchParams.set("start_date", params.startDate);
-                if (params.endDate) searchParams.set("end_date", params.endDate);
-                if (params.timePeriod) searchParams.set("time_period", params.timePeriod);
+                if (effectiveParams.companyId)
+                    searchParams.set("company_id", effectiveParams.companyId);
+                if (effectiveParams.startDate)
+                    searchParams.set("start_date", effectiveParams.startDate);
+                if (effectiveParams.endDate) searchParams.set("end_date", effectiveParams.endDate);
+                if (effectiveParams.timePeriod)
+                    searchParams.set("time_period", effectiveParams.timePeriod);
 
                 const response = await apiClient.get<RevenueSummary>(
                     `/operations/v1/analytics/revenue-summary?${searchParams.toString()}`
                 );
-
-                console.log("response.data", response.data);
 
                 return response.data;
             } catch (error) {
@@ -52,16 +67,31 @@ export function useRevenueSummary(params: RevenueQueryParams = {}) {
  * Fetch margin summary
  */
 export function useMarginSummary(params: MarginQueryParams = {}) {
+    const { selectedCompanyId } = useCompanyFilter();
+    const hasExplicitCompany = params.companyId !== undefined;
+    const effectiveParams = useMemo(
+        () => ({
+            ...params,
+            companyId: hasExplicitCompany
+                ? params.companyId || undefined
+                : selectedCompanyId || undefined,
+        }),
+        [params, hasExplicitCompany, selectedCompanyId]
+    );
+
     return useQuery({
-        queryKey: ["analytics", "margins", params],
+        queryKey: ["analytics", "margins", effectiveParams],
         queryFn: async () => {
             try {
                 const searchParams = new URLSearchParams();
 
-                if (params.companyId) searchParams.set("companyId", params.companyId);
-                if (params.startDate) searchParams.set("startDate", params.startDate);
-                if (params.endDate) searchParams.set("endDate", params.endDate);
-                if (params.timePeriod) searchParams.set("timePeriod", params.timePeriod);
+                if (effectiveParams.companyId)
+                    searchParams.set("companyId", effectiveParams.companyId);
+                if (effectiveParams.startDate)
+                    searchParams.set("startDate", effectiveParams.startDate);
+                if (effectiveParams.endDate) searchParams.set("endDate", effectiveParams.endDate);
+                if (effectiveParams.timePeriod)
+                    searchParams.set("timePeriod", effectiveParams.timePeriod);
 
                 const response = await apiClient.get<MarginSummary>(
                     `/operations/v1/analytics/margin-summary?${searchParams.toString()}`
@@ -109,17 +139,31 @@ export function useCompanyBreakdown(params: CompanyBreakdownQueryParams = {}) {
  * Fetch time series data
  */
 export function useTimeSeries(params: TimeSeriesQueryParams) {
+    const { selectedCompanyId } = useCompanyFilter();
+    const hasExplicitCompany = params.companyId !== undefined;
+    const effectiveParams = useMemo(
+        () => ({
+            ...params,
+            companyId: hasExplicitCompany
+                ? params.companyId || undefined
+                : selectedCompanyId || undefined,
+        }),
+        [params, hasExplicitCompany, selectedCompanyId]
+    );
+
     return useQuery({
-        queryKey: ["analytics", "time-series", params],
+        queryKey: ["analytics", "time-series", effectiveParams],
         queryFn: async () => {
             try {
                 const searchParams = new URLSearchParams();
 
-                searchParams.set("groupBy", params.groupBy); // Required parameter
+                searchParams.set("groupBy", effectiveParams.groupBy); // Required parameter
 
-                if (params.companyId) searchParams.set("companyId", params.companyId);
-                if (params.startDate) searchParams.set("startDate", params.startDate);
-                if (params.endDate) searchParams.set("endDate", params.endDate);
+                if (effectiveParams.companyId)
+                    searchParams.set("companyId", effectiveParams.companyId);
+                if (effectiveParams.startDate)
+                    searchParams.set("startDate", effectiveParams.startDate);
+                if (effectiveParams.endDate) searchParams.set("endDate", effectiveParams.endDate);
 
                 const response = await apiClient.get<TimeSeries>(
                     `/operations/v1/analytics/time-series?${searchParams.toString()}`
@@ -131,6 +175,6 @@ export function useTimeSeries(params: TimeSeriesQueryParams) {
             }
         },
         staleTime: 0,
-        enabled: !!params.groupBy, // Only run query if groupBy is provided
+        enabled: !!effectiveParams.groupBy, // Only run query if groupBy is provided
     });
 }

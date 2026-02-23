@@ -61,6 +61,7 @@ import { useToken } from "@/lib/auth/use-token";
 import { usePlatform } from "@/contexts/platform-context";
 import { hasAnyPermission } from "@/lib/auth/permissions";
 import { WAREHOUSE_NAV_PERMISSIONS } from "@/lib/auth/permission-map";
+import { CompanySelector } from "@/components/company/company-selector";
 
 type NavItem = {
     name: string;
@@ -482,6 +483,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                     {/* Main Content */}
                     <SidebarInset className="pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
+                        <div className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/90">
+                            <div className="px-4 py-2 flex justify-end">
+                                <CompanySelector />
+                            </div>
+                        </div>
                         {children}
                     </SidebarInset>
                 </div>
