@@ -298,7 +298,7 @@ export default function MobileCreateAssetPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background pb-24">
+        <div className="min-h-screen bg-background pb-40">
             <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border">
                 <div className="px-4 py-3 space-y-3">
                     <div className="flex items-center justify-between">
@@ -832,7 +832,7 @@ export default function MobileCreateAssetPage() {
                 )}
             </div>
 
-            <div className="fixed bottom-0 inset-x-0 border-t border-border bg-background/95 backdrop-blur">
+            <div className="fixed bottom-16 inset-x-0 z-50 border-t border-border bg-background/95 backdrop-blur lg:hidden">
                 <div className="p-4 flex gap-3">
                     <Button
                         type="button"
