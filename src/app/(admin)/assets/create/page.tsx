@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft,
@@ -9,6 +9,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Loader2,
+    RefreshCcw,
+    RotateCcw,
     X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -56,8 +58,17 @@ export default function MobileCreateAssetPage() {
     const [isMounted, setIsMounted] = useState(false);
     const [currentStep, setCurrentStep] = useState<Step>(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [selectedImages, setSelectedImages] = useState<File[]>([]);
-    const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+    // Camera flow state
+    type CapturedPhoto = { file: File; previewUrl: string; note: string };
+    type CameraPhase = "closed" | "viewfinder" | "preview";
+    const [capturedPhotos, setCapturedPhotos] = useState<CapturedPhoto[]>([]);
+    const [cameraPhase, setCameraPhase] = useState<CameraPhase>("closed");
+    const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+    const [capturedPreviewUrl, setCapturedPreviewUrl] = useState("");
+    const [pendingNote, setPendingNote] = useState("");
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const [formData, setFormData] = useState<Partial<CreateAssetRequest>>({
         tracking_method: "INDIVIDUAL",
@@ -119,25 +130,95 @@ export default function MobileCreateAssetPage() {
         }));
     };
 
-    const onSelectImages = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(event.target.files || []);
-        if (!files.length) return;
+    // Attach stream to video element when viewfinder opens
+    useEffect(() => {
+        if (cameraPhase === "viewfinder" && videoRef.current && streamRef.current) {
+            videoRef.current.srcObject = streamRef.current;
+            videoRef.current.play().catch(() => {});
+        }
+    }, [cameraPhase]);
 
-        setSelectedImages((prev) => [...prev, ...files]);
-        const urls = files.map((file) => URL.createObjectURL(file));
-        setPreviewUrls((prev) => [...prev, ...urls]);
+    // Cleanup on unmount
+    useEffect(() => () => { streamRef.current?.getTracks().forEach((t) => t.stop()); }, []);
+
+    const stopStream = () => {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
     };
 
-    const removeImageAt = (index: number) => {
-        const fileList = [...selectedImages];
-        const urlList = [...previewUrls];
+    const openCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+            });
+            streamRef.current = stream;
+            setCameraPhase("viewfinder");
+        } catch {
+            toast.error("Camera access denied. Enable camera permission and try again.");
+        }
+    };
 
-        URL.revokeObjectURL(urlList[index]);
-        fileList.splice(index, 1);
-        urlList.splice(index, 1);
+    const capturePhoto = () => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !canvas) return;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d")?.drawImage(video, 0, 0);
+        canvas.toBlob((blob) => {
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            setCapturedBlob(blob);
+            setCapturedPreviewUrl(url);
+            setCameraPhase("preview");
+            stopStream();
+        }, "image/jpeg", 0.92);
+    };
 
-        setSelectedImages(fileList);
-        setPreviewUrls(urlList);
+    const retakePhoto = async () => {
+        URL.revokeObjectURL(capturedPreviewUrl);
+        setCapturedBlob(null);
+        setCapturedPreviewUrl("");
+        setPendingNote("");
+        await openCamera();
+    };
+
+    const savePhoto = (andTakeNext: boolean) => {
+        if (!capturedBlob) return;
+        const file = new File([capturedBlob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
+        setCapturedPhotos((prev) => [...prev, { file, previewUrl: capturedPreviewUrl, note: pendingNote.trim() }]);
+        setCapturedBlob(null);
+        setCapturedPreviewUrl("");
+        setPendingNote("");
+        if (andTakeNext) {
+            openCamera();
+        } else {
+            setCameraPhase("closed");
+        }
+    };
+
+    const closeCamera = () => {
+        stopStream();
+        URL.revokeObjectURL(capturedPreviewUrl);
+        setCapturedBlob(null);
+        setCapturedPreviewUrl("");
+        setPendingNote("");
+        setCameraPhase("closed");
+    };
+
+    const removePhotoAt = (index: number) => {
+        setCapturedPhotos((prev) => {
+            URL.revokeObjectURL(prev[index].previewUrl);
+            return prev.filter((_, i) => i !== index);
+        });
+    };
+
+    // Gallery fallback
+    const onSelectFromGallery = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+        const photos = files.map((file) => ({ file, previewUrl: URL.createObjectURL(file), note: "" }));
+        setCapturedPhotos((prev) => [...prev, ...photos]);
     };
 
     const validateStep = (step: Step) => {
@@ -233,13 +314,17 @@ export default function MobileCreateAssetPage() {
 
         setIsSubmitting(true);
         try {
-            let imageUrls: string[] = [];
-            if (selectedImages.length > 0) {
+            let assetImages: { url: string; note?: string }[] = [];
+            if (capturedPhotos.length > 0) {
                 const uploadFormData = new FormData();
                 uploadFormData.append("companyId", formData.company_id);
-                selectedImages.forEach((file) => uploadFormData.append("files", file));
+                capturedPhotos.forEach(({ file }) => uploadFormData.append("files", file));
                 const uploadResult = await uploadImage.mutateAsync(uploadFormData);
-                imageUrls = uploadResult?.data?.imageUrls || [];
+                const urls: string[] = uploadResult?.data?.imageUrls || [];
+                assetImages = urls.map((url, i) => ({
+                    url,
+                    ...(capturedPhotos[i]?.note ? { note: capturedPhotos[i].note } : {}),
+                }));
             }
 
             await createAsset.mutateAsync({
@@ -250,7 +335,7 @@ export default function MobileCreateAssetPage() {
                 name: formData.name || "",
                 description: formData.description,
                 category: formData.category,
-                images: imageUrls.map((url) => ({ url })),
+                images: assetImages,
                 tracking_method: formData.tracking_method || "INDIVIDUAL",
                 total_quantity: formData.total_quantity || 1,
                 available_quantity: formData.available_quantity || 1,
@@ -739,51 +824,41 @@ export default function MobileCreateAssetPage() {
 
                 {currentStep === 3 && (
                     <div className="space-y-4">
+                        {/* hidden canvas for capture */}
+                        <canvas ref={canvasRef} className="hidden" />
+
                         <Card>
                             <CardHeader>
-                                <CardTitle className="font-mono text-sm uppercase">
-                                    Photos
-                                </CardTitle>
+                                <CardTitle className="font-mono text-sm uppercase">Photos</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                <Label htmlFor="asset-images" className="sr-only">
-                                    Upload images
-                                </Label>
-                                <input
-                                    id="asset-images"
-                                    type="file"
-                                    multiple
-                                    accept="image/*"
-                                    onChange={onSelectImages}
-                                    className="hidden"
-                                />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => document.getElementById("asset-images")?.click()}
-                                >
+                                <Button type="button" className="w-full" onClick={openCamera}>
                                     <Camera className="w-4 h-4 mr-2" />
-                                    Add Photos
+                                    {capturedPhotos.length > 0 ? "Take Another Photo" : "Open Camera"}
                                 </Button>
 
-                                {previewUrls.length > 0 && (
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {previewUrls.map((url, index) => (
-                                            <div
-                                                key={`${url}-${index}`}
-                                                className="relative aspect-square rounded-md overflow-hidden border"
-                                            >
-                                                <img
-                                                    src={url}
-                                                    alt="Asset preview"
-                                                    className="w-full h-full object-cover"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/80 border border-border flex items-center justify-center"
-                                                    onClick={() => removeImageAt(index)}
-                                                >
+                                {/* gallery fallback */}
+                                <input id="gallery-pick" type="file" multiple accept="image/*" onChange={onSelectFromGallery} className="hidden" />
+                                <Button type="button" variant="outline" className="w-full text-xs" onClick={() => document.getElementById("gallery-pick")?.click()}>
+                                    Pick from Gallery
+                                </Button>
+
+                                {capturedPhotos.length > 0 && (
+                                    <div className="space-y-2 mt-2">
+                                        {capturedPhotos.map((photo, index) => (
+                                            <div key={index} className="flex gap-3 items-start rounded-md border p-2">
+                                                <div className="relative w-16 h-16 shrink-0 rounded overflow-hidden border">
+                                                    <img src={photo.previewUrl} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-medium font-mono">Photo {index + 1}</p>
+                                                    {photo.note ? (
+                                                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{photo.note}</p>
+                                                    ) : (
+                                                        <p className="text-xs text-muted-foreground/50 mt-0.5 italic">No note</p>
+                                                    )}
+                                                </div>
+                                                <button type="button" onClick={() => removePhotoAt(index)} className="shrink-0 h-6 w-6 rounded-full bg-muted flex items-center justify-center">
                                                     <X className="w-3 h-3" />
                                                 </button>
                                             </div>
@@ -818,7 +893,7 @@ export default function MobileCreateAssetPage() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Photos</span>
-                                    <span className="font-medium">{selectedImages.length}</span>
+                                    <span className="font-medium">{capturedPhotos.length}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Volume (m³)</span>
@@ -831,6 +906,88 @@ export default function MobileCreateAssetPage() {
                     </div>
                 )}
             </div>
+
+            {/* ── Camera overlay ── */}
+            {cameraPhase !== "closed" && (
+                <div className="fixed inset-0 z-[60] bg-black flex flex-col">
+                    {/* Viewfinder */}
+                    {cameraPhase === "viewfinder" && (
+                        <>
+                            <video
+                                ref={videoRef}
+                                playsInline
+                                muted
+                                className="flex-1 w-full object-cover"
+                            />
+                            <div className="p-6 flex items-center justify-between bg-black/80">
+                                <button
+                                    type="button"
+                                    onClick={closeCamera}
+                                    className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center"
+                                >
+                                    <X className="w-5 h-5 text-white" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={capturePhoto}
+                                    className="h-18 w-18 rounded-full bg-white border-4 border-white/30 flex items-center justify-center"
+                                    style={{ height: 72, width: 72 }}
+                                >
+                                    <div className="h-14 w-14 rounded-full bg-white" />
+                                </button>
+                                <div className="h-12 w-12" />
+                            </div>
+                        </>
+                    )}
+
+                    {/* Preview + note */}
+                    {cameraPhase === "preview" && (
+                        <>
+                            <div className="flex-1 relative overflow-hidden">
+                                <img
+                                    src={capturedPreviewUrl}
+                                    alt="Captured"
+                                    className="w-full h-full object-contain bg-black"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={retakePhoto}
+                                    className="absolute top-4 left-4 flex items-center gap-1.5 bg-black/60 text-white text-sm px-3 py-2 rounded-full"
+                                >
+                                    <RotateCcw className="w-4 h-4" />
+                                    Retake
+                                </button>
+                            </div>
+                            <div className="bg-black/90 p-4 space-y-3">
+                                <textarea
+                                    value={pendingNote}
+                                    onChange={(e) => setPendingNote(e.target.value)}
+                                    placeholder="Add a note for this photo (optional)"
+                                    rows={2}
+                                    className="w-full rounded-md bg-white/10 text-white placeholder:text-white/40 text-sm px-3 py-2 border border-white/20 resize-none focus:outline-none focus:border-white/60"
+                                />
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => savePhoto(false)}
+                                        className="flex-1 py-3 rounded-xl bg-white/20 text-white text-sm font-medium"
+                                    >
+                                        Save
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => savePhoto(true)}
+                                        className="flex-1 py-3 rounded-xl bg-white text-black text-sm font-semibold flex items-center justify-center gap-2"
+                                    >
+                                        <Camera className="w-4 h-4" />
+                                        Save &amp; Take Next
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
 
             <div className="fixed bottom-16 inset-x-0 z-50 border-t border-border bg-background/95 backdrop-blur lg:hidden">
                 <div className="p-4 flex gap-3">
