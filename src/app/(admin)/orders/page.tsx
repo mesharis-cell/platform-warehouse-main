@@ -5,7 +5,8 @@
  * Professional order management interface with filtering, search, and export
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useCompanyFilter } from "@/contexts/company-filter-context";
 import Link from "next/link";
 import { useAdminOrders, useExportOrders } from "@/hooks/use-orders";
 import { useCompanies } from "@/hooks/use-companies";
@@ -81,10 +82,16 @@ const ORDER_STATUS_CONFIG = {
 
 export default function AdminOrdersPage() {
     const { user } = useToken();
+    const { selectedCompanyId } = useCompanyFilter();
     // Filters state
     const [page, setPage] = useState(1);
     const [limit] = useState(20);
-    const [company, setCompany] = useState<string>("");
+    const [company, setCompany] = useState<string>(selectedCompanyId || "");
+
+    useEffect(() => {
+        setCompany(selectedCompanyId || "");
+        setPage(1);
+    }, [selectedCompanyId]);
     const [brand, setBrand] = useState<string>("");
     const [status, setStatus] = useState<string>("");
     const [search, setSearch] = useState<string>("");

@@ -30,6 +30,7 @@ import { useCompanies } from "@/hooks/use-companies";
 import { useWarehouses } from "@/hooks/use-warehouses";
 import { useZones } from "@/hooks/use-zones";
 import { useBrands } from "@/hooks/use-brands";
+import { useTeams } from "@/hooks/use-teams";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { AssetCategory, CreateAssetRequest } from "@/types/asset";
 
@@ -79,6 +80,9 @@ export default function MobileCreateAssetPage() {
     const { data: brandsResponse } = useBrands(
         formData.company_id ? { company_id: formData.company_id } : undefined
     );
+    const { data: teamsResponse } = useTeams(
+        formData.company_id ? { company_id: formData.company_id } : undefined
+    );
 
     const createAsset = useCreateAsset();
     const uploadImage = useUploadImage();
@@ -87,6 +91,7 @@ export default function MobileCreateAssetPage() {
     const warehouses = warehousesResponse?.data || [];
     const zones = zonesResponse?.data || [];
     const brands = brandsResponse?.data || [];
+    const teams = teamsResponse?.data || [];
 
     useEffect(() => {
         setIsMounted(true);
@@ -245,7 +250,7 @@ export default function MobileCreateAssetPage() {
                 name: formData.name || "",
                 description: formData.description,
                 category: formData.category,
-                images: imageUrls,
+                images: imageUrls.map((url) => ({ url })),
                 tracking_method: formData.tracking_method || "INDIVIDUAL",
                 total_quantity: formData.total_quantity || 1,
                 available_quantity: formData.available_quantity || 1,
@@ -428,6 +433,33 @@ export default function MobileCreateAssetPage() {
                                     placeholder="Optional details about this asset"
                                 />
                             </div>
+
+                            {teams.length > 0 && (
+                                <div className="space-y-2">
+                                    <Label>Team (optional)</Label>
+                                    <Select
+                                        value={formData.team_id || "_none_"}
+                                        onValueChange={(value) =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                team_id: value === "_none_" ? null : value,
+                                            }))
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="No team (shared)" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="_none_">No team (shared)</SelectItem>
+                                            {teams.map((team) => (
+                                                <SelectItem key={team.id} value={team.id}>
+                                                    {team.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 )}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { useCompanyFilter } from "@/contexts/company-filter-context";
 import Link from "next/link";
 import { AdminHeader } from "@/components/admin-header";
 import { Badge } from "@/components/ui/badge";
@@ -106,6 +107,7 @@ const COMMERCIAL_STATUS_CONFIG: Record<string, { label: string; color: string }>
 };
 
 export default function ServiceRequestsPage() {
+    const { selectedCompanyId } = useCompanyFilter();
     const [page, setPage] = useState(1);
     const [limit] = useState(20);
     const [searchTerm, setSearchTerm] = useState("");
@@ -113,7 +115,12 @@ export default function ServiceRequestsPage() {
     const [statusFilter, setStatusFilter] = useState("");
     const [typeFilter, setTypeFilter] = useState("");
     const [billingFilter, setBillingFilter] = useState("");
-    const [companyFilter, setCompanyFilter] = useState("");
+    const [companyFilter, setCompanyFilter] = useState(selectedCompanyId || "");
+
+    useEffect(() => {
+        setCompanyFilter(selectedCompanyId || "");
+        setPage(1);
+    }, [selectedCompanyId]);
     const [sortBy, setSortBy] = useState("created_at");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 

@@ -194,7 +194,7 @@ export function CreateInboundRequestDialog({
             dimensions: asset.dimensions,
             volume_per_unit: asset.volume_per_unit || 0,
             handling_tags: asset.handling_tags || [],
-            images: asset.images || [],
+            images: (asset.images || []).map((img) => img.url),
             brand_id: asset.brand_id || undefined,
         });
 
@@ -792,6 +792,7 @@ export function CreateInboundRequestDialog({
                                                                             <img
                                                                                 src={
                                                                                     asset.images[0]
+                                                                                        .url
                                                                                 }
                                                                                 alt={asset.name}
                                                                                 className="w-10 h-10 rounded object-cover border border-border"

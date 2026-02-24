@@ -1,5 +1,10 @@
 // Phase 3: Asset Management & QR Code Generation TypeScript Types
 
+export interface AssetImage {
+    url: string;
+    note?: string;
+}
+
 // Tracking Method
 export type TrackingMethod = "INDIVIDUAL" | "BATCH";
 
@@ -51,7 +56,14 @@ export interface Asset {
     name: string;
     description?: string;
     category: AssetCategory;
-    images: string[];
+    images: AssetImage[];
+    team_id?: string | null;
+    team?: {
+        id: string;
+        name: string;
+        can_other_teams_see: boolean;
+        can_other_teams_book: boolean;
+    } | null;
     tracking_method: TrackingMethod;
     total_quantity: number;
     available_quantity: number;
@@ -124,7 +136,7 @@ export interface CreateAssetRequest {
     name: string;
     description?: string;
     category: AssetCategory;
-    images: string[]; // array of uploaded image URLs
+    images: AssetImage[]; // array of uploaded image objects
     tracking_method: TrackingMethod;
     total_quantity: number;
     available_quantity: number;
@@ -138,6 +150,7 @@ export interface CreateAssetRequest {
     volume_per_unit: number; // m³
     condition?: Condition; // optional, defaults to GREEN if not provided
     condition_notes?: string; // Feedback #2: Required for ORANGE/RED items
+    team_id?: string | null;
     handling_tags?: string[];
     refurb_days_estimate?: number;
     status?: AssetStatus; // optional, defaults to AVAILABLE
@@ -151,7 +164,7 @@ export interface UpdateAssetRequest {
     name?: string;
     description?: string;
     category?: AssetCategory;
-    images?: string[]; // replace existing images
+    images?: AssetImage[]; // replace existing images
     totalQuantity?: number; // adjust total quantity
     packaging?: string;
     weight?: number; // kg
@@ -231,7 +244,7 @@ export interface AssetsDetails {
     description: string | null;
     category: string;
 
-    images: string[];
+    images: AssetImage[];
 
     tracking_method: TrackingMethod;
 

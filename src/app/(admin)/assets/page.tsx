@@ -47,10 +47,12 @@ import { useToken } from "@/lib/auth/use-token";
 import { hasPermission } from "@/lib/auth/permissions";
 import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useCompanyFilter } from "@/contexts/company-filter-context";
 
 export default function AssetsPage() {
     const { user } = useToken();
     const router = useRouter();
+    const { selectedCompanyId } = useCompanyFilter();
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [filters, setFilters] = useState({
@@ -58,7 +60,6 @@ export default function AssetsPage() {
         condition: "all",
         status: "all",
         warehouse: "all",
-        company: "all",
     });
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const { data: companies } = useCompanies();
@@ -66,7 +67,7 @@ export default function AssetsPage() {
     const canBulkUploadAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsBulkUpload);
     const isMobile = useIsMobile();
 
-    // Build query params
+    // Build query params — company filter comes from global CompanyFilter context
     const queryParams = useMemo(() => {
         const params: Record<string, string> = {};
         if (searchQuery) params.search_term = searchQuery;
@@ -75,9 +76,9 @@ export default function AssetsPage() {
         if (filters.status && filters.status !== "all") params.status = filters.status;
         if (filters.warehouse && filters.warehouse !== "all")
             params.warehouse_id = filters.warehouse;
-        if (filters.company && filters.company !== "all") params.company_id = filters.company;
+        if (selectedCompanyId) params.company_id = selectedCompanyId;
         return params;
-    }, [searchQuery, filters]);
+    }, [searchQuery, filters, selectedCompanyId]);
 
     // Fetch assets
     const { data, isLoading: loading } = useAssets(queryParams);
@@ -163,25 +164,6 @@ export default function AssetsPage() {
 
                         {/* Filters */}
                         <div className="flex gap-2 flex-wrap">
-                            <Select
-                                value={filters.company}
-                                onValueChange={(value) =>
-                                    setFilters({ ...filters, company: value })
-                                }
-                            >
-                                <SelectTrigger className="w-[160px] font-mono">
-                                    <SelectValue placeholder="Company" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Companies</SelectItem>
-                                    {companies?.data.map((company) => (
-                                        <SelectItem key={company.id} value={company.id}>
-                                            {company.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
                             <Select
                                 value={filters.category}
                                 onValueChange={(value) =>
@@ -302,7 +284,7 @@ export default function AssetsPage() {
                                     <div className="relative aspect-4/3 bg-muted overflow-hidden">
                                         {asset.images.length > 0 ? (
                                             <Image
-                                                src={asset.images[0]}
+                                                src={asset.images[0].url}
                                                 alt={asset.name}
                                                 fill
                                                 className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -335,9 +317,19 @@ export default function AssetsPage() {
                                             <h3 className="font-semibold font-mono text-sm line-clamp-1 group-hover:text-primary transition-colors">
                                                 {asset.name}
                                             </h3>
-                                            <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                                                {asset.category}
-                                            </p>
+                                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                <p className="text-xs text-muted-foreground font-mono">
+                                                    {asset.category}
+                                                </p>
+                                                {(asset as any).team && (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="text-[10px] font-mono px-1 py-0 h-4"
+                                                    >
+                                                        {(asset as any).team.name}
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Status and availability */}
@@ -379,7 +371,7 @@ export default function AssetsPage() {
                                             <div className="relative w-20 h-20 bg-muted rounded-lg overflow-hidden shrink-0">
                                                 {asset.images.length > 0 ? (
                                                     <Image
-                                                        src={asset.images[0]}
+                                                        src={asset.images[0].url}
                                                         alt={asset.name}
                                                         fill
                                                         className="object-cover"

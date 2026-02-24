@@ -352,7 +352,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                     <>
                                         <div className="relative aspect-16/10 bg-muted rounded-lg overflow-hidden mb-4">
                                             <Image
-                                                src={asset.images[currentImageIndex]}
+                                                src={asset.images[currentImageIndex].url}
                                                 alt={asset.name}
                                                 fill
                                                 className="object-cover"
@@ -366,6 +366,12 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                             >
                                                 <X className="w-3.5 h-3.5" />
                                             </button>
+
+                                            {asset.images[currentImageIndex]?.note && (
+                                                <p className="text-xs text-muted-foreground italic px-1 py-1">
+                                                    {asset.images[currentImageIndex].note}
+                                                </p>
+                                            )}
 
                                             {asset.images.length > 1 && (
                                                 <>
@@ -411,7 +417,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                                         } transition-colors`}
                                                     >
                                                         <Image
-                                                            src={img}
+                                                            src={img.url}
                                                             alt={`Thumbnail ${index + 1}`}
                                                             fill
                                                             className="object-cover"
