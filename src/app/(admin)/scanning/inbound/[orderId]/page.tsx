@@ -30,7 +30,8 @@ import {
     useScanInboundItem,
     useCompleteInboundScan,
 } from "@/hooks/use-scanning";
-import { useCreateServiceRequest } from "@/hooks/use-service-requests";
+import { useCreateServiceRequest, useListServiceRequests } from "@/hooks/use-service-requests";
+import { useAdminOrderDetails } from "@/hooks/use-orders";
 import { useUploadImage } from "@/hooks/use-assets";
 import { APIInboundProgressResponse } from "@/types/scanning";
 import { Camera, CheckCircle2, ScanLine, Package } from "lucide-react";
@@ -91,6 +92,10 @@ export default function InboundScanningPage() {
     const createServiceRequest = useCreateServiceRequest();
     const uploadImage = useUploadImage();
     const progress = useInboundScanProgress(orderId);
+
+    // Fetch order details (for order_item_id lookup) and existing linked SRs (to prevent duplicates)
+    const orderDetail = useAdminOrderDetails(orderId);
+    const linkedSRsQuery = useListServiceRequests({ related_order_id: orderId, limit: 100 });
 
     // Shared QR scanner init — called on permission grant and after inspection dialog closes
     const startQrScanner = async () => {
@@ -420,39 +425,65 @@ export default function InboundScanningPage() {
                                 "PENDING_APPROVAL",
                                 "QUOTED",
                             ];
-                            const created = await createServiceRequest.mutateAsync({
-                                request_type: "MAINTENANCE",
-                                billing_mode: "INTERNAL_ONLY",
-                                link_mode: preQuoteStatuses.includes(currentOrderStatus)
-                                    ? "BUNDLED_WITH_ORDER"
-                                    : "SEPARATE_CHANGE_REQUEST",
-                                blocks_fulfillment: snapshotCondition === "RED",
-                                title: `Flagged ${snapshotCondition} during inbound scan`,
-                                description:
-                                    inspectionSnapshot.conditionReport.conditionNotes || undefined,
-                                related_asset_id: asset?.id || inspectionSnapshot.assetId,
-                                related_order_id: orderId,
-                                items: [
-                                    {
-                                        asset_id: asset?.id || inspectionSnapshot.assetId,
-                                        asset_name:
-                                            asset?.name ||
-                                            inspectionSnapshot.assetName ||
-                                            "Scanned asset",
-                                        quantity: inspectionSnapshot.quantity || 1,
-                                        notes:
-                                            inspectionSnapshot.conditionReport.conditionNotes ||
-                                            undefined,
-                                        refurb_days_estimate:
-                                            inspectionSnapshot.conditionReport.refurbDays ||
-                                            undefined,
-                                    },
-                                ],
-                            });
-                            toast.success("Linked service request created", {
-                                description:
-                                    created?.data?.service_request_id || "Damage handoff logged",
-                            });
+
+                            // Look up order_item_id for this asset
+                            const scannedAssetId = asset?.id || inspectionSnapshot.assetId;
+                            const orderItemId =
+                                (orderDetail.data as any)?.data?.items?.find(
+                                    (i: any) => i.asset?.id === scannedAssetId
+                                )?.order_item?.id ?? null;
+
+                            // Check for existing non-cancelled SR for this order item
+                            const existingSR = orderItemId
+                                ? (linkedSRsQuery.data as any)?.data?.find(
+                                      (sr: any) =>
+                                          sr.related_order_item_id === orderItemId &&
+                                          sr.request_status !== "CANCELLED"
+                                  )
+                                : null;
+
+                            if (existingSR) {
+                                toast.info("Service request already exists for this item", {
+                                    description: `${existingSR.service_request_id} — ${existingSR.request_status.replace(/_/g, " ")}`,
+                                });
+                            } else {
+                                const created = await createServiceRequest.mutateAsync({
+                                    request_type: "MAINTENANCE",
+                                    billing_mode: "INTERNAL_ONLY",
+                                    link_mode: preQuoteStatuses.includes(currentOrderStatus)
+                                        ? "BUNDLED_WITH_ORDER"
+                                        : "SEPARATE_CHANGE_REQUEST",
+                                    blocks_fulfillment: snapshotCondition === "RED",
+                                    title: `Flagged ${snapshotCondition} during inbound scan`,
+                                    description:
+                                        inspectionSnapshot.conditionReport.conditionNotes ||
+                                        undefined,
+                                    related_asset_id: scannedAssetId,
+                                    related_order_id: orderId,
+                                    related_order_item_id: orderItemId ?? undefined,
+                                    items: [
+                                        {
+                                            asset_id: scannedAssetId,
+                                            asset_name:
+                                                asset?.name ||
+                                                inspectionSnapshot.assetName ||
+                                                "Scanned asset",
+                                            quantity: inspectionSnapshot.quantity || 1,
+                                            notes:
+                                                inspectionSnapshot.conditionReport.conditionNotes ||
+                                                undefined,
+                                            refurb_days_estimate:
+                                                inspectionSnapshot.conditionReport.refurbDays ||
+                                                undefined,
+                                        },
+                                    ],
+                                });
+                                toast.success("Linked service request created", {
+                                    description:
+                                        created?.data?.service_request_id ||
+                                        "Damage handoff logged",
+                                });
+                            }
                         } catch (error: any) {
                             toast.error("Scan saved but SR creation failed", {
                                 description:

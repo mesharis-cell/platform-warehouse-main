@@ -1,18 +1,45 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useCollection } from "@/hooks/use-collections";
+import { useCollection, useCollectionAvailability } from "@/hooks/use-collections";
 import { useAssets } from "@/hooks/use-assets";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Package, Layers, AlertCircle, CheckCircle, Building2, Tag } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    ArrowLeft,
+    Package,
+    Layers,
+    AlertCircle,
+    CheckCircle,
+    Building2,
+    Tag,
+    Calendar,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function CollectionDetailPage() {
     const params = useParams();
     const collectionId = params?.id as string;
+    const [checkStartDate, setCheckStartDate] = useState("");
+    const [checkEndDate, setCheckEndDate] = useState("");
+
+    const datesSet = !!checkStartDate && !!checkEndDate;
+
+    const { data: availabilityData } = useCollectionAvailability(
+        datesSet ? collectionId : undefined,
+        checkStartDate,
+        checkEndDate
+    );
+
+    // Build a map of asset_id → availability item when dates are checked
+    const availabilityMap = new Map(
+        (availabilityData?.data?.items ?? []).map((item: any) => [item.asset_id, item])
+    );
 
     function getConditionColor(condition: string) {
         switch (condition) {
@@ -182,6 +209,43 @@ export default function CollectionDetailPage() {
                 </Card>
             </div>
 
+            {/* Availability Date Check */}
+            <Card className="mb-8">
+                <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <h2 className="text-base font-semibold">Check Availability by Date</h2>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Event Start</Label>
+                            <Input
+                                type="date"
+                                value={checkStartDate}
+                                onChange={(e) => setCheckStartDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Event End</Label>
+                            <Input
+                                type="date"
+                                value={checkEndDate}
+                                onChange={(e) => setCheckEndDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    {datesSet && availabilityData?.data && (
+                        <p
+                            className={`mt-3 text-sm font-medium ${availabilityData.data.is_fully_available ? "text-emerald-600" : "text-amber-600"}`}
+                        >
+                            {availabilityData.data.is_fully_available
+                                ? "All items available for selected dates"
+                                : "Some items unavailable for selected dates"}
+                        </p>
+                    )}
+                </CardContent>
+            </Card>
+
             {/* Collection Items */}
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-4">
@@ -255,7 +319,7 @@ export default function CollectionDetailPage() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-3 mt-3">
+                                            <div className="flex items-center gap-3 mt-3 flex-wrap">
                                                 <Badge
                                                     variant="outline"
                                                     className={getConditionColor(
@@ -264,23 +328,65 @@ export default function CollectionDetailPage() {
                                                 >
                                                     {item?.asset?.condition}
                                                 </Badge>
-                                                <Badge variant="outline">
-                                                    {item?.asset?.available_quantity >=
-                                                    item.default_quantity ? (
-                                                        <>
-                                                            <CheckCircle className="w-3 h-3 mr-1" />
-                                                            Available
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <AlertCircle className="w-3 h-3 mr-1" />
-                                                            Low Stock
-                                                        </>
-                                                    )}
-                                                </Badge>
+
+                                                {datesSet && availabilityMap.has(item.asset.id) ? (
+                                                    (() => {
+                                                        const avail = availabilityMap.get(
+                                                            item.asset.id
+                                                        ) as any;
+                                                        if (avail.is_available) {
+                                                            return (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                                                >
+                                                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                                                    Available for dates
+                                                                </Badge>
+                                                            );
+                                                        }
+                                                        if (avail.is_booked_for_dates) {
+                                                            return (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                                                >
+                                                                    <AlertCircle className="w-3 h-3 mr-1" />
+                                                                    Booked for these dates
+                                                                </Badge>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <Badge
+                                                                variant="outline"
+                                                                className="bg-red-500/10 text-red-600 border-red-500/20"
+                                                            >
+                                                                <AlertCircle className="w-3 h-3 mr-1" />
+                                                                Insufficient stock
+                                                            </Badge>
+                                                        );
+                                                    })()
+                                                ) : (
+                                                    <Badge variant="outline">
+                                                        {item?.asset?.available_quantity >=
+                                                        item.default_quantity ? (
+                                                            <>
+                                                                <CheckCircle className="w-3 h-3 mr-1" />
+                                                                Available
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <AlertCircle className="w-3 h-3 mr-1" />
+                                                                Low Stock
+                                                            </>
+                                                        )}
+                                                    </Badge>
+                                                )}
+
                                                 <span className="text-sm text-muted-foreground">
-                                                    {item?.asset?.available_quantity} /{" "}
-                                                    {item?.asset?.total_quantity} available
+                                                    {datesSet && availabilityMap.has(item.asset.id)
+                                                        ? `${(availabilityMap.get(item.asset.id) as any).available_quantity} / ${item?.asset?.total_quantity} for dates`
+                                                        : `${item?.asset?.available_quantity} / ${item?.asset?.total_quantity} available`}
                                                 </span>
                                             </div>
 

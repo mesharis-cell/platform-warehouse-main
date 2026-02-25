@@ -121,13 +121,19 @@ export interface CollectionAvailabilityItem {
     asset_name: string;
     default_quantity: number;
     available_quantity: number;
+    total_quantity: number;
     is_available: boolean;
+    is_booked_for_dates: boolean;
+    condition: string;
+    status: string;
 }
 
 export interface CollectionAvailabilityResponse {
-    success: boolean;
-    collectionId: string;
-    isFullyAvailable: boolean;
+    collection_id: string;
+    collection_name: string;
+    event_start_date: string;
+    event_end_date: string;
+    is_fully_available: boolean;
     items: CollectionAvailabilityItem[];
 }
 

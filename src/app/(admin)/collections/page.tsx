@@ -169,8 +169,10 @@ export default function CollectionsPage() {
 
                                         {/* Overlay with item count */}
                                         <Badge variant="default" className="backdrop-blur-sm">
-                                            {collectionsData?.meta?.total}{" "}
-                                            {collectionsData?.meta?.total === 1 ? "item" : "items"}
+                                            {(collection as any).assets?.length ?? 0}{" "}
+                                            {((collection as any).assets?.length ?? 0) === 1
+                                                ? "item"
+                                                : "items"}
                                         </Badge>
                                     </div>
                                 </Link>

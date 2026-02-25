@@ -68,6 +68,7 @@ import {
     Loader2,
     ImagePlus,
     Trash2,
+    Wrench,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -1245,17 +1246,88 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                {order?.data?.items?.map((item: any) => (
-                                    <OrderItemCard
-                                        key={item.id}
-                                        item={item}
-                                        orderId={order?.data?.id}
-                                        orderStatus={order?.data?.order_status}
-                                        onRefresh={refetch}
-                                    />
-                                ))}
+                                {(() => {
+                                    const linkedSRs: any[] =
+                                        order?.data?.linked_service_requests ?? [];
+                                    const getLinkedSR = (orderItemId: string) =>
+                                        linkedSRs.find(
+                                            (sr: any) => sr.related_order_item_id === orderItemId
+                                        ) ?? null;
+                                    return order?.data?.items?.map((item: any) => (
+                                        <OrderItemCard
+                                            key={item.id}
+                                            item={item}
+                                            orderId={order?.data?.id}
+                                            orderStatus={order?.data?.order_status}
+                                            linkedSr={getLinkedSR(item.order_item?.id)}
+                                            onRefresh={refetch}
+                                        />
+                                    ));
+                                })()}
                             </CardContent>
                         </Card>
+
+                        {/* Linked Service Requests */}
+                        {(order?.data?.linked_service_requests ?? []).length > 0 && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="font-mono text-sm flex items-center gap-2">
+                                        <Wrench className="h-4 w-4 text-primary" />
+                                        LINKED SERVICE REQUESTS (
+                                        {(order?.data?.linked_service_requests ?? []).length})
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="divide-y divide-border">
+                                    {(order?.data?.linked_service_requests ?? []).map((sr: any) => (
+                                        <div
+                                            key={sr.id}
+                                            className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                                        >
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="font-mono text-sm font-medium">
+                                                    {sr.service_request_id}
+                                                </span>
+                                                <Badge
+                                                    variant="outline"
+                                                    className="font-mono text-xs"
+                                                >
+                                                    {sr.request_type}
+                                                </Badge>
+                                                <Badge
+                                                    variant={
+                                                        sr.request_status === "COMPLETED"
+                                                            ? "default"
+                                                            : sr.request_status === "CANCELLED"
+                                                              ? "destructive"
+                                                              : "secondary"
+                                                    }
+                                                    className="font-mono text-xs"
+                                                >
+                                                    {sr.request_status.replace(/_/g, " ")}
+                                                </Badge>
+                                                {sr.blocks_fulfillment &&
+                                                    !["COMPLETED", "CANCELLED"].includes(
+                                                        sr.request_status
+                                                    ) && (
+                                                        <Badge
+                                                            variant="destructive"
+                                                            className="font-mono text-xs"
+                                                        >
+                                                            Blocks Fulfillment
+                                                        </Badge>
+                                                    )}
+                                            </div>
+                                            <Link
+                                                href={`/service-requests/${sr.id}`}
+                                                className="text-xs text-primary hover:underline font-mono shrink-0"
+                                            >
+                                                View →
+                                            </Link>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Scanning Activity - Show for IN_PREPARATION+ states */}
                         {[

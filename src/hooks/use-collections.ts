@@ -100,8 +100,8 @@ export function useCollectionAvailability(
                 if (!id) throw new Error("Collection ID required");
 
                 const queryParams = new URLSearchParams({
-                    eventStartDate,
-                    eventEndDate,
+                    event_start_date: eventStartDate,
+                    event_end_date: eventEndDate,
                 });
 
                 const response = await apiClient.get(

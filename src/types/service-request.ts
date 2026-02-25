@@ -76,6 +76,8 @@ export interface ServiceRequest {
     completed_at: string | null;
     completed_by: string | null;
     completion_notes: string | null;
+    photos: string[];
+    work_notes: string | null;
     cancelled_at: string | null;
     cancelled_by: string | null;
     cancellation_reason: string | null;
@@ -110,6 +112,7 @@ export interface ListServiceRequestsParams {
     request_status?: ServiceRequestStatus;
     request_type?: ServiceRequestType;
     billing_mode?: ServiceRequestBillingMode;
+    related_order_id?: string;
 }
 
 export interface ServiceRequestItemInput {
@@ -148,6 +151,8 @@ export interface UpdateServiceRequestPayload {
     requested_start_at?: string | null;
     requested_due_at?: string | null;
     items?: ServiceRequestItemInput[];
+    photos?: string[];
+    work_notes?: string;
 }
 
 export interface UpdateServiceRequestStatusPayload {
