@@ -33,6 +33,7 @@ function buildQueryString(params: ListServiceRequestsParams) {
     if (params.request_status) queryParams.append("request_status", params.request_status);
     if (params.request_type) queryParams.append("request_type", params.request_type);
     if (params.billing_mode) queryParams.append("billing_mode", params.billing_mode);
+    if (params.related_order_id) queryParams.append("related_order_id", params.related_order_id);
     return queryParams.toString();
 }
 

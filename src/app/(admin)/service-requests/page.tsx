@@ -116,6 +116,7 @@ export default function ServiceRequestsPage() {
     const [typeFilter, setTypeFilter] = useState("");
     const [billingFilter, setBillingFilter] = useState("");
     const [companyFilter, setCompanyFilter] = useState(selectedCompanyId || "");
+    const [orderIdFilter, setOrderIdFilter] = useState("");
 
     useEffect(() => {
         setCompanyFilter(selectedCompanyId || "");
@@ -144,10 +145,20 @@ export default function ServiceRequestsPage() {
             request_type: (typeFilter || undefined) as ServiceRequestType | undefined,
             billing_mode: (billingFilter || undefined) as ServiceRequestBillingMode | undefined,
             company_id: companyFilter || undefined,
+            related_order_id: orderIdFilter || undefined,
             page,
             limit,
         }),
-        [searchTerm, statusFilter, typeFilter, billingFilter, companyFilter, page, limit]
+        [
+            searchTerm,
+            statusFilter,
+            typeFilter,
+            billingFilter,
+            companyFilter,
+            orderIdFilter,
+            page,
+            limit,
+        ]
     );
 
     const { data, isLoading, error } = useListServiceRequests(filters);
@@ -630,6 +641,34 @@ export default function ServiceRequestsPage() {
                                     <Button onClick={handleSearch} size="icon" variant="secondary">
                                         <Search className="h-4 w-4" />
                                     </Button>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium text-slate-700 uppercase tracking-wide">
+                                    Filter by Order ID
+                                </label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="Paste order UUID…"
+                                        value={orderIdFilter}
+                                        onChange={(e) => {
+                                            setOrderIdFilter(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        className="flex-1 font-mono text-xs"
+                                    />
+                                    {orderIdFilter && (
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => {
+                                                setOrderIdFilter("");
+                                                setPage(1);
+                                            }}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                             <div className="space-y-2">

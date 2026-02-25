@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Package, XCircle } from "lucide-react";
+import { AlertTriangle, Package, Wrench, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCreateServiceRequest } from "@/hooks/use-service-requests";
 import { Condition } from "@/types";
 import { PrintQrAction } from "@/components/qr/PrintQrAction";
 import { toast } from "sonner";
+
+interface LinkedSr {
+    id: string;
+    service_request_id: string;
+    request_status: string;
+    blocks_fulfillment: boolean;
+}
 
 interface OrderItemCardProps {
     item: {
@@ -29,10 +36,12 @@ interface OrderItemCardProps {
             total_volume: number;
             total_weight: number;
             handling_tags?: string[];
+            maintenance_decision?: string | null;
         };
     };
     orderId: string;
     orderStatus: string;
+    linkedSr?: LinkedSr | null;
     onRefresh?: () => void;
 }
 
@@ -55,7 +64,13 @@ const CONDITION_STYLES: Record<string, { banner: string; icon: typeof AlertTrian
     },
 };
 
-export function OrderItemCard({ item, orderId, orderStatus, onRefresh }: OrderItemCardProps) {
+export function OrderItemCard({
+    item,
+    orderId,
+    orderStatus,
+    linkedSr,
+    onRefresh,
+}: OrderItemCardProps) {
     const createServiceRequest = useCreateServiceRequest();
 
     const thumbnail =
@@ -69,8 +84,13 @@ export function OrderItemCard({ item, orderId, orderStatus, onRefresh }: OrderIt
     const ConditionIcon = conditionStyle?.icon;
 
     const showWarning = PRE_FULFILLMENT_STATUSES.includes(orderStatus) && isDamaged;
-    const showAction =
-        showWarning && item.asset?.status !== "MAINTENANCE" && item.asset?.condition === "RED";
+    // Show Create SR button only as fallback for legacy orders (no auto-created SR)
+    const canNeedSR =
+        item.asset?.condition === "RED" ||
+        (item.asset?.condition === "ORANGE" &&
+            item.order_item?.maintenance_decision === "FIX_IN_ORDER");
+    const showCreateSRButton =
+        showWarning && item.asset?.status !== "MAINTENANCE" && canNeedSR && !linkedSr;
 
     const handleCreateLinkedServiceRequest = async () => {
         if (!item?.asset?.id || !item?.order_item?.id) return;
@@ -184,7 +204,28 @@ export function OrderItemCard({ item, orderId, orderStatus, onRefresh }: OrderIt
                     </div>
                 )}
 
-                {showAction && (
+                {linkedSr && showWarning && (
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50 flex-wrap">
+                        <Wrench className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <Link
+                            href={`/service-requests/${linkedSr.id}`}
+                            className="font-mono text-xs text-primary hover:underline"
+                        >
+                            {linkedSr.service_request_id}
+                        </Link>
+                        <Badge variant="outline" className="font-mono text-[10px]">
+                            {linkedSr.request_status.replace(/_/g, " ")}
+                        </Badge>
+                        {linkedSr.blocks_fulfillment &&
+                            !["COMPLETED", "CANCELLED"].includes(linkedSr.request_status) && (
+                                <Badge variant="destructive" className="font-mono text-[10px]">
+                                    Blocking
+                                </Badge>
+                            )}
+                    </div>
+                )}
+
+                {showCreateSRButton && (
                     <Button
                         variant="destructive"
                         size="sm"
