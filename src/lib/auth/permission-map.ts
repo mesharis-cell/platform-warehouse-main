@@ -21,6 +21,9 @@ export const WAREHOUSE_NAV_PERMISSIONS = {
 } as const;
 
 export const WAREHOUSE_ACTION_PERMISSIONS = {
+    brandsCreate: "brands:create",
+    brandsUpdate: "brands:update",
+    brandsDelete: "brands:delete",
     ordersRead: "orders:read",
     ordersUpdate: "orders:update",
     ordersExport: "orders:export",

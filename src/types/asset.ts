@@ -150,6 +150,7 @@ export interface CreateAssetRequest {
     volume_per_unit: number; // m³
     condition?: Condition; // optional, defaults to GREEN if not provided
     condition_notes?: string; // Feedback #2: Required for ORANGE/RED items
+    condition_photos?: string[]; // URLs of condition damage photos (ORANGE/RED only)
     team_id?: string | null;
     handling_tags?: string[];
     refurb_days_estimate?: number;
