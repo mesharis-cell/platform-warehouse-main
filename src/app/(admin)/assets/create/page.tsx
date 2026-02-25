@@ -264,17 +264,16 @@ export default function MobileCreateAssetPage() {
 
         setIsSubmitting(true);
         try {
-            // Build images: condition photos first, then general photos
-            // If the photo has an uploadedUrl it was already uploaded as a draft — the server will move it
-            const condImages = conditionReport.conditionPhotos.map((p) => ({
-                url: p.uploadedUrl ?? p.previewUrl,
-                note: p.note || undefined,
-            }));
+            // Condition photos go separately → stored in assetConditionHistory.photos
+            // General asset photos go into assets.images
+            // Both sets were already uploaded to S3 as drafts; the server promotes them
+            const conditionPhotos = conditionReport.conditionPhotos.map(
+                (p) => p.uploadedUrl ?? p.previewUrl
+            );
             const generalImages = capturedPhotos.map((p) => ({
                 url: p.uploadedUrl ?? p.previewUrl,
                 note: p.note || undefined,
             }));
-            const allImages = [...condImages, ...generalImages];
 
             await createAsset.mutateAsync({
                 company_id: formData.company_id,
@@ -285,7 +284,8 @@ export default function MobileCreateAssetPage() {
                 name: formData.name || "",
                 description: formData.description,
                 category: formData.category,
-                images: allImages,
+                images: generalImages,
+                condition_photos: conditionPhotos,
                 tracking_method: formData.tracking_method || "INDIVIDUAL",
                 total_quantity: formData.total_quantity || 1,
                 available_quantity: formData.available_quantity || 1,

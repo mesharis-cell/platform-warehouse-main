@@ -83,9 +83,7 @@ async function deleteAsset(id: string): Promise<void> {
 }
 
 // Upload image
-async function uploadImage(
-    formData: FormData
-): Promise<{ data: { imageUrls: string[]; presignedUrl: string } }> {
+async function uploadImage(formData: FormData): Promise<{ data: { imageUrls: string[] } }> {
     try {
         const response = await apiClient.post("/operations/v1/upload/images", formData, {
             headers: {
