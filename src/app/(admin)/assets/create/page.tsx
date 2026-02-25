@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,11 +17,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCreateAsset } from "@/hooks/use-assets";
 import { useCompanies } from "@/hooks/use-companies";
 import { useWarehouses } from "@/hooks/use-warehouses";
 import { useZones } from "@/hooks/use-zones";
-import { useBrands } from "@/hooks/use-brands";
+import { useBrands, useCreateBrand } from "@/hooks/use-brands";
 import { useTeams } from "@/hooks/use-teams";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PhotoCaptureStrip, PhotoEntry } from "@/components/shared/photo-capture-strip";
@@ -102,6 +103,31 @@ export default function MobileCreateAssetPage() {
     );
 
     const createAsset = useCreateAsset();
+    const createBrand = useCreateBrand();
+
+    const [isNewBrandOpen, setIsNewBrandOpen] = useState(false);
+    const [newBrandName, setNewBrandName] = useState("");
+    const [isCreatingBrand, setIsCreatingBrand] = useState(false);
+
+    const handleQuickCreateBrand = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.company_id || !newBrandName.trim()) return;
+        setIsCreatingBrand(true);
+        try {
+            const created = await createBrand.mutateAsync({
+                company_id: formData.company_id,
+                name: newBrandName.trim(),
+            });
+            setFormData((prev) => ({ ...prev, brand_id: created.id }));
+            setNewBrandName("");
+            setIsNewBrandOpen(false);
+            toast.success(`Brand "${created.name}" created`);
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message ?? "Failed to create brand");
+        } finally {
+            setIsCreatingBrand(false);
+        }
+    };
 
     const companies = companiesResponse?.data || [];
     const warehouses = warehousesResponse?.data || [];
@@ -441,7 +467,19 @@ export default function MobileCreateAssetPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Brand</Label>
+                                <div className="flex items-center justify-between">
+                                    <Label>Brand</Label>
+                                    {formData.company_id && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsNewBrandOpen(true)}
+                                            className="flex items-center gap-1 text-xs text-primary hover:underline font-mono"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                            New Brand
+                                        </button>
+                                    )}
+                                </div>
                                 <Select
                                     value={formData.brand_id || "_none_"}
                                     onValueChange={(value) =>
@@ -464,6 +502,58 @@ export default function MobileCreateAssetPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {/* Quick-create brand dialog */}
+                            <Dialog open={isNewBrandOpen} onOpenChange={setIsNewBrandOpen}>
+                                <DialogContent className="max-w-sm">
+                                    <DialogHeader>
+                                        <DialogTitle className="font-mono text-sm uppercase">
+                                            New Brand
+                                        </DialogTitle>
+                                    </DialogHeader>
+                                    <form onSubmit={handleQuickCreateBrand} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Brand Name *</Label>
+                                            <Input
+                                                value={newBrandName}
+                                                onChange={(e) => setNewBrandName(e.target.value)}
+                                                placeholder="e.g., Johnnie Walker"
+                                                required
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Creates under the selected company. You can add a logo
+                                            later from the Brands page.
+                                        </p>
+                                        <div className="flex gap-3">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="flex-1"
+                                                onClick={() => {
+                                                    setIsNewBrandOpen(false);
+                                                    setNewBrandName("");
+                                                }}
+                                                disabled={isCreatingBrand}
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                type="submit"
+                                                className="flex-1"
+                                                disabled={isCreatingBrand || !newBrandName.trim()}
+                                            >
+                                                {isCreatingBrand ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    "Create"
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
 
                             <div className="space-y-2">
                                 <Label>Category *</Label>
