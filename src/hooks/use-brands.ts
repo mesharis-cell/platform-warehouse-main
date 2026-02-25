@@ -29,7 +29,7 @@ async function fetchBrands(params?: Record<string, string>): Promise<BrandListRe
 async function createBrand(data: CreateBrandRequest): Promise<Brand> {
     try {
         const response = await apiClient.post("/operations/v1/brand", data);
-        return response.data;
+        return response.data.data;
     } catch (error) {
         throwApiError(error);
     }
@@ -39,7 +39,7 @@ async function createBrand(data: CreateBrandRequest): Promise<Brand> {
 async function updateBrand({ id, data }: { id: string; data: UpdateBrandRequest }): Promise<Brand> {
     try {
         const response = await apiClient.patch(`/operations/v1/brand/${id}`, data);
-        return response.data;
+        return response.data.data;
     } catch (error) {
         throwApiError(error);
     }
