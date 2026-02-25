@@ -1,18 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-    ArrowLeft,
-    Camera,
-    CheckCircle2,
-    ChevronLeft,
-    ChevronRight,
-    Loader2,
-    RefreshCcw,
-    RotateCcw,
-    X,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,13 +17,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { useCreateAsset, useUploadImage } from "@/hooks/use-assets";
+import { useCreateAsset } from "@/hooks/use-assets";
 import { useCompanies } from "@/hooks/use-companies";
 import { useWarehouses } from "@/hooks/use-warehouses";
 import { useZones } from "@/hooks/use-zones";
 import { useBrands } from "@/hooks/use-brands";
 import { useTeams } from "@/hooks/use-teams";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { PhotoCaptureStrip, PhotoEntry } from "@/components/shared/photo-capture-strip";
+import {
+    ConditionReportPanel,
+    ConditionReport,
+    validateConditionReport,
+} from "@/components/shared/condition-report-panel";
 import type { AssetCategory, CreateAssetRequest } from "@/types/asset";
 
 type Step = 0 | 1 | 2 | 3;
@@ -52,23 +48,33 @@ const toPositiveNumber = (value: string) => {
     return Number.isNaN(parsed) ? 0 : parsed;
 };
 
+const DRAFT_KEY = "asset-create-draft";
+
+interface DraftState {
+    formData: Partial<CreateAssetRequest>;
+    conditionReport: ConditionReport;
+    capturedPhotos: { previewUrl: string; note: string; uploadedUrl?: string }[];
+    teamSelected: boolean;
+}
+
+const DEFAULT_CONDITION: ConditionReport = {
+    condition: "GREEN",
+    conditionPhotos: [],
+    conditionNotes: "",
+    refurbDays: null,
+};
+
 export default function MobileCreateAssetPage() {
     const router = useRouter();
     const isMobile = useIsMobile();
     const [isMounted, setIsMounted] = useState(false);
     const [currentStep, setCurrentStep] = useState<Step>(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    // Camera flow state
-    type CapturedPhoto = { file: File; previewUrl: string; note: string };
-    type CameraPhase = "closed" | "viewfinder" | "preview";
-    const [capturedPhotos, setCapturedPhotos] = useState<CapturedPhoto[]>([]);
-    const [cameraPhase, setCameraPhase] = useState<CameraPhase>("closed");
-    const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
-    const [capturedPreviewUrl, setCapturedPreviewUrl] = useState("");
-    const [pendingNote, setPendingNote] = useState("");
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const streamRef = useRef<MediaStream | null>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [hasDraft, setHasDraft] = useState(false);
+
+    const [capturedPhotos, setCapturedPhotos] = useState<PhotoEntry[]>([]);
+    const [conditionReport, setConditionReport] = useState<ConditionReport>(DEFAULT_CONDITION);
+    const [teamSelected, setTeamSelected] = useState(false);
 
     const [formData, setFormData] = useState<Partial<CreateAssetRequest>>({
         tracking_method: "INDIVIDUAL",
@@ -96,7 +102,6 @@ export default function MobileCreateAssetPage() {
     );
 
     const createAsset = useCreateAsset();
-    const uploadImage = useUploadImage();
 
     const companies = companiesResponse?.data || [];
     const warehouses = warehousesResponse?.data || [];
@@ -108,21 +113,70 @@ export default function MobileCreateAssetPage() {
         setIsMounted(true);
     }, []);
 
+    // Restore draft on mount
+    useEffect(() => {
+        if (!isMounted) return;
+        try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (!raw) return;
+            const draft: DraftState = JSON.parse(raw);
+            setFormData(draft.formData);
+            setTeamSelected(draft.teamSelected ?? false);
+
+            // Remap photo entries so previewUrl = uploadedUrl (blob URLs are gone after reload)
+            const remapPhotos = (
+                photos: { previewUrl: string; note: string; uploadedUrl?: string }[]
+            ) =>
+                (photos ?? []).map((p) => ({
+                    previewUrl: p.uploadedUrl ?? p.previewUrl,
+                    note: p.note,
+                    uploadedUrl: p.uploadedUrl,
+                }));
+
+            const savedCondition = draft.conditionReport ?? DEFAULT_CONDITION;
+            setConditionReport({
+                ...savedCondition,
+                conditionPhotos: remapPhotos(savedCondition.conditionPhotos),
+            });
+            setCapturedPhotos(remapPhotos(draft.capturedPhotos ?? []));
+            setHasDraft(true);
+        } catch (_) {
+            /* ignore parse errors */
+        }
+    }, [isMounted]);
+
+    // Persist draft on every change
+    useEffect(() => {
+        if (!isMounted) return;
+        try {
+            const draft: DraftState = {
+                formData,
+                conditionReport,
+                capturedPhotos: capturedPhotos.map((p) => ({
+                    previewUrl: p.uploadedUrl ?? p.previewUrl,
+                    note: p.note,
+                    uploadedUrl: p.uploadedUrl,
+                })),
+                teamSelected,
+            };
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        } catch (_) {
+            /* ignore storage errors */
+        }
+    }, [isMounted, formData, conditionReport, capturedPhotos, teamSelected]);
+
+    const clearDraft = () => {
+        localStorage.removeItem(DRAFT_KEY);
+        setHasDraft(false);
+    };
+
     const progressPercent = useMemo(() => ((currentStep + 1) / STEPS.length) * 100, [currentStep]);
 
     const updateDimension = (field: "length" | "width" | "height", value: number) => {
-        const nextDimensions = {
-            ...formData.dimensions,
-            [field]: value,
-        };
-
-        const length = nextDimensions.length || 0;
-        const width = nextDimensions.width || 0;
-        const height = nextDimensions.height || 0;
-
+        const nextDimensions = { ...formData.dimensions, [field]: value };
+        const { length = 0, width = 0, height = 0 } = nextDimensions;
         const nextVolume =
             length > 0 && width > 0 && height > 0 ? (length * width * height) / 1000000 : 0;
-
         setFormData((prev) => ({
             ...prev,
             dimensions: nextDimensions,
@@ -130,101 +184,14 @@ export default function MobileCreateAssetPage() {
         }));
     };
 
-    // Attach stream to video element when viewfinder opens
-    useEffect(() => {
-        if (cameraPhase === "viewfinder" && videoRef.current && streamRef.current) {
-            videoRef.current.srcObject = streamRef.current;
-            videoRef.current.play().catch(() => {});
-        }
-    }, [cameraPhase]);
-
-    // Cleanup on unmount
-    useEffect(() => () => { streamRef.current?.getTracks().forEach((t) => t.stop()); }, []);
-
-    const stopStream = () => {
-        streamRef.current?.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-    };
-
-    const openCamera = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-            });
-            streamRef.current = stream;
-            setCameraPhase("viewfinder");
-        } catch {
-            toast.error("Camera access denied. Enable camera permission and try again.");
-        }
-    };
-
-    const capturePhoto = () => {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        if (!video || !canvas) return;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext("2d")?.drawImage(video, 0, 0);
-        canvas.toBlob((blob) => {
-            if (!blob) return;
-            const url = URL.createObjectURL(blob);
-            setCapturedBlob(blob);
-            setCapturedPreviewUrl(url);
-            setCameraPhase("preview");
-            stopStream();
-        }, "image/jpeg", 0.92);
-    };
-
-    const retakePhoto = async () => {
-        URL.revokeObjectURL(capturedPreviewUrl);
-        setCapturedBlob(null);
-        setCapturedPreviewUrl("");
-        setPendingNote("");
-        await openCamera();
-    };
-
-    const savePhoto = (andTakeNext: boolean) => {
-        if (!capturedBlob) return;
-        const file = new File([capturedBlob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
-        setCapturedPhotos((prev) => [...prev, { file, previewUrl: capturedPreviewUrl, note: pendingNote.trim() }]);
-        setCapturedBlob(null);
-        setCapturedPreviewUrl("");
-        setPendingNote("");
-        if (andTakeNext) {
-            openCamera();
-        } else {
-            setCameraPhase("closed");
-        }
-    };
-
-    const closeCamera = () => {
-        stopStream();
-        URL.revokeObjectURL(capturedPreviewUrl);
-        setCapturedBlob(null);
-        setCapturedPreviewUrl("");
-        setPendingNote("");
-        setCameraPhase("closed");
-    };
-
-    const removePhotoAt = (index: number) => {
-        setCapturedPhotos((prev) => {
-            URL.revokeObjectURL(prev[index].previewUrl);
-            return prev.filter((_, i) => i !== index);
-        });
-    };
-
-    // Gallery fallback
-    const onSelectFromGallery = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(event.target.files || []);
-        if (!files.length) return;
-        const photos = files.map((file) => ({ file, previewUrl: URL.createObjectURL(file), note: "" }));
-        setCapturedPhotos((prev) => [...prev, ...photos]);
-    };
-
-    const validateStep = (step: Step) => {
+    const validateStep = (step: Step): boolean => {
         if (step === 0) {
             if (!formData.company_id || !formData.name || !formData.category) {
                 toast.error("Complete company, asset name, and category.");
+                return false;
+            }
+            if (teams.length > 0 && !teamSelected) {
+                toast.error("Please select a team or 'No team (shared)'.");
                 return false;
             }
             return true;
@@ -235,28 +202,16 @@ export default function MobileCreateAssetPage() {
                 toast.error("Select warehouse and zone.");
                 return false;
             }
-
-            if (formData.condition === "ORANGE" || formData.condition === "RED") {
-                if (!formData.refurb_days_estimate || formData.refurb_days_estimate <= 0) {
-                    toast.error("Refurbishment days are required for ORANGE/RED assets.");
-                    return false;
-                }
-                if (!formData.condition_notes || formData.condition_notes.trim().length < 10) {
-                    toast.error(
-                        "Condition notes must be at least 10 characters for ORANGE/RED assets."
-                    );
-                    return false;
-                }
+            const condErr = validateConditionReport(conditionReport);
+            if (condErr) {
+                toast.error(condErr);
+                return false;
             }
-
             return true;
         }
 
         if (step === 2) {
-            const length = formData.dimensions?.length || 0;
-            const width = formData.dimensions?.width || 0;
-            const height = formData.dimensions?.height || 0;
-
+            const { length = 0, width = 0, height = 0 } = formData.dimensions || {};
             if (
                 !formData.weight_per_unit ||
                 formData.weight_per_unit <= 0 ||
@@ -269,22 +224,18 @@ export default function MobileCreateAssetPage() {
                 toast.error("Weight, dimensions, and volume must all be positive.");
                 return false;
             }
-
             if (!formData.total_quantity || formData.total_quantity < 1) {
                 toast.error("Total quantity must be at least 1.");
                 return false;
             }
-
             if ((formData.available_quantity || 0) > (formData.total_quantity || 0)) {
                 toast.error("Available quantity cannot exceed total quantity.");
                 return false;
             }
-
             if (formData.tracking_method === "BATCH" && !formData.packaging?.trim()) {
                 toast.error("Packaging is required for BATCH tracking.");
                 return false;
             }
-
             return true;
         }
 
@@ -292,10 +243,9 @@ export default function MobileCreateAssetPage() {
     };
 
     const goNext = () => {
-        if (!validateStep(currentStep)) return;
-        if (currentStep < 3) setCurrentStep((prev) => (prev + 1) as Step);
+        if (validateStep(currentStep) && currentStep < 3)
+            setCurrentStep((prev) => (prev + 1) as Step);
     };
-
     const goBack = () => {
         if (currentStep > 0) setCurrentStep((prev) => (prev - 1) as Step);
     };
@@ -308,34 +258,34 @@ export default function MobileCreateAssetPage() {
             !formData.zone_id ||
             !formData.category
         ) {
-            toast.error("Missing required relationships for asset creation.");
+            toast.error("Missing required fields.");
             return;
         }
 
         setIsSubmitting(true);
         try {
-            let assetImages: { url: string; note?: string }[] = [];
-            if (capturedPhotos.length > 0) {
-                const uploadFormData = new FormData();
-                uploadFormData.append("companyId", formData.company_id);
-                capturedPhotos.forEach(({ file }) => uploadFormData.append("files", file));
-                const uploadResult = await uploadImage.mutateAsync(uploadFormData);
-                const urls: string[] = uploadResult?.data?.imageUrls || [];
-                assetImages = urls.map((url, i) => ({
-                    url,
-                    ...(capturedPhotos[i]?.note ? { note: capturedPhotos[i].note } : {}),
-                }));
-            }
+            // Build images: condition photos first, then general photos
+            // If the photo has an uploadedUrl it was already uploaded as a draft — the server will move it
+            const condImages = conditionReport.conditionPhotos.map((p) => ({
+                url: p.uploadedUrl ?? p.previewUrl,
+                note: p.note || undefined,
+            }));
+            const generalImages = capturedPhotos.map((p) => ({
+                url: p.uploadedUrl ?? p.previewUrl,
+                note: p.note || undefined,
+            }));
+            const allImages = [...condImages, ...generalImages];
 
             await createAsset.mutateAsync({
                 company_id: formData.company_id,
                 warehouse_id: formData.warehouse_id,
                 zone_id: formData.zone_id,
                 brand_id: formData.brand_id,
+                team_id: formData.team_id ?? null,
                 name: formData.name || "",
                 description: formData.description,
                 category: formData.category,
-                images: assetImages,
+                images: allImages,
                 tracking_method: formData.tracking_method || "INDIVIDUAL",
                 total_quantity: formData.total_quantity || 1,
                 available_quantity: formData.available_quantity || 1,
@@ -343,13 +293,14 @@ export default function MobileCreateAssetPage() {
                 weight_per_unit: formData.weight_per_unit || 0,
                 dimensions: formData.dimensions || {},
                 volume_per_unit: formData.volume_per_unit || 0,
-                condition: formData.condition || "GREEN",
-                condition_notes: formData.condition_notes,
-                refurb_days_estimate: formData.refurb_days_estimate,
+                condition: conditionReport.condition,
+                condition_notes: conditionReport.conditionNotes || undefined,
+                refurb_days_estimate: conditionReport.refurbDays ?? undefined,
                 status: "AVAILABLE",
                 handling_tags: formData.handling_tags || [],
             });
 
+            clearDraft();
             toast.success("Asset created successfully");
             router.push("/assets");
         } catch (error) {
@@ -411,6 +362,40 @@ export default function MobileCreateAssetPage() {
             </div>
 
             <div className="p-4 space-y-4">
+                {/* Draft restore banner */}
+                {hasDraft && (
+                    <div className="flex items-center justify-between gap-2 rounded-xl border border-primary/40 bg-primary/5 px-4 py-3">
+                        <p className="text-xs text-primary font-mono">
+                            Draft restored — continue where you left off
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                clearDraft();
+                                setCurrentStep(0);
+                                setFormData({
+                                    tracking_method: "INDIVIDUAL",
+                                    total_quantity: 1,
+                                    available_quantity: 1,
+                                    images: [],
+                                    handling_tags: [],
+                                    condition: "GREEN",
+                                    status: "AVAILABLE",
+                                    dimensions: {},
+                                });
+                                setConditionReport(DEFAULT_CONDITION);
+                                setCapturedPhotos([]);
+                                setTeamSelected(false);
+                            }}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                            <X className="w-3 h-3" />
+                            Clear
+                        </button>
+                    </div>
+                )}
+
+                {/* ── Step 0: Identity ── */}
                 {currentStep === 0 && (
                     <Card>
                         <CardHeader>
@@ -435,9 +420,9 @@ export default function MobileCreateAssetPage() {
                                         <SelectValue placeholder="Select company" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {companies.map((company) => (
-                                            <SelectItem key={company.id} value={company.id}>
-                                                {company.name}
+                                        {companies.map((c) => (
+                                            <SelectItem key={c.id} value={c.id}>
+                                                {c.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -471,9 +456,9 @@ export default function MobileCreateAssetPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="_none_">No Brand</SelectItem>
-                                        {brands.map((brand) => (
-                                            <SelectItem key={brand.id} value={brand.id}>
-                                                {brand.name}
+                                        {brands.map((b) => (
+                                            <SelectItem key={b.id} value={b.id}>
+                                                {b.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -495,9 +480,9 @@ export default function MobileCreateAssetPage() {
                                         <SelectValue placeholder="Select category" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {DEFAULT_CATEGORIES.map((category) => (
-                                            <SelectItem key={category} value={category}>
-                                                {category}
+                                        {DEFAULT_CATEGORIES.map((cat) => (
+                                            <SelectItem key={cat} value={cat}>
+                                                {cat}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -514,31 +499,33 @@ export default function MobileCreateAssetPage() {
                                             description: e.target.value,
                                         }))
                                     }
-                                    rows={4}
+                                    rows={3}
                                     placeholder="Optional details about this asset"
                                 />
                             </div>
 
+                            {/* Team — always shown when teams exist, explicit selection required */}
                             {teams.length > 0 && (
                                 <div className="space-y-2">
-                                    <Label>Team (optional)</Label>
+                                    <Label>Team *</Label>
                                     <Select
-                                        value={formData.team_id || "_none_"}
-                                        onValueChange={(value) =>
+                                        value={teamSelected ? formData.team_id || "_none_" : ""}
+                                        onValueChange={(value) => {
+                                            setTeamSelected(true);
                                             setFormData((prev) => ({
                                                 ...prev,
                                                 team_id: value === "_none_" ? null : value,
-                                            }))
-                                        }
+                                            }));
+                                        }}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="No team (shared)" />
+                                            <SelectValue placeholder="Select a team…" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="_none_">No team (shared)</SelectItem>
-                                            {teams.map((team) => (
-                                                <SelectItem key={team.id} value={team.id}>
-                                                    {team.name}
+                                            {teams.map((t) => (
+                                                <SelectItem key={t.id} value={t.id}>
+                                                    {t.name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -549,6 +536,7 @@ export default function MobileCreateAssetPage() {
                     </Card>
                 )}
 
+                {/* ── Step 1: Location & Condition ── */}
                 {currentStep === 1 && (
                     <Card>
                         <CardHeader>
@@ -573,9 +561,9 @@ export default function MobileCreateAssetPage() {
                                         <SelectValue placeholder="Select warehouse" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {warehouses.map((warehouse) => (
-                                            <SelectItem key={warehouse.id} value={warehouse.id}>
-                                                {warehouse.name}
+                                        {warehouses.map((w) => (
+                                            <SelectItem key={w.id} value={w.id}>
+                                                {w.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -594,9 +582,9 @@ export default function MobileCreateAssetPage() {
                                         <SelectValue placeholder="Select zone" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {zones.map((zone) => (
-                                            <SelectItem key={zone.id} value={zone.id}>
-                                                {zone.name}
+                                        {zones.map((z) => (
+                                            <SelectItem key={z.id} value={z.id}>
+                                                {z.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -605,66 +593,18 @@ export default function MobileCreateAssetPage() {
 
                             <div className="space-y-2">
                                 <Label>Condition</Label>
-                                <Select
-                                    value={formData.condition || "GREEN"}
-                                    onValueChange={(value) =>
-                                        setFormData((prev) => ({
-                                            ...prev,
-                                            condition: value as "GREEN" | "ORANGE" | "RED",
-                                        }))
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="GREEN">GREEN</SelectItem>
-                                        <SelectItem value="ORANGE">ORANGE</SelectItem>
-                                        <SelectItem value="RED">RED</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <ConditionReportPanel
+                                    value={conditionReport}
+                                    onChange={setConditionReport}
+                                    uploadOnCapture
+                                    companyId={formData.company_id}
+                                />
                             </div>
-
-                            {(formData.condition === "ORANGE" || formData.condition === "RED") && (
-                                <>
-                                    <div className="space-y-2">
-                                        <Label>Refurbishment Days *</Label>
-                                        <Input
-                                            type="number"
-                                            min={1}
-                                            step="1"
-                                            value={formData.refurb_days_estimate || ""}
-                                            onChange={(e) =>
-                                                setFormData((prev) => ({
-                                                    ...prev,
-                                                    refurb_days_estimate: Math.max(
-                                                        1,
-                                                        Math.floor(toPositiveNumber(e.target.value))
-                                                    ),
-                                                }))
-                                            }
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Condition Notes *</Label>
-                                        <Textarea
-                                            rows={4}
-                                            value={formData.condition_notes || ""}
-                                            onChange={(e) =>
-                                                setFormData((prev) => ({
-                                                    ...prev,
-                                                    condition_notes: e.target.value,
-                                                }))
-                                            }
-                                            placeholder="Describe damage/maintenance context (min 10 chars)"
-                                        />
-                                    </div>
-                                </>
-                            )}
                         </CardContent>
                     </Card>
                 )}
 
+                {/* ── Step 2: Specs & Tracking ── */}
                 {currentStep === 2 && (
                     <Card>
                         <CardHeader>
@@ -712,51 +652,23 @@ export default function MobileCreateAssetPage() {
                             </div>
 
                             <div className="grid grid-cols-3 gap-3">
-                                <div className="space-y-2">
-                                    <Label>L (cm) *</Label>
-                                    <Input
-                                        type="number"
-                                        min={0.01}
-                                        step="0.01"
-                                        value={formData.dimensions?.length || ""}
-                                        onChange={(e) =>
-                                            updateDimension(
-                                                "length",
-                                                toPositiveNumber(e.target.value)
-                                            )
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>W (cm) *</Label>
-                                    <Input
-                                        type="number"
-                                        min={0.01}
-                                        step="0.01"
-                                        value={formData.dimensions?.width || ""}
-                                        onChange={(e) =>
-                                            updateDimension(
-                                                "width",
-                                                toPositiveNumber(e.target.value)
-                                            )
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>H (cm) *</Label>
-                                    <Input
-                                        type="number"
-                                        min={0.01}
-                                        step="0.01"
-                                        value={formData.dimensions?.height || ""}
-                                        onChange={(e) =>
-                                            updateDimension(
-                                                "height",
-                                                toPositiveNumber(e.target.value)
-                                            )
-                                        }
-                                    />
-                                </div>
+                                {(["length", "width", "height"] as const).map((dim, i) => (
+                                    <div key={dim} className="space-y-2">
+                                        <Label>{["L (cm)", "W (cm)", "H (cm)"][i]} *</Label>
+                                        <Input
+                                            type="number"
+                                            min={0.01}
+                                            step="0.01"
+                                            value={formData.dimensions?.[dim] || ""}
+                                            onChange={(e) =>
+                                                updateDimension(
+                                                    dim,
+                                                    toPositiveNumber(e.target.value)
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                ))}
                             </div>
 
                             <div className="space-y-2">
@@ -822,49 +734,23 @@ export default function MobileCreateAssetPage() {
                     </Card>
                 )}
 
+                {/* ── Step 3: Photos & Review ── */}
                 {currentStep === 3 && (
                     <div className="space-y-4">
-                        {/* hidden canvas for capture */}
-                        <canvas ref={canvasRef} className="hidden" />
-
                         <Card>
                             <CardHeader>
-                                <CardTitle className="font-mono text-sm uppercase">Photos</CardTitle>
+                                <CardTitle className="font-mono text-sm uppercase">
+                                    Photos
+                                </CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-3">
-                                <Button type="button" className="w-full" onClick={openCamera}>
-                                    <Camera className="w-4 h-4 mr-2" />
-                                    {capturedPhotos.length > 0 ? "Take Another Photo" : "Open Camera"}
-                                </Button>
-
-                                {/* gallery fallback */}
-                                <input id="gallery-pick" type="file" multiple accept="image/*" onChange={onSelectFromGallery} className="hidden" />
-                                <Button type="button" variant="outline" className="w-full text-xs" onClick={() => document.getElementById("gallery-pick")?.click()}>
-                                    Pick from Gallery
-                                </Button>
-
-                                {capturedPhotos.length > 0 && (
-                                    <div className="space-y-2 mt-2">
-                                        {capturedPhotos.map((photo, index) => (
-                                            <div key={index} className="flex gap-3 items-start rounded-md border p-2">
-                                                <div className="relative w-16 h-16 shrink-0 rounded overflow-hidden border">
-                                                    <img src={photo.previewUrl} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-medium font-mono">Photo {index + 1}</p>
-                                                    {photo.note ? (
-                                                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{photo.note}</p>
-                                                    ) : (
-                                                        <p className="text-xs text-muted-foreground/50 mt-0.5 italic">No note</p>
-                                                    )}
-                                                </div>
-                                                <button type="button" onClick={() => removePhotoAt(index)} className="shrink-0 h-6 w-6 rounded-full bg-muted flex items-center justify-center">
-                                                    <X className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                            <CardContent>
+                                <PhotoCaptureStrip
+                                    photos={capturedPhotos}
+                                    onChange={setCapturedPhotos}
+                                    label="Asset Photos"
+                                    uploadOnCapture
+                                    companyId={formData.company_id}
+                                />
                             </CardContent>
                         </Card>
 
@@ -875,120 +761,30 @@ export default function MobileCreateAssetPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Name</span>
-                                    <span className="font-medium">{formData.name}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Category</span>
-                                    <span className="font-medium">{formData.category}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Tracking</span>
-                                    <span className="font-medium">{formData.tracking_method}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Condition</span>
-                                    <span className="font-medium">{formData.condition}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Photos</span>
-                                    <span className="font-medium">{capturedPhotos.length}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Volume (m³)</span>
-                                    <span className="font-medium">
-                                        {formData.volume_per_unit || 0}
-                                    </span>
-                                </div>
+                                {[
+                                    ["Name", formData.name],
+                                    ["Category", formData.category],
+                                    ["Tracking", formData.tracking_method],
+                                    ["Condition", conditionReport.condition],
+                                    [
+                                        "Condition Photos",
+                                        conditionReport.conditionPhotos.length || "—",
+                                    ],
+                                    ["Asset Photos", capturedPhotos.length || "—"],
+                                    ["Volume (m³)", formData.volume_per_unit || 0],
+                                ].map(([label, value]) => (
+                                    <div key={label as string} className="flex justify-between">
+                                        <span className="text-muted-foreground">{label}</span>
+                                        <span className="font-medium">{value as string}</span>
+                                    </div>
+                                ))}
                             </CardContent>
                         </Card>
                     </div>
                 )}
             </div>
 
-            {/* ── Camera overlay ── */}
-            {cameraPhase !== "closed" && (
-                <div className="fixed inset-0 z-[60] bg-black flex flex-col">
-                    {/* Viewfinder */}
-                    {cameraPhase === "viewfinder" && (
-                        <>
-                            <video
-                                ref={videoRef}
-                                playsInline
-                                muted
-                                className="flex-1 w-full object-cover"
-                            />
-                            <div className="p-6 flex items-center justify-between bg-black/80">
-                                <button
-                                    type="button"
-                                    onClick={closeCamera}
-                                    className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center"
-                                >
-                                    <X className="w-5 h-5 text-white" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={capturePhoto}
-                                    className="h-18 w-18 rounded-full bg-white border-4 border-white/30 flex items-center justify-center"
-                                    style={{ height: 72, width: 72 }}
-                                >
-                                    <div className="h-14 w-14 rounded-full bg-white" />
-                                </button>
-                                <div className="h-12 w-12" />
-                            </div>
-                        </>
-                    )}
-
-                    {/* Preview + note */}
-                    {cameraPhase === "preview" && (
-                        <>
-                            <div className="flex-1 relative overflow-hidden">
-                                <img
-                                    src={capturedPreviewUrl}
-                                    alt="Captured"
-                                    className="w-full h-full object-contain bg-black"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={retakePhoto}
-                                    className="absolute top-4 left-4 flex items-center gap-1.5 bg-black/60 text-white text-sm px-3 py-2 rounded-full"
-                                >
-                                    <RotateCcw className="w-4 h-4" />
-                                    Retake
-                                </button>
-                            </div>
-                            <div className="bg-black/90 p-4 space-y-3">
-                                <textarea
-                                    value={pendingNote}
-                                    onChange={(e) => setPendingNote(e.target.value)}
-                                    placeholder="Add a note for this photo (optional)"
-                                    rows={2}
-                                    className="w-full rounded-md bg-white/10 text-white placeholder:text-white/40 text-sm px-3 py-2 border border-white/20 resize-none focus:outline-none focus:border-white/60"
-                                />
-                                <div className="flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => savePhoto(false)}
-                                        className="flex-1 py-3 rounded-xl bg-white/20 text-white text-sm font-medium"
-                                    >
-                                        Save
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => savePhoto(true)}
-                                        className="flex-1 py-3 rounded-xl bg-white text-black text-sm font-semibold flex items-center justify-center gap-2"
-                                    >
-                                        <Camera className="w-4 h-4" />
-                                        Save &amp; Take Next
-                                    </button>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </div>
-            )}
-
+            {/* ── Nav bar ── */}
             <div className="fixed bottom-16 inset-x-0 z-50 border-t border-border bg-background/95 backdrop-blur lg:hidden">
                 <div className="p-4 flex gap-3">
                     <Button
@@ -1016,7 +812,7 @@ export default function MobileCreateAssetPage() {
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Creating...
+                                    Creating…
                                 </>
                             ) : (
                                 <>
