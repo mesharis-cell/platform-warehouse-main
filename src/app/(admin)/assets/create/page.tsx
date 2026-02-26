@@ -839,14 +839,17 @@ export default function MobileCreateAssetPage() {
                                         type="number"
                                         min={1}
                                         step="1"
-                                        value={formData.total_quantity || 1}
+                                        value={formData.total_quantity ?? ""}
                                         onChange={(e) =>
                                             setFormData((prev) => ({
                                                 ...prev,
-                                                total_quantity: Math.max(
-                                                    1,
-                                                    Math.floor(toPositiveNumber(e.target.value))
-                                                ),
+                                                total_quantity: e.target.value === "" ? undefined : Math.floor(toPositiveNumber(e.target.value)),
+                                            }))
+                                        }
+                                        onBlur={() =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                total_quantity: !prev.total_quantity || prev.total_quantity < 1 ? 1 : prev.total_quantity,
                                             }))
                                         }
                                     />
@@ -857,14 +860,17 @@ export default function MobileCreateAssetPage() {
                                         type="number"
                                         min={0}
                                         step="1"
-                                        value={formData.available_quantity || 1}
+                                        value={formData.available_quantity ?? ""}
                                         onChange={(e) =>
                                             setFormData((prev) => ({
                                                 ...prev,
-                                                available_quantity: Math.max(
-                                                    0,
-                                                    Math.floor(toPositiveNumber(e.target.value))
-                                                ),
+                                                available_quantity: e.target.value === "" ? undefined : Math.floor(toPositiveNumber(e.target.value)),
+                                            }))
+                                        }
+                                        onBlur={() =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                available_quantity: prev.available_quantity == null ? 1 : prev.available_quantity,
                                             }))
                                         }
                                     />
