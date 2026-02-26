@@ -369,25 +369,10 @@ export interface InvoiceListParams {
 }
 
 export interface OrderPricing {
-    warehouse_ops_rate: number;
-    base_ops_total: number;
-    logistics_sub_total: number;
-    transport: {
-        final_rate: number;
-        system_rate: number;
-    };
-    line_items: {
-        custom_total: number;
-        catalog_total: number;
-    };
-    margin: {
-        amount: number;
-        percent: number;
-        is_override: boolean;
-        override_reason: string | null;
-    };
-    final_total: number;
-    calculated_at: string;
+    base_ops_total?: number;
+    margin_percent?: number;
+    final_total: number | string;
+    calculated_at?: string;
 }
 
 // Invoice list item
