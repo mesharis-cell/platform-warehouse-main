@@ -70,7 +70,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { apiClient } from "@/lib/api/api-client";
-import { getOrderPrice, removeUnderScore } from "@/lib/utils/helper";
+import { removeUnderScore } from "@/lib/utils/helper";
 import { addDays, endOfDay, isAfter, isBefore, startOfDay, subDays } from "date-fns";
 import { LogisticsPricingReview } from "@/components/orders/LogisticsPricingReview";
 import { OrderApprovalRequestSubmitBtn } from "@/components/orders/OrderApprovalRequestSubmitBtn";
@@ -451,7 +451,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         );
     }
 
-    const { total } = getOrderPrice(order?.data?.pricing);
     const currentStatusConfig = STATUS_CONFIG[order.data.order_status] || STATUS_CONFIG.DRAFT;
     const allowedNextStates = currentStatusConfig.nextStates || [];
 

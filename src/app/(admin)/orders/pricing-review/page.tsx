@@ -140,12 +140,12 @@ export default function PricingReviewPage() {
                                         <div>
                                             <div className="flex items-center gap-2 text-muted-foreground mb-1">
                                                 <DollarSign className="h-4 w-4" />
-                                                <span>Base Price</span>
+                                                <span>Order Total</span>
                                             </div>
                                             <p className="font-medium font-mono">
-                                                {Number(
-                                                    order.order_pricing?.base_ops_total
-                                                ).toFixed(2)}
+                                                {Number(order.order_pricing?.final_total).toFixed(
+                                                    2
+                                                )}
                                             </p>
                                         </div>
                                     </div>

@@ -13,7 +13,6 @@ import {
     Search,
     Archive,
     Pencil,
-    Percent,
     Building2,
     Mail,
     Phone,
@@ -82,7 +81,6 @@ export default function CompaniesPage() {
                 secondary_color: "",
             },
         },
-        platform_margin_percent: 0.3,
         contact_email: undefined,
         contact_phone: "",
     });
@@ -265,7 +263,6 @@ export default function CompaniesPage() {
                     secondary_color: "",
                 },
             },
-            platform_margin_percent: 0.3,
             contact_email: undefined,
             contact_phone: "",
         });
@@ -286,7 +283,6 @@ export default function CompaniesPage() {
                     secondary_color: company.settings.branding.secondary_color,
                 },
             },
-            platform_margin_percent: parseFloat(String(company.platform_margin_percent)),
             contact_email: company.contact_email || undefined,
             contact_phone: company.contact_phone || "",
         });
@@ -319,7 +315,7 @@ export default function CompaniesPage() {
                                 </h1>
                             </div>
                             <p className="text-sm text-muted-foreground font-mono">
-                                TENANT ENTITIES · MARGIN CONFIG · CONTACT MANAGEMENT
+                                TENANT ENTITIES · CONTACT MANAGEMENT
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -403,41 +399,6 @@ export default function CompaniesPage() {
                                                     className="font-mono"
                                                     required
                                                 />
-                                            </div>
-
-                                            {/* Platform Margin */}
-                                            <div className="space-y-2">
-                                                <Label
-                                                    htmlFor="margin"
-                                                    className="font-mono text-xs flex items-center gap-2"
-                                                >
-                                                    <Percent className="h-3 w-3" />
-                                                    PLATFORM MARGIN PERCENT
-                                                </Label>
-                                                <div className="flex items-center gap-2">
-                                                    <Input
-                                                        id="margin"
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
-                                                        value={formData.platform_margin_percent}
-                                                        onChange={(e) =>
-                                                            setFormData({
-                                                                ...formData,
-                                                                platform_margin_percent: parseFloat(
-                                                                    e.target.value
-                                                                ),
-                                                            })
-                                                        }
-                                                        className="font-mono"
-                                                    />
-                                                    <span className="text-sm text-muted-foreground font-mono">
-                                                        %
-                                                    </span>
-                                                </div>
-                                                {/* <p className="text-xs text-muted-foreground font-mono">
-												Default margin applied to orders (2 decimal places)
-											</p> */}
                                             </div>
 
                                             {/* Contact Information */}
@@ -754,9 +715,6 @@ export default function CompaniesPage() {
                                     <TableHead className="font-mono text-xs font-bold">
                                         DOMAIN
                                     </TableHead>
-                                    <TableHead className="font-mono text-xs font-bold text-right">
-                                        PLATFORM MARGIN PERCENT
-                                    </TableHead>
                                     <TableHead className="font-mono text-xs font-bold">
                                         CONTACT
                                     </TableHead>
@@ -804,17 +762,6 @@ export default function CompaniesPage() {
                                         </TableCell>
                                         <TableCell className="font-mono text-sm text-muted-foreground max-w-xs">
                                             {company.domain || "—"}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                {/* <Percent className="h-3.5 w-3.5 text-primary" /> */}
-                                                <span className="font-mono font-bold text-primary">
-                                                    {parseFloat(
-                                                        String(company.platform_margin_percent)
-                                                    ).toFixed(2)}
-                                                    %
-                                                </span>
-                                            </div>
                                         </TableCell>
                                         <TableCell className="font-mono text-sm">
                                             {company.contact_email || company.contact_phone ? (

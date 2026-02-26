@@ -217,32 +217,10 @@ export default function InboundRequestDetailsPage({ params }: { params: Promise<
                                 )}
                                 {pricing && (
                                     <div className="space-y-2 text-sm">
-                                        <div className="flex justify-between p-2 bg-muted/30 rounded">
-                                            <span className="text-muted-foreground">
-                                                Base Operations
-                                            </span>
-                                            <span className="font-mono">
-                                                {pricing.base_ops_total || 0} AED
-                                            </span>
-                                        </div>
-                                        {pricing.line_items?.catalog_total ? (
-                                            <div className="flex justify-between p-2 bg-muted/30 rounded">
-                                                <span className="text-muted-foreground">
-                                                    Service Line Item
-                                                </span>
-                                                <span className="font-mono">
-                                                    {pricing.line_items?.catalog_total?.toFixed(
-                                                        2
-                                                    ) || 0}{" "}
-                                                    AED
-                                                </span>
-                                            </div>
-                                        ) : null}
-                                        <div className="border-t border-border my-2"></div>
                                         <div className="flex justify-between font-semibold">
-                                            <span>Estimated Subtotal</span>
+                                            <span>Order Total</span>
                                             <span className="font-mono">
-                                                {pricing.logistics_sub_total || 0} AED
+                                                {Number(pricing.final_total || 0).toFixed(2)} AED
                                             </span>
                                         </div>
                                     </div>

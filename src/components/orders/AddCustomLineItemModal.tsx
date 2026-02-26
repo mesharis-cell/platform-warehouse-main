@@ -238,7 +238,7 @@ export function AddCustomLineItemModal({
                         <Label>Derived Total (AED)</Label>
                         <Input value={derivedTotal.toFixed(2)} readOnly className="bg-muted" />
                         <p className="text-xs text-muted-foreground mt-1">
-                            Total is calculated as qty × unit rate and margin is applied later.
+                            Total is calculated as qty × unit rate.
                         </p>
                     </div>
 
@@ -353,8 +353,7 @@ export function AddCustomLineItemModal({
 
                     <div className="bg-primary/10 border border-primary/20 rounded-md p-3">
                         <p className="text-xs text-primary">
-                            Custom and reskin amounts are treated as base cost inputs, then margin
-                            is applied once by the pricing engine.
+                            Custom and reskin amounts are priced as entered.
                         </p>
                     </div>
                 </div>
