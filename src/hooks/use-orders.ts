@@ -724,3 +724,22 @@ export function useCancelOrder() {
         },
     });
 }
+
+export function useRecalculateBaseOps() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (orderId: string) => {
+            try {
+                const response = await apiClient.post(
+                    `/operations/v1/order/${orderId}/recalculate-base-ops`
+                );
+                return response.data;
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["orders"] });
+        },
+    });
+}
