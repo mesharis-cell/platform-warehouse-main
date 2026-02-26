@@ -68,10 +68,7 @@ export const LogisticsPricing = ({
                             <div className="p-2 bg-muted/30 rounded space-y-1">
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">
-                                        Base Operations ({volume.toFixed(3)} m³)
-                                    </span>
-                                    <span className="font-mono">
-                                        {pricing.base_ops_total || 0} AED
+                                        Volume: {volume.toFixed(3)} m³
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between pt-1">
@@ -95,17 +92,9 @@ export const LogisticsPricing = ({
                                     </Button>
                                 </div>
                             </div>
-                            {pricing.line_items?.catalog_total ? (
-                                <div className="flex justify-between p-2 bg-muted/30 rounded">
-                                    <span className="text-muted-foreground">Service Line Item</span>
-                                    <span className="font-mono">
-                                        {pricing.line_items?.catalog_total?.toFixed(2) || 0} AED
-                                    </span>
-                                </div>
-                            ) : null}
                             <div className="border-t border-border my-2"></div>
                             <div className="flex justify-between font-semibold">
-                                <span>Estimated Total</span>
+                                <span>Order Total</span>
                                 <span className="font-mono">{pricing.final_total || 0} AED</span>
                             </div>
                         </div>
