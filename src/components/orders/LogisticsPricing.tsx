@@ -18,6 +18,7 @@ export const LogisticsPricing = ({
 }) => {
     const recalculate = useRecalculateBaseOps();
     const volume = parseFloat(order?.calculated_totals?.volume || "0");
+    const canRecalculate = ["PRICING_REVIEW", "PENDING_APPROVAL"].includes(order?.order_status);
 
     const handleRecalculate = async () => {
         try {
@@ -71,32 +72,42 @@ export const LogisticsPricing = ({
                                         Volume: {volume.toFixed(3)} m³
                                     </span>
                                 </div>
-                                <div className="flex items-center justify-between pt-1">
-                                    {volume === 0 && (
-                                        <span className="text-xs text-amber-600">
-                                            Update asset dimensions if needed
-                                        </span>
-                                    )}
-                                    {volume > 0 && <span />}
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 text-xs text-primary gap-1"
-                                        onClick={handleRecalculate}
-                                        disabled={recalculate.isPending}
-                                    >
-                                        <RefreshCw
-                                            className={`h-3 w-3 ${recalculate.isPending ? "animate-spin" : ""}`}
-                                        />
-                                        {recalculate.isPending ? "Recalculating..." : "Recalculate"}
-                                    </Button>
-                                </div>
+                                {canRecalculate && (
+                                    <div className="flex items-center justify-between pt-1">
+                                        {volume === 0 && (
+                                            <span className="text-xs text-amber-600">
+                                                Update asset dimensions if needed
+                                            </span>
+                                        )}
+                                        {volume > 0 && <span />}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 text-xs text-primary gap-1"
+                                            onClick={handleRecalculate}
+                                            disabled={recalculate.isPending}
+                                        >
+                                            <RefreshCw
+                                                className={`h-3 w-3 ${recalculate.isPending ? "animate-spin" : ""}`}
+                                            />
+                                            {recalculate.isPending
+                                                ? "Recalculating..."
+                                                : "Recalculate"}
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                             <div className="border-t border-border my-2"></div>
                             <div className="flex justify-between font-semibold">
                                 <span>Order Total</span>
                                 <span className="font-mono">{pricing.final_total || 0} AED</span>
                             </div>
+                            {pricing.calculated_at && (
+                                <p className="text-xs text-muted-foreground text-right">
+                                    Last calculated:{" "}
+                                    {new Date(pricing.calculated_at as string).toLocaleString()}
+                                </p>
+                            )}
                         </div>
                     )}
                 </CardContent>
