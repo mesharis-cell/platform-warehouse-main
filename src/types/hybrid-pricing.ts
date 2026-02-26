@@ -191,7 +191,7 @@ export interface OrderPricing {
         custom_total: number;
     };
     logistics_subtotal?: number;
-    margin: {
+    margin?: {
         percent: number;
         amount: number;
         is_override: boolean;
