@@ -423,7 +423,7 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                     <div className="flex-1 overflow-y-auto px-1">
                         {currentStep === 0 && (
                             <div className="space-y-4 py-4">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label className="font-mono text-xs">Company *</Label>
                                         <Select
@@ -448,7 +448,7 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                         </Select>
                                     </div>
 
-                                    <div className="space-y-2">
+                                    <div className={`space-y-2 ${brandOpen ? "sm:col-span-2" : ""}`}>
                                         <Label className="font-mono text-xs">
                                             Brand (Optional)
                                         </Label>
