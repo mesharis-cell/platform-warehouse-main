@@ -7,7 +7,7 @@
  * Design: Warehouse terminal interface with tabbed steps
  */
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCompanies } from "@/hooks/use-companies";
 import { useWarehouses } from "@/hooks/use-warehouses";
 import { useZones } from "@/hooks/use-zones";
@@ -94,8 +94,23 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
     const { data: zonesData } = useZones(
         formData.warehouse_id ? { warehouse_id: formData.warehouse_id } : undefined
     );
-    const { data: brandsData } = useBrands(
-        formData.company_id ? { company_id: formData.company_id } : undefined
+    const [debouncedBrandSearch, setDebouncedBrandSearch] = useState("");
+    const brandDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current);
+        brandDebounceRef.current = setTimeout(() => setDebouncedBrandSearch(brandSearch), 300);
+        return () => { if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current); };
+    }, [brandSearch]);
+
+    const { data: brandsData, isFetching: brandsFetching } = useBrands(
+        formData.company_id
+            ? {
+                  company_id: formData.company_id,
+                  limit: "100",
+                  ...(debouncedBrandSearch ? { search_term: debouncedBrandSearch } : {}),
+              }
+            : undefined
     );
 
     const companies = companiesData?.data || [];
@@ -469,34 +484,33 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                                     />
                                                 </div>
                                                 <div className="max-h-48 overflow-y-auto p-1">
-                                                    {brands.filter((b) =>
-                                                        b.name.toLowerCase().includes(brandSearch.toLowerCase())
-                                                    ).length === 0 ? (
+                                                    {brandsFetching ? (
+                                                        <div className="py-4 text-center text-sm font-mono text-muted-foreground">
+                                                            Loading...
+                                                        </div>
+                                                    ) : brands.length === 0 ? (
                                                         <div className="py-4 text-center text-sm font-mono text-muted-foreground">
                                                             No brands found
                                                         </div>
                                                     ) : (
-                                                        brands
-                                                            .filter((b) =>
-                                                                b.name.toLowerCase().includes(brandSearch.toLowerCase())
-                                                            )
-                                                            .map((brand) => (
-                                                                <button
-                                                                    key={brand.id}
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setFormData({ ...formData, brand_id: brand.id });
-                                                                        setBrandOpen(false);
-                                                                        setBrandSearch("");
-                                                                    }}
-                                                                    className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-mono hover:bg-accent hover:text-accent-foreground"
-                                                                >
-                                                                    <Check
-                                                                        className={`h-4 w-4 ${formData.brand_id === brand.id ? "opacity-100" : "opacity-0"}`}
-                                                                    />
-                                                                    {brand.name}
-                                                                </button>
-                                                            ))
+                                                        brands.map((brand) => (
+                                                            <button
+                                                                key={brand.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setFormData({ ...formData, brand_id: brand.id });
+                                                                    setBrandOpen(false);
+                                                                    setBrandSearch("");
+                                                                    setDebouncedBrandSearch("");
+                                                                }}
+                                                                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-mono hover:bg-accent hover:text-accent-foreground"
+                                                            >
+                                                                <Check
+                                                                    className={`h-4 w-4 ${formData.brand_id === brand.id ? "opacity-100" : "opacity-0"}`}
+                                                                />
+                                                                {brand.name}
+                                                            </button>
+                                                        ))
                                                     )}
                                                 </div>
                                             </div>
