@@ -45,7 +45,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
+import { ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import type { CreateAssetRequest } from "@/types/asset";
 
@@ -79,6 +89,8 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
     });
     const [customCategory, setCustomCategory] = useState("");
     const [customHandlingTag, setCustomHandlingTag] = useState("");
+    const [brandOpen, setBrandOpen] = useState(false);
+    const [brandSearch, setBrandSearch] = useState("");
 
     // Image upload state - store files locally until form submit
     const [selectedImages, setSelectedImages] = useState<File[]>([]);
@@ -433,41 +445,65 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                         <Label className="font-mono text-xs">
                                             Brand (Optional)
                                         </Label>
-                                        <Select
-                                            value={formData.brand_id}
-                                            onValueChange={(value) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    brand_id: value,
-                                                })
-                                            }
-                                            disabled={!formData.company_id}
-                                        >
-                                            <SelectTrigger className="font-mono">
-                                                <SelectValue
-                                                    placeholder={
-                                                        !formData.company_id
-                                                            ? "Select company first"
-                                                            : brands.length === 0
-                                                              ? "No brands available"
-                                                              : "Select brand"
-                                                    }
-                                                />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {brands.length === 0 ? (
-                                                    <div className="px-2 py-6 text-center text-sm text-muted-foreground font-mono">
-                                                        No brands for this company
-                                                    </div>
-                                                ) : (
-                                                    brands.map((brand) => (
-                                                        <SelectItem key={brand.id} value={brand.id}>
-                                                            {brand.name}
-                                                        </SelectItem>
-                                                    ))
-                                                )}
-                                            </SelectContent>
-                                        </Select>
+                                        <Popover open={brandOpen && !!formData.company_id} onOpenChange={(o) => formData.company_id && setBrandOpen(o)}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    disabled={!formData.company_id}
+                                                    className="w-full justify-between font-mono font-normal"
+                                                >
+                                                    <span className="truncate text-left">
+                                                        {formData.brand_id
+                                                            ? (brands.find((b) => b.id === formData.brand_id)?.name ?? "Select brand")
+                                                            : !formData.company_id
+                                                              ? "Select company first"
+                                                              : brands.length === 0
+                                                                ? "No brands available"
+                                                                : "Select brand"}
+                                                    </span>
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <Command>
+                                                    <CommandInput
+                                                        placeholder="Search brands..."
+                                                        value={brandSearch}
+                                                        onValueChange={setBrandSearch}
+                                                        className="font-mono text-sm"
+                                                    />
+                                                    <CommandList>
+                                                        <CommandEmpty className="py-4 text-center text-sm font-mono text-muted-foreground">
+                                                            No brands found
+                                                        </CommandEmpty>
+                                                        <CommandGroup>
+                                                            {brands
+                                                                .filter((b) =>
+                                                                    b.name.toLowerCase().includes(brandSearch.toLowerCase())
+                                                                )
+                                                                .map((brand) => (
+                                                                    <CommandItem
+                                                                        key={brand.id}
+                                                                        value={brand.name}
+                                                                        onSelect={() => {
+                                                                            setFormData({ ...formData, brand_id: brand.id });
+                                                                            setBrandOpen(false);
+                                                                            setBrandSearch("");
+                                                                        }}
+                                                                        className="font-mono"
+                                                                    >
+                                                                        <Check
+                                                                            className={`mr-2 h-4 w-4 ${formData.brand_id === brand.id ? "opacity-100" : "opacity-0"}`}
+                                                                        />
+                                                                        {brand.name}
+                                                                    </CommandItem>
+                                                                ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                     </div>
                                 </div>
 
