@@ -731,7 +731,8 @@ export function useRecalculateBaseOps() {
         mutationFn: async (orderId: string) => {
             try {
                 const response = await apiClient.post(
-                    `/client/v1/order/${orderId}/recalculate-base-ops`);
+                    `/client/v1/order/${orderId}/recalculate-base-ops`
+                );
                 return response.data;
             } catch (error) {
                 throwApiError(error);
