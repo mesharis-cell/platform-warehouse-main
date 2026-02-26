@@ -100,7 +100,9 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
     useEffect(() => {
         if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current);
         brandDebounceRef.current = setTimeout(() => setDebouncedBrandSearch(brandSearch), 300);
-        return () => { if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current); };
+        return () => {
+            if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current);
+        };
     }, [brandSearch]);
 
     const { data: brandsData, isFetching: brandsFetching } = useBrands(
@@ -448,7 +450,9 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                         </Select>
                                     </div>
 
-                                    <div className={`space-y-2 ${brandOpen ? "sm:col-span-2" : ""}`}>
+                                    <div
+                                        className={`space-y-2 ${brandOpen ? "sm:col-span-2" : ""}`}
+                                    >
                                         <Label className="font-mono text-xs">
                                             Brand (Optional)
                                         </Label>
@@ -463,7 +467,9 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                         >
                                             <span className="truncate text-left">
                                                 {formData.brand_id
-                                                    ? (brands.find((b) => b.id === formData.brand_id)?.name ?? "Select brand")
+                                                    ? (brands.find(
+                                                          (b) => b.id === formData.brand_id
+                                                      )?.name ?? "Select brand")
                                                     : !formData.company_id
                                                       ? "Select company first"
                                                       : brands.length === 0
@@ -480,7 +486,9 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                                         className="flex h-10 w-full bg-transparent py-3 text-sm font-mono outline-none placeholder:text-muted-foreground"
                                                         placeholder="Search brands..."
                                                         value={brandSearch}
-                                                        onChange={(e) => setBrandSearch(e.target.value)}
+                                                        onChange={(e) =>
+                                                            setBrandSearch(e.target.value)
+                                                        }
                                                     />
                                                 </div>
                                                 <div className="max-h-48 overflow-y-auto p-1">
@@ -498,7 +506,10 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                                                 key={brand.id}
                                                                 type="button"
                                                                 onClick={() => {
-                                                                    setFormData({ ...formData, brand_id: brand.id });
+                                                                    setFormData({
+                                                                        ...formData,
+                                                                        brand_id: brand.id,
+                                                                    });
                                                                     setBrandOpen(false);
                                                                     setBrandSearch("");
                                                                     setDebouncedBrandSearch("");

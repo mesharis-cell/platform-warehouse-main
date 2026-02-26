@@ -77,7 +77,7 @@ export function LogisticsPricingReview({
                 </CardContent>
             </Card>
 
-            <LogisticsPricing pricing={pricing} order={order} />
+            <LogisticsPricing pricing={pricing} order={order} onRefresh={_onSubmitSuccess} />
 
             {/* Modals */}
             <AddCatalogLineItemModal

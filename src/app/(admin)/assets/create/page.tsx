@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, ChevronsUpDown, Check, Loader2, Plus, Search, X } from "lucide-react";
+import {
+    ArrowLeft,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsUpDown,
+    Check,
+    Loader2,
+    Plus,
+    Search,
+    X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,7 +114,9 @@ export default function MobileCreateAssetPage() {
     useEffect(() => {
         if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current);
         brandDebounceRef.current = setTimeout(() => setDebouncedBrandSearch(brandSearch), 300);
-        return () => { if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current); };
+        return () => {
+            if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current);
+        };
     }, [brandSearch]);
 
     const { data: brandsResponse, isFetching: brandsFetching } = useBrands(
@@ -506,7 +519,8 @@ export default function MobileCreateAssetPage() {
                                 >
                                     <span className="truncate text-left">
                                         {formData.brand_id
-                                            ? (brands.find((b) => b.id === formData.brand_id)?.name ?? "Select brand")
+                                            ? (brands.find((b) => b.id === formData.brand_id)
+                                                  ?.name ?? "Select brand")
                                             : !formData.company_id
                                               ? "Select company first"
                                               : "No Brand"}
@@ -526,38 +540,52 @@ export default function MobileCreateAssetPage() {
                                         </div>
                                         <div className="max-h-48 overflow-y-auto p-1">
                                             {brandsFetching ? (
-                                                <div className="py-4 text-center text-sm text-muted-foreground">Loading...</div>
+                                                <div className="py-4 text-center text-sm text-muted-foreground">
+                                                    Loading...
+                                                </div>
                                             ) : (
                                                 <>
                                                     <button
                                                         type="button"
                                                         onClick={() => {
-                                                            setFormData((prev) => ({ ...prev, brand_id: undefined }));
+                                                            setFormData((prev) => ({
+                                                                ...prev,
+                                                                brand_id: undefined,
+                                                            }));
                                                             setBrandOpen(false);
                                                             setBrandSearch("");
                                                             setDebouncedBrandSearch("");
                                                         }}
                                                         className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
                                                     >
-                                                        <Check className={`h-4 w-4 ${!formData.brand_id ? "opacity-100" : "opacity-0"}`} />
+                                                        <Check
+                                                            className={`h-4 w-4 ${!formData.brand_id ? "opacity-100" : "opacity-0"}`}
+                                                        />
                                                         No Brand
                                                     </button>
                                                     {brands.length === 0 ? (
-                                                        <div className="py-2 text-center text-sm text-muted-foreground">No brands found</div>
+                                                        <div className="py-2 text-center text-sm text-muted-foreground">
+                                                            No brands found
+                                                        </div>
                                                     ) : (
                                                         brands.map((b) => (
                                                             <button
                                                                 key={b.id}
                                                                 type="button"
                                                                 onClick={() => {
-                                                                    setFormData((prev) => ({ ...prev, brand_id: b.id }));
+                                                                    setFormData((prev) => ({
+                                                                        ...prev,
+                                                                        brand_id: b.id,
+                                                                    }));
                                                                     setBrandOpen(false);
                                                                     setBrandSearch("");
                                                                     setDebouncedBrandSearch("");
                                                                 }}
                                                                 className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
                                                             >
-                                                                <Check className={`h-4 w-4 ${formData.brand_id === b.id ? "opacity-100" : "opacity-0"}`} />
+                                                                <Check
+                                                                    className={`h-4 w-4 ${formData.brand_id === b.id ? "opacity-100" : "opacity-0"}`}
+                                                                />
                                                                 {b.name}
                                                             </button>
                                                         ))
@@ -843,13 +871,21 @@ export default function MobileCreateAssetPage() {
                                         onChange={(e) =>
                                             setFormData((prev) => ({
                                                 ...prev,
-                                                total_quantity: e.target.value === "" ? undefined : Math.floor(toPositiveNumber(e.target.value)),
+                                                total_quantity:
+                                                    e.target.value === ""
+                                                        ? undefined
+                                                        : Math.floor(
+                                                              toPositiveNumber(e.target.value)
+                                                          ),
                                             }))
                                         }
                                         onBlur={() =>
                                             setFormData((prev) => ({
                                                 ...prev,
-                                                total_quantity: !prev.total_quantity || prev.total_quantity < 1 ? 1 : prev.total_quantity,
+                                                total_quantity:
+                                                    !prev.total_quantity || prev.total_quantity < 1
+                                                        ? 1
+                                                        : prev.total_quantity,
                                             }))
                                         }
                                     />
@@ -864,13 +900,21 @@ export default function MobileCreateAssetPage() {
                                         onChange={(e) =>
                                             setFormData((prev) => ({
                                                 ...prev,
-                                                available_quantity: e.target.value === "" ? undefined : Math.floor(toPositiveNumber(e.target.value)),
+                                                available_quantity:
+                                                    e.target.value === ""
+                                                        ? undefined
+                                                        : Math.floor(
+                                                              toPositiveNumber(e.target.value)
+                                                          ),
                                             }))
                                         }
                                         onBlur={() =>
                                             setFormData((prev) => ({
                                                 ...prev,
-                                                available_quantity: prev.available_quantity == null ? 1 : prev.available_quantity,
+                                                available_quantity:
+                                                    prev.available_quantity == null
+                                                        ? 1
+                                                        : prev.available_quantity,
                                             }))
                                         }
                                     />

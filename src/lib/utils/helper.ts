@@ -1,7 +1,5 @@
 "use client";
 
-import { OrderPricing } from "@/types/hybrid-pricing";
-
 export const capitalizeFirstLetter = (str?: string): string => {
     return str?.charAt(0).toUpperCase() + str.slice(1).toLowerCase().replace("_", " ");
 };
@@ -51,39 +49,4 @@ export const mapCamelToSnake = <T extends object>(obj: T): Record<string, unknow
         result[camelToSnake(key)] = (obj as Record<string, unknown>)[key];
     }
     return result;
-};
-
-const roundCurrency = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
-
-const applyMargin = (baseValue: number, marginPercent: number) =>
-    roundCurrency(baseValue * (1 + marginPercent / 100));
-
-export const getOrderPrice = (
-    orderPricing: Partial<OrderPricing> | null | undefined,
-    overrideMarginPercent?: number
-) => {
-    const marginPercent = Number(overrideMarginPercent ?? orderPricing?.margin?.percent ?? 0);
-    const baseBase = Number(orderPricing?.base_ops_total ?? 0);
-    const catalogBase = Number(orderPricing?.line_items?.catalog_total ?? 0);
-    const customBase = Number(orderPricing?.line_items?.custom_total ?? 0);
-
-    const basePrice = applyMargin(baseBase, marginPercent);
-    const transportPrice = 0;
-    const catalogPrice = applyMargin(catalogBase, marginPercent);
-    const customPrice = applyMargin(customBase, marginPercent);
-    const servicePrice = roundCurrency(catalogPrice + customPrice);
-    const baseSubtotal = roundCurrency(baseBase + catalogBase + customBase);
-    const total = roundCurrency(basePrice + servicePrice);
-    const marginAmount = roundCurrency(total - baseSubtotal);
-
-    return {
-        marginPercent,
-        marginAmount,
-        basePrice,
-        transportPrice,
-        catalogPrice,
-        customPrice,
-        servicePrice,
-        total,
-    };
 };

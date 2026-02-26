@@ -725,34 +725,21 @@ export function useCancelOrder() {
     });
 }
 
-export function useUpdateOrderPricing() {
+export function useRecalculateBaseOps() {
     const queryClient = useQueryClient();
-
     return useMutation({
-        mutationFn: async ({
-            orderId,
-            pricingId,
-            rate,
-        }: {
-            orderId: string;
-            pricingId: string;
-            rate: number;
-        }) => {
+        mutationFn: async (orderId: string) => {
             try {
-                const response = await apiClient.patch(
-                    `/operations/v1/price/transport/${pricingId}`,
-                    { transport_rate: rate }
+                const response = await apiClient.post(
+                    `/client/v1/order/${orderId}/recalculate-base-ops`
                 );
                 return response.data;
             } catch (error) {
                 throwApiError(error);
             }
         },
-        onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({
-                queryKey: ["orders", "admin-detail", variables.orderId],
-            });
-            queryClient.invalidateQueries({ queryKey: ["orders", "pricing-review"] });
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["orders"] });
         },
     });
 }

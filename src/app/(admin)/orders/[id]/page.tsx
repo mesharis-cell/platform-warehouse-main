@@ -70,7 +70,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { apiClient } from "@/lib/api/api-client";
-import { getOrderPrice, removeUnderScore } from "@/lib/utils/helper";
+import { removeUnderScore } from "@/lib/utils/helper";
 import { addDays, endOfDay, isAfter, isBefore, startOfDay, subDays } from "date-fns";
 import { LogisticsPricingReview } from "@/components/orders/LogisticsPricingReview";
 import { OrderApprovalRequestSubmitBtn } from "@/components/orders/OrderApprovalRequestSubmitBtn";
@@ -451,7 +451,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         );
     }
 
-    const { total } = getOrderPrice(order?.data?.pricing);
     const currentStatusConfig = STATUS_CONFIG[order.data.order_status] || STATUS_CONFIG.DRAFT;
     const allowedNextStates = currentStatusConfig.nextStates || [];
 
@@ -1275,54 +1274,72 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                         {(order?.data?.linked_service_requests ?? []).length})
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="divide-y divide-border">
-                                    {(order?.data?.linked_service_requests ?? []).map((sr: any) => (
-                                        <div
-                                            key={sr.id}
-                                            className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-                                        >
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className="font-mono text-sm font-medium">
-                                                    {sr.service_request_id}
-                                                </span>
-                                                <Badge
-                                                    variant="outline"
-                                                    className="font-mono text-xs"
+                                <CardContent className="space-y-3">
+                                    {(order?.data?.linked_service_requests ?? []).some(
+                                        (sr: any) =>
+                                            !["COMPLETED", "CANCELLED"].includes(sr.request_status)
+                                    ) && (
+                                        <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200">
+                                            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                                            <p className="text-xs text-amber-800">
+                                                Remember to add maintenance/repair line items to
+                                                this order to cover the cost of these service
+                                                requests.
+                                            </p>
+                                        </div>
+                                    )}
+                                    <div className="divide-y divide-border">
+                                        {(order?.data?.linked_service_requests ?? []).map(
+                                            (sr: any) => (
+                                                <div
+                                                    key={sr.id}
+                                                    className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
                                                 >
-                                                    {sr.request_type}
-                                                </Badge>
-                                                <Badge
-                                                    variant={
-                                                        sr.request_status === "COMPLETED"
-                                                            ? "default"
-                                                            : sr.request_status === "CANCELLED"
-                                                              ? "destructive"
-                                                              : "secondary"
-                                                    }
-                                                    className="font-mono text-xs"
-                                                >
-                                                    {sr.request_status.replace(/_/g, " ")}
-                                                </Badge>
-                                                {sr.blocks_fulfillment &&
-                                                    !["COMPLETED", "CANCELLED"].includes(
-                                                        sr.request_status
-                                                    ) && (
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-mono text-sm font-medium">
+                                                            {sr.service_request_id}
+                                                        </span>
                                                         <Badge
-                                                            variant="destructive"
+                                                            variant="outline"
                                                             className="font-mono text-xs"
                                                         >
-                                                            Blocks Fulfillment
+                                                            {sr.request_type}
                                                         </Badge>
-                                                    )}
-                                            </div>
-                                            <Link
-                                                href={`/service-requests/${sr.id}`}
-                                                className="text-xs text-primary hover:underline font-mono shrink-0"
-                                            >
-                                                View →
-                                            </Link>
-                                        </div>
-                                    ))}
+                                                        <Badge
+                                                            variant={
+                                                                sr.request_status === "COMPLETED"
+                                                                    ? "default"
+                                                                    : sr.request_status ===
+                                                                        "CANCELLED"
+                                                                      ? "destructive"
+                                                                      : "secondary"
+                                                            }
+                                                            className="font-mono text-xs"
+                                                        >
+                                                            {sr.request_status.replace(/_/g, " ")}
+                                                        </Badge>
+                                                        {sr.blocks_fulfillment &&
+                                                            !["COMPLETED", "CANCELLED"].includes(
+                                                                sr.request_status
+                                                            ) && (
+                                                                <Badge
+                                                                    variant="destructive"
+                                                                    className="font-mono text-xs"
+                                                                >
+                                                                    Blocks Fulfillment
+                                                                </Badge>
+                                                            )}
+                                                    </div>
+                                                    <Link
+                                                        href={`/service-requests/${sr.id}`}
+                                                        className="text-xs text-primary hover:underline font-mono shrink-0"
+                                                    >
+                                                        View →
+                                                    </Link>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
                                 </CardContent>
                             </Card>
                         )}
@@ -1387,6 +1404,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                             <LogisticsPricing
                                 pricing={order.data.order_pricing}
                                 order={order.data}
+                                onRefresh={refetch}
                             />
                         )}
 

@@ -26,7 +26,7 @@ const EXPORT_CARDS: ExportCardConfig[] = [
         id: "workSummary",
         title: "Work Summary",
         description:
-            "Buy-side cost breakdown per order — ops, logistics, transport, and line items. Use this to invoice the platform for work completed.",
+            "Cost breakdown per order — ops, logistics, transport, and line items. Use this to invoice the platform for work completed.",
         endpoint: "/operations/v1/export/work-summary",
         filename: "work-summary.csv",
     },

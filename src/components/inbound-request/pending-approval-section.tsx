@@ -7,10 +7,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { DollarSign, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AddCatalogLineItemModal } from "@/components/orders/AddCatalogLineItemModal";
@@ -35,50 +31,14 @@ export function PendingApprovalSection({
 
     const [addCatalogOpen, setAddCatalogOpen] = useState(false);
     const [addCustomOpen, setAddCustomOpen] = useState(false);
-    const [marginOverride, setMarginOverride] = useState(false);
-    // Default margin from pricing
-    const [marginPercent, setMarginPercent] = useState<any>(
-        Number(request?.request_pricing?.margin?.percent || 0)
-    );
-    const [marginReason, setMarginReason] = useState("");
     const [returnToLogisticsOpen, setReturnToLogisticsOpen] = useState(false);
 
-    // Helper to ensure numbers
     const pricing = request.request_pricing;
-    const currentMarginPercent = Number(pricing?.margin?.percent || 0);
-    const effectiveMarginPercent = marginOverride
-        ? Number(marginPercent || 0)
-        : currentMarginPercent;
-    const roundCurrency = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
-    const applyMargin = (baseValue: number) =>
-        roundCurrency(baseValue * (1 + effectiveMarginPercent / 100));
-    const baseOpsBase = Number(pricing?.base_ops_total || 0);
-    const catalogBase = Number(pricing?.line_items?.catalog_total || 0);
-    const customBase = Number(pricing?.line_items?.custom_total || 0);
-    const baseOpsSell = applyMargin(baseOpsBase);
-    const catalogSell = applyMargin(catalogBase);
-    const customSell = applyMargin(customBase);
-    const finalTotalPreview = roundCurrency(baseOpsSell + catalogSell + customSell);
-    const marginAmountPreview = roundCurrency(
-        finalTotalPreview - (baseOpsBase + catalogBase + customBase)
-    );
 
     const handleApprove = async () => {
-        if (marginOverride && Math.abs(Number(marginPercent) - currentMarginPercent) < 0.0001) {
-            toast.error("Margin is same as current margin");
-            return;
-        }
-
-        if (marginOverride && !marginReason.trim()) {
-            toast.error("Please provide reason for margin override");
-            return;
-        }
-
         try {
             await adminApproveRequest.mutateAsync({
                 id: requestId,
-                marginOverridePercent: marginOverride ? Number(marginPercent) : undefined,
-                marginOverrideReason: marginOverride ? marginReason : undefined,
             });
             toast.success("Request approved and sent to client");
             onRefresh?.();
@@ -126,52 +86,18 @@ export function PendingApprovalSection({
                 </CardContent>
             </Card>
 
-            {/* Pricing Breakdown with Margin Override */}
+            {/* Pricing Breakdown */}
             <Card>
                 <CardHeader>
                     <CardTitle>Final Pricing Review</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* Display current pricing if available */}
                     {pricing && (
                         <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Base Operations</span>
-                                <span className="font-mono">
-                                    {Number(pricing.base_ops_total).toFixed(2)} AED
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Logistics Sub-total</span>
-                                <span className="font-mono">
-                                    {Number(pricing.logistics_sub_total).toFixed(2)} AED
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Catalog Services</span>
-                                <span className="font-mono">
-                                    {Number(catalogBase).toFixed(2)} AED
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Custom Services</span>
-                                <span className="font-mono">
-                                    {Number(customBase).toFixed(2)} AED
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                    Margin ({effectiveMarginPercent}%)
-                                </span>
-                                <span className="font-mono">
-                                    {Number(marginAmountPreview).toFixed(2)} AED
-                                </span>
-                            </div>
-                            <div className="border-t border-border my-2"></div>
                             <div className="flex justify-between font-semibold">
-                                <span>Total</span>
+                                <span>Order Total</span>
                                 <span className="font-mono">
-                                    {Number(finalTotalPreview).toFixed(2)} AED
+                                    {Number(pricing.final_total || 0).toFixed(2)} AED
                                 </span>
                             </div>
                         </div>
@@ -179,49 +105,6 @@ export function PendingApprovalSection({
 
                     {isPendingApproval && (
                         <div>
-                            {/* Margin Override */}
-                            <div className="space-y-3 border-t border-border pt-4">
-                                <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                        id="marginOverride"
-                                        checked={marginOverride}
-                                        onCheckedChange={(checked) =>
-                                            setMarginOverride(checked as boolean)
-                                        }
-                                    />
-                                    <Label htmlFor="marginOverride" className="cursor-pointer">
-                                        Override platform margin
-                                    </Label>
-                                </div>
-
-                                {marginOverride && (
-                                    <div className="space-y-3 pl-6 border-l-2 border-primary">
-                                        <div>
-                                            <Label>Margin Percent (%)</Label>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                max="100"
-                                                value={marginPercent}
-                                                onChange={(e) =>
-                                                    setMarginPercent(Number(e.target.value || 0))
-                                                }
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label>Reason for Override</Label>
-                                            <Textarea
-                                                value={marginReason}
-                                                onChange={(e) => setMarginReason(e.target.value)}
-                                                placeholder="e.g., High-value request, premium service justifies higher margin"
-                                                rows={2}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
                             {/* Actions */}
                             <div className="flex gap-3 pt-4">
                                 <Button
