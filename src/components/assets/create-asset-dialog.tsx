@@ -25,6 +25,7 @@ import {
     Image as ImageIcon,
     ChevronRight,
     AlertCircle,
+    Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,15 +46,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
@@ -445,65 +437,73 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                         <Label className="font-mono text-xs">
                                             Brand (Optional)
                                         </Label>
-                                        <Popover open={brandOpen && !!formData.company_id} onOpenChange={(o) => formData.company_id && setBrandOpen(o)}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    role="combobox"
-                                                    disabled={!formData.company_id}
-                                                    className="w-full justify-between font-mono font-normal"
-                                                >
-                                                    <span className="truncate text-left">
-                                                        {formData.brand_id
-                                                            ? (brands.find((b) => b.id === formData.brand_id)?.name ?? "Select brand")
-                                                            : !formData.company_id
-                                                              ? "Select company first"
-                                                              : brands.length === 0
-                                                                ? "No brands available"
-                                                                : "Select brand"}
-                                                    </span>
-                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                                <Command>
-                                                    <CommandInput
-                                                        placeholder="Search brands..."
-                                                        value={brandSearch}
-                                                        onValueChange={setBrandSearch}
-                                                        className="font-mono text-sm"
-                                                    />
-                                                    <CommandList>
-                                                        <CommandEmpty className="py-4 text-center text-sm font-mono text-muted-foreground">
-                                                            No brands found
-                                                        </CommandEmpty>
-                                                        <CommandGroup>
-                                                            {brands
+                                        <div className="relative">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                disabled={!formData.company_id}
+                                                onClick={() =>
+                                                    formData.company_id && setBrandOpen((o) => !o)
+                                                }
+                                                className="w-full justify-between font-mono font-normal"
+                                            >
+                                                <span className="truncate text-left">
+                                                    {formData.brand_id
+                                                        ? (brands.find((b) => b.id === formData.brand_id)?.name ?? "Select brand")
+                                                        : !formData.company_id
+                                                          ? "Select company first"
+                                                          : brands.length === 0
+                                                            ? "No brands available"
+                                                            : "Select brand"}
+                                                </span>
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                            {brandOpen && formData.company_id && (
+                                                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+                                                    <div className="flex items-center border-b px-3">
+                                                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        <input
+                                                            className="flex h-10 w-full bg-transparent py-3 text-sm font-mono outline-none placeholder:text-muted-foreground"
+                                                            placeholder="Search brands..."
+                                                            value={brandSearch}
+                                                            onChange={(e) => setBrandSearch(e.target.value)}
+                                                            autoFocus
+                                                        />
+                                                    </div>
+                                                    <div className="max-h-[200px] overflow-y-auto p-1">
+                                                        {brands.filter((b) =>
+                                                            b.name.toLowerCase().includes(brandSearch.toLowerCase())
+                                                        ).length === 0 ? (
+                                                            <div className="py-4 text-center text-sm font-mono text-muted-foreground">
+                                                                No brands found
+                                                            </div>
+                                                        ) : (
+                                                            brands
                                                                 .filter((b) =>
                                                                     b.name.toLowerCase().includes(brandSearch.toLowerCase())
                                                                 )
                                                                 .map((brand) => (
-                                                                    <CommandItem
+                                                                    <button
                                                                         key={brand.id}
-                                                                        value={brand.name}
-                                                                        onSelect={() => {
+                                                                        type="button"
+                                                                        onClick={() => {
                                                                             setFormData({ ...formData, brand_id: brand.id });
                                                                             setBrandOpen(false);
                                                                             setBrandSearch("");
                                                                         }}
-                                                                        className="font-mono"
+                                                                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-mono hover:bg-accent hover:text-accent-foreground"
                                                                     >
                                                                         <Check
-                                                                            className={`mr-2 h-4 w-4 ${formData.brand_id === brand.id ? "opacity-100" : "opacity-0"}`}
+                                                                            className={`h-4 w-4 ${formData.brand_id === brand.id ? "opacity-100" : "opacity-0"}`}
                                                                         />
                                                                         {brand.name}
-                                                                    </CommandItem>
-                                                                ))}
-                                                        </CommandGroup>
-                                                    </CommandList>
-                                                </Command>
-                                            </PopoverContent>
-                                        </Popover>
+                                                                    </button>
+                                                                ))
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
