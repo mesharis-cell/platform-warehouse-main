@@ -22,11 +22,7 @@ import {
 } from "@/hooks/use-orders";
 import { useUploadImage } from "@/hooks/use-assets";
 import { ScanActivityTimeline } from "@/components/scanning/scan-activity-timeline";
-import {
-    PricingReviewSection,
-    AwaitingFabricationSection,
-    CancelOrderButton,
-} from "./hybrid-sections";
+import { PricingReviewSection, CancelOrderButton } from "./hybrid-sections";
 import { OrderItemCard } from "@/components/orders/OrderItemCard";
 import { StatusHistoryTimeline } from "@/components/orders/StatusHistoryTimeline";
 import { Button } from "@/components/ui/button";
@@ -172,11 +168,6 @@ const STATUS_CONFIG: Record<
         color: "bg-teal-500/10 text-teal-700 border-teal-500/20",
         nextStates: ["IN_PREPARATION"],
     },
-    AWAITING_FABRICATION: {
-        label: "AWAITING FABRICATION",
-        color: "bg-cyan-500/10 text-cyan-700 border-cyan-500/20",
-        nextStates: ["IN_PREPARATION"],
-    },
     IN_PREPARATION: {
         label: "IN PREP",
         color: "bg-cyan-500/10 text-cyan-700 border-cyan-500/20",
@@ -200,6 +191,11 @@ const STATUS_CONFIG: Record<
     IN_USE: {
         label: "IN USE",
         color: "bg-pink-500/10 text-pink-700 border-pink-500/20",
+        nextStates: ["DERIG"],
+    },
+    DERIG: {
+        label: "DERIGGING",
+        color: "bg-purple-500/10 text-purple-700 border-purple-500/20",
         nextStates: ["AWAITING_RETURN"],
     },
     AWAITING_RETURN: {
@@ -246,15 +242,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     const [deliveryPhotoFiles, setDeliveryPhotoFiles] = useState<File[]>([]);
     const [deliveryPhotoPreviews, setDeliveryPhotoPreviews] = useState<string[]>([]);
     const [timeWindowsOpen, setTimeWindowsOpen] = useState(false);
-    const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
     const [updateTimeWindowsLoading, setUpdateTimeWindowsLoading] = useState(false);
-
-    const [paymentDetails, setPaymentDetails] = useState({
-        paymentMethod: "",
-        paymentReference: "",
-        paymentDate: new Date(),
-        notes: "",
-    });
     const [timeWindows, setTimeWindows] = useState<{
         deliveryWindowStart: Date | undefined;
         deliveryWindowEnd: Date | undefined;
@@ -551,10 +539,8 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                             disabled={
                                                 progressLoading ||
                                                 order.data.order_status === "PENDING_APPROVAL" ||
-                                                // order.data.order_status === "AWAITING_FABRICATION" ||
                                                 order.data.order_status === "PRICING_REVIEW" ||
                                                 order.data.order_status === "IN_PREPARATION" ||
-                                                order.data.order_status === "AWAITING_RETURN" ||
                                                 order.data.order_status === "QUOTED" ||
                                                 (order.data.order_status === "CONFIRMED" &&
                                                     (!order?.data?.delivery_window?.start ||
@@ -686,7 +672,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                     progressLoading ||
                                                     uploadImage.isPending ||
                                                     order.data.order_status === "IN_PREPARATION" ||
-                                                    order.data.order_status === "AWAITING_RETURN" ||
                                                     order.data.order_status === "QUOTED" ||
                                                     (order.data.order_status === "CONFIRMED" &&
                                                         (!order?.data?.delivery_window?.start ||
@@ -711,8 +696,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
-                        {(order?.data?.order_status === "CONFIRMED" ||
-                            order?.data?.order_status === "AWAITING_FABRICATION") &&
+                        {order?.data?.order_status === "CONFIRMED" &&
                             !order?.data?.delivery_window?.start && (
                                 <Card className="p-4 bg-orange-500/5 border-orange-500/30">
                                     <div className="flex items-start gap-3">
@@ -722,20 +706,37 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                 Action Required
                                             </p>
                                             <p className="font-mono text-xs text-muted-foreground mt-1">
-                                                Set delivery schedule before fabricating items and
-                                                starting preparation
+                                                Set delivery and pickup schedule before starting
+                                                preparation
                                             </p>
                                         </div>
                                     </div>
                                 </Card>
                             )}
 
-                        {/* NEW: AWAITING_FABRICATION - Fabrication Tracking */}
-                        {order.data.order_status === "AWAITING_FABRICATION" && (
-                            <AwaitingFabricationSection
-                                order={order.data}
-                                orderId={order.data.id}
-                            />
+                        {/* DERIG — navigate to capture page */}
+                        {order.data.order_status === "DERIG" && (
+                            <Card className="p-4 bg-purple-500/5 border-purple-500/30">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-start gap-3">
+                                        <AlertCircle className="h-5 w-5 text-purple-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="font-mono text-sm font-bold text-purple-700">
+                                                Derig Capture Required
+                                            </p>
+                                            <p className="font-mono text-xs text-muted-foreground mt-1">
+                                                Photograph all assets on site before loading trucks
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Link
+                                        href={`/scanning/derig/${order.data.id}`}
+                                        className="shrink-0 inline-flex items-center gap-1.5 rounded-md bg-purple-600 px-4 py-2 text-xs font-mono font-semibold text-white hover:bg-purple-700"
+                                    >
+                                        Open Derig Capture
+                                    </Link>
+                                </div>
+                            </Card>
                         )}
 
                         {order.data.order_status === "IN_PREPARATION" && (
@@ -929,13 +930,10 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                             </Card>
                         )}
 
-                        {/* Delivery Schedule Card - Show for CONFIRMED+ states (Feedback #1: Independent from payment) */}
-                        {[
-                            "AWAITING_FABRICATION",
-                            "CONFIRMED",
-                            "IN_PREPARATION",
-                            "READY_FOR_DELIVERY",
-                        ].includes(order?.data?.order_status) && (
+                        {/* Delivery Schedule Card - Show for CONFIRMED+ states */}
+                        {["CONFIRMED", "IN_PREPARATION", "READY_FOR_DELIVERY"].includes(
+                            order?.data?.order_status
+                        ) && (
                             <Card>
                                 <CardHeader>
                                     <div className="flex items-center justify-between">
