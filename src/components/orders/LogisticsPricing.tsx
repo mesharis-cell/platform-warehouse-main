@@ -19,6 +19,11 @@ export const LogisticsPricing = ({
     const recalculate = useRecalculateBaseOps();
     const volume = parseFloat(order?.calculated_totals?.volume || "0");
     const canRecalculate = ["PRICING_REVIEW", "PENDING_APPROVAL"].includes(order?.order_status);
+    const breakdownLines = Array.isArray(pricing?.breakdown_lines)
+        ? pricing.breakdown_lines.filter(
+              (line) => !line.is_voided && (line.billing_mode || "BILLABLE") === "BILLABLE"
+          )
+        : [];
 
     const handleRecalculate = async () => {
         try {
@@ -98,9 +103,41 @@ export const LogisticsPricing = ({
                                 )}
                             </div>
                             <div className="border-t border-border my-2"></div>
+                            {breakdownLines.length > 0 && (
+                                <div className="rounded border border-border/60 overflow-hidden">
+                                    <div className="grid grid-cols-12 bg-muted/30 px-3 py-2 text-xs font-medium">
+                                        <span className="col-span-8">Line</span>
+                                        <span className="col-span-4 text-right">Buy Total</span>
+                                    </div>
+                                    {breakdownLines.map((line) => (
+                                        <div
+                                            key={line.line_id}
+                                            className="grid grid-cols-12 px-3 py-2 text-xs border-t border-border/40"
+                                        >
+                                            <span className="col-span-8 truncate">
+                                                {line.label} ({line.quantity} {line.unit})
+                                            </span>
+                                            <span className="col-span-4 text-right font-mono">
+                                                {Number(line.total ?? line.buy_total ?? 0).toFixed(
+                                                    2
+                                                )}{" "}
+                                                AED
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="flex justify-between font-semibold">
                                 <span>Order Total</span>
-                                <span className="font-mono">{pricing.final_total || 0} AED</span>
+                                <span className="font-mono">
+                                    {Number(
+                                        pricing.totals?.total ??
+                                            pricing.totals?.buy_total ??
+                                            pricing.final_total ??
+                                            0
+                                    ).toFixed(2)}{" "}
+                                    AED
+                                </span>
                             </div>
                             {pricing.calculated_at && (
                                 <p className="text-xs text-muted-foreground text-right">

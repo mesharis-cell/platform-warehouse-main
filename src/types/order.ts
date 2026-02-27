@@ -369,7 +369,23 @@ export interface InvoiceListParams {
 }
 
 export interface OrderPricing {
+    breakdown_lines?: Array<{
+        line_id: string;
+        line_kind?: "BASE_OPS" | "RATE_CARD" | "CUSTOM";
+        category?: string;
+        label: string;
+        quantity: number;
+        unit: string;
+        unit_price?: number;
+        total?: number;
+        buy_unit_price?: number;
+        buy_total?: number;
+        billing_mode?: string;
+        is_voided?: boolean;
+    }>;
+    totals?: Record<string, number>;
     base_ops_total?: number;
+    logistics_sub_total?: number;
     margin_percent?: number;
     final_total: number | string;
     calculated_at?: string;

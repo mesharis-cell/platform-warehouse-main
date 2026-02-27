@@ -169,6 +169,31 @@ export interface VoidLineItemRequest {
 // ============================================================
 
 export interface OrderPricing {
+    breakdown_lines?: Array<{
+        line_id: string;
+        line_kind?: "BASE_OPS" | "RATE_CARD" | "CUSTOM";
+        category?: string;
+        label: string;
+        quantity: number;
+        unit: string;
+        unit_price?: number;
+        total?: number;
+        buy_unit_price?: number;
+        buy_total?: number;
+        billing_mode?: string;
+        is_voided?: boolean;
+        notes?: string | null;
+    }>;
+    totals?: {
+        base_ops_total?: number;
+        rate_card_total?: number;
+        custom_total?: number;
+        total?: number;
+        buy_base_ops_total?: number;
+        buy_rate_card_total?: number;
+        buy_custom_total?: number;
+        buy_total?: number;
+    };
     base_ops_total?: number;
     line_items?: {
         catalog_total: number;
