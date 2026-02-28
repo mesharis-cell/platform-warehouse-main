@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     ArrowLeft,
     CheckCircle2,
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCreateAsset } from "@/hooks/use-assets";
+import { useAddCollectionItem } from "@/hooks/use-collections";
 import { useCompanies } from "@/hooks/use-companies";
 import { useWarehouses } from "@/hooks/use-warehouses";
 import { useZones } from "@/hooks/use-zones";
@@ -60,8 +61,6 @@ const toPositiveNumber = (value: string) => {
     return Number.isNaN(parsed) ? 0 : parsed;
 };
 
-const DRAFT_KEY = "asset-create-draft";
-
 interface DraftState {
     formData: Partial<CreateAssetRequest>;
     conditionReport: ConditionReport;
@@ -78,6 +77,7 @@ const DEFAULT_CONDITION: ConditionReport = {
 
 export default function MobileCreateAssetPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const isMobile = useIsMobile();
     const [isMounted, setIsMounted] = useState(false);
     const [currentStep, setCurrentStep] = useState<Step>(0);
@@ -98,6 +98,17 @@ export default function MobileCreateAssetPage() {
         status: "AVAILABLE",
         dimensions: {},
     });
+
+    const collectionId = searchParams.get("collectionId");
+    const returnTo = searchParams.get("returnTo");
+    const flow = searchParams.get("flow");
+    const isCollectionFlow = flow === "collection-builder" && Boolean(collectionId);
+    const backTarget =
+        returnTo ||
+        (isCollectionFlow && collectionId ? `/collections/builder/${collectionId}` : "/assets");
+    const draftKey = isCollectionFlow
+        ? `warehouse.assetCreateDraft.collection.${collectionId}`
+        : "warehouse.assetCreateDraft.standalone";
 
     const { data: companiesResponse } = useCompanies({ limit: "100" });
     const { data: warehousesResponse } = useWarehouses(
@@ -133,6 +144,7 @@ export default function MobileCreateAssetPage() {
     );
 
     const createAsset = useCreateAsset();
+    const addCollectionItem = useAddCollectionItem(collectionId || "");
     const createBrand = useCreateBrand();
 
     const [isNewBrandOpen, setIsNewBrandOpen] = useState(false);
@@ -173,7 +185,7 @@ export default function MobileCreateAssetPage() {
     useEffect(() => {
         if (!isMounted) return;
         try {
-            const raw = localStorage.getItem(DRAFT_KEY);
+            const raw = localStorage.getItem(draftKey);
             if (!raw) return;
             const draft: DraftState = JSON.parse(raw);
             setFormData(draft.formData);
@@ -199,7 +211,7 @@ export default function MobileCreateAssetPage() {
         } catch (_) {
             /* ignore parse errors */
         }
-    }, [isMounted]);
+    }, [isMounted, draftKey]);
 
     // Persist draft on every change
     useEffect(() => {
@@ -215,14 +227,14 @@ export default function MobileCreateAssetPage() {
                 })),
                 teamSelected,
             };
-            localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+            localStorage.setItem(draftKey, JSON.stringify(draft));
         } catch (_) {
             /* ignore storage errors */
         }
-    }, [isMounted, formData, conditionReport, capturedPhotos, teamSelected]);
+    }, [isMounted, draftKey, formData, conditionReport, capturedPhotos, teamSelected]);
 
     const clearDraft = () => {
-        localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(draftKey);
         setHasDraft(false);
     };
 
@@ -331,7 +343,7 @@ export default function MobileCreateAssetPage() {
                 note: p.note || undefined,
             }));
 
-            await createAsset.mutateAsync({
+            const createdAssetResult: any = await createAsset.mutateAsync({
                 company_id: formData.company_id,
                 warehouse_id: formData.warehouse_id,
                 zone_id: formData.zone_id,
@@ -356,9 +368,25 @@ export default function MobileCreateAssetPage() {
                 handling_tags: formData.handling_tags || [],
             });
 
+            const createdAssetId = createdAssetResult?.data?.id || createdAssetResult?.id;
+            if (isCollectionFlow && collectionId && createdAssetId) {
+                await addCollectionItem.mutateAsync({
+                    asset_id: createdAssetId,
+                    default_quantity: 1,
+                });
+            }
+
             clearDraft();
             toast.success("Asset created successfully");
-            router.push("/assets");
+            if (isCollectionFlow) {
+                if (returnTo) {
+                    router.push(returnTo);
+                } else {
+                    router.push(`/collections/builder/${collectionId}`);
+                }
+            } else {
+                router.push("/assets");
+            }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "Failed to create asset");
         } finally {
@@ -380,8 +408,8 @@ export default function MobileCreateAssetPage() {
                             Use the assets page on desktop. This create flow is optimized for
                             mobile.
                         </p>
-                        <Button onClick={() => router.push("/assets")} className="w-full">
-                            Back to Assets
+                        <Button onClick={() => router.push(backTarget)} className="w-full">
+                            {isCollectionFlow ? "Back to Builder" : "Back to Assets"}
                         </Button>
                     </CardContent>
                 </Card>
@@ -394,7 +422,7 @@ export default function MobileCreateAssetPage() {
             <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border">
                 <div className="px-4 py-3 space-y-3">
                     <div className="flex items-center justify-between">
-                        <Button variant="ghost" size="sm" onClick={() => router.push("/assets")}>
+                        <Button variant="ghost" size="sm" onClick={() => router.push(backTarget)}>
                             <ArrowLeft className="w-4 h-4 mr-1" />
                             Back
                         </Button>
@@ -403,7 +431,9 @@ export default function MobileCreateAssetPage() {
                         </Badge>
                     </div>
                     <div className="space-y-1">
-                        <h1 className="font-mono text-lg font-bold uppercase">Create Asset</h1>
+                        <h1 className="font-mono text-lg font-bold uppercase">
+                            {isCollectionFlow ? "Create Collection Asset" : "Create Asset"}
+                        </h1>
                         <p className="text-xs text-muted-foreground font-mono">
                             {STEPS[currentStep].title}
                         </p>
