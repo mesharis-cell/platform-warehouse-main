@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAdminOrderDetails } from "@/hooks/use-orders";
 import { PhotoCaptureStrip, PhotoEntry } from "@/components/shared/photo-capture-strip";
-import { apiClient } from "@/lib/api/api-client";
+import { patchOrder } from "@/lib/api/order-api-path";
 
 interface ItemCapture {
     photos: PhotoEntry[];
@@ -28,7 +28,6 @@ export default function DerigCapturePage() {
     const [captures, setCaptures] = useState<Record<string, ItemCapture>>({});
     const [saving, setSaving] = useState(false);
     const [completing, setCompleting] = useState(false);
-
     const getCapture = (itemId: string): ItemCapture =>
         captures[itemId] ?? { photos: [], notes: "" };
 
@@ -64,7 +63,7 @@ export default function DerigCapturePage() {
 
         setSaving(true);
         try {
-            await apiClient.patch(`/operations/v1/order/${orderId}/derig`, { items });
+            await patchOrder(orderId, "/derig", { items });
             toast.success("Derig capture saved");
         } catch (err: any) {
             toast.error(err?.response?.data?.message ?? "Failed to save captures");
@@ -91,9 +90,9 @@ export default function DerigCapturePage() {
         setCompleting(true);
         try {
             if (items.length > 0) {
-                await apiClient.patch(`/operations/v1/order/${orderId}/derig`, { items });
+                await patchOrder(orderId, "/derig", { items });
             }
-            await apiClient.patch(`/client/v1/order/${orderId}/status`, {
+            await patchOrder(orderId, "/status", {
                 new_status: "AWAITING_RETURN",
                 notes: "Derig completed on site",
             });

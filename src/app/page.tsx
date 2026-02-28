@@ -34,7 +34,7 @@ export default function HomePage() {
             const role = jwtDecode<CustomJwtPayload>(access_token).role;
 
             if (role === "LOGISTICS") {
-                // PMG Admin goes to analytics dashboard
+                // Platform Admin goes to analytics dashboard
                 router.push("/orders");
             } else {
                 // User is not an admin, sign out and invalidate token

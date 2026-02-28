@@ -21,6 +21,7 @@ import {
     useUpdateJobNumber,
 } from "@/hooks/use-orders";
 import { useUploadImage } from "@/hooks/use-assets";
+import { useUploadTruckPhotos } from "@/hooks/use-scanning";
 import { ScanActivityTimeline } from "@/components/scanning/scan-activity-timeline";
 import { PricingReviewSection, CancelOrderButton } from "./hybrid-sections";
 import { OrderItemCard } from "@/components/orders/OrderItemCard";
@@ -189,7 +190,7 @@ const STATUS_CONFIG: Record<
         nextStates: ["IN_USE"],
     },
     IN_USE: {
-        label: "IN USE",
+        label: "ON SITE",
         color: "bg-pink-500/10 text-pink-700 border-pink-500/20",
         nextStates: ["DERIG"],
     },
@@ -233,6 +234,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     const updateJobNumber = useUpdateJobNumber();
     const downloadGoodsForm = useDownloadGoodsForm();
     const uploadImage = useUploadImage();
+    const uploadTruckPhotos = useUploadTruckPhotos();
 
     const [isEditingJobNumber, setIsEditingJobNumber] = useState(false);
     const [jobNumber, setJobNumber] = useState("");
@@ -241,7 +243,9 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     const [statusNotes, setStatusNotes] = useState("");
     const [deliveryPhotoFiles, setDeliveryPhotoFiles] = useState<File[]>([]);
     const [deliveryPhotoPreviews, setDeliveryPhotoPreviews] = useState<string[]>([]);
-    const [timeWindowsOpen, setTimeWindowsOpen] = useState(false);
+    const [onSitePhotoFiles, setOnSitePhotoFiles] = useState<File[]>([]);
+    const [onSitePhotoPreviews, setOnSitePhotoPreviews] = useState<string[]>([]);
+    const [onSiteUploading, setOnSiteUploading] = useState(false);
     const [updateTimeWindowsLoading, setUpdateTimeWindowsLoading] = useState(false);
     const [timeWindows, setTimeWindows] = useState<{
         deliveryWindowStart: Date | undefined;
@@ -274,13 +278,34 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     // Initialize states when order loads
     if (order) {
         if (!jobNumber && order?.data?.job_number) setJobNumber(order?.data?.job_number);
-        if (!timeWindows.deliveryWindowStart && order?.data?.delivery_window?.start) {
-            setTimeWindows({
-                deliveryWindowStart: new Date(order?.data?.delivery_window?.start),
-                deliveryWindowEnd: new Date(order?.data?.delivery_window?.end),
-                pickupWindowStart: new Date(order?.data?.pickup_window?.start),
-                pickupWindowEnd: new Date(order?.data?.pickup_window?.end),
-            });
+        if (!timeWindows.deliveryWindowStart) {
+            if (order?.data?.delivery_window?.start) {
+                setTimeWindows({
+                    deliveryWindowStart: new Date(order?.data?.delivery_window?.start),
+                    deliveryWindowEnd: new Date(order?.data?.delivery_window?.end),
+                    pickupWindowStart: new Date(order?.data?.pickup_window?.start),
+                    pickupWindowEnd: new Date(order?.data?.pickup_window?.end),
+                });
+            } else if (order?.data?.event_start_date && order?.data?.event_end_date) {
+                const eventStart = new Date(order.data.event_start_date);
+                const eventEnd = new Date(order.data.event_end_date);
+                const deliveryStart = subDays(eventStart, 1);
+                deliveryStart.setHours(8, 0, 0, 0);
+                const deliveryEnd = new Date(deliveryStart);
+                deliveryEnd.setHours(9, 0, 0, 0);
+
+                const pickupStart = addDays(eventEnd, 1);
+                pickupStart.setHours(8, 0, 0, 0);
+                const pickupEnd = new Date(pickupStart);
+                pickupEnd.setHours(9, 0, 0, 0);
+
+                setTimeWindows({
+                    deliveryWindowStart: deliveryStart,
+                    deliveryWindowEnd: deliveryEnd,
+                    pickupWindowStart: pickupStart,
+                    pickupWindowEnd: pickupEnd,
+                });
+            }
         }
     }
 
@@ -366,16 +391,81 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         });
     };
 
+    const handleOnSitePhotoSelect = (e: ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []).filter((file) =>
+            file.type.startsWith("image/")
+        );
+        if (files.length === 0) return;
+        const previewUrls = files.map((file) => URL.createObjectURL(file));
+        setOnSitePhotoFiles((prev) => [...prev, ...files]);
+        setOnSitePhotoPreviews((prev) => [...prev, ...previewUrls]);
+        e.target.value = "";
+    };
+
+    const handleOnSitePhotoRemove = (index: number) => {
+        setOnSitePhotoFiles((prev) => prev.filter((_, idx) => idx !== index));
+        setOnSitePhotoPreviews((prev) => {
+            const target = prev[index];
+            if (target) URL.revokeObjectURL(target);
+            return prev.filter((_, idx) => idx !== index);
+        });
+    };
+
+    const handleSaveOnSitePhotos = async () => {
+        if (!order?.data || onSitePhotoFiles.length === 0) {
+            toast.error("Add at least one on-site photo");
+            return;
+        }
+
+        try {
+            setOnSiteUploading(true);
+            const formData = new FormData();
+            onSitePhotoFiles.forEach((file) => formData.append("files", file));
+            const uploadResult = await uploadImage.mutateAsync(formData);
+            const uploadedUrls = uploadResult.data?.imageUrls?.filter(Boolean) || [];
+            if (uploadedUrls.length === 0) {
+                toast.error("Photo upload failed");
+                return;
+            }
+
+            await apiClient.patch(`/client/v1/order/${order.data.id}/on-site-photos`, {
+                photos: uploadedUrls,
+            });
+            toast.success("On-site photos saved");
+            setOnSitePhotoFiles([]);
+            setOnSitePhotoPreviews((prev) => {
+                prev.forEach((url) => URL.revokeObjectURL(url));
+                return [];
+            });
+            window.location.reload();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || "Failed to save on-site photos");
+        } finally {
+            setOnSiteUploading(false);
+        }
+    };
+
     const handleStatusProgression = async () => {
         if (!order?.data || !selectedNextStatus) return;
         try {
             setProgressLoading(true);
+            const shouldUploadTripPhotos = ["DELIVERED", "RETURN_IN_TRANSIT"].includes(
+                selectedNextStatus
+            );
             let deliveryPhotos: string[] | undefined;
-            if (selectedNextStatus === "DELIVERED" && deliveryPhotoFiles.length > 0) {
+            if (shouldUploadTripPhotos && deliveryPhotoFiles.length > 0) {
                 const formData = new FormData();
                 deliveryPhotoFiles.forEach((file) => formData.append("files", file));
                 const uploadResult = await uploadImage.mutateAsync(formData);
                 deliveryPhotos = uploadResult.data?.imageUrls?.filter(Boolean) || [];
+                if (deliveryPhotos.length > 0) {
+                    await uploadTruckPhotos.mutateAsync({
+                        orderId: order.data.id,
+                        photos: deliveryPhotos,
+                        tripPhase:
+                            selectedNextStatus === "RETURN_IN_TRANSIT" ? "RETURN" : "OUTBOUND",
+                    });
+                }
             }
             await apiClient.patch(`/client/v1/order/${order.data.id}/status`, {
                 new_status: selectedNextStatus,
@@ -420,7 +510,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
             });
 
             toast.success("Delivery schedule updated");
-            setTimeWindowsOpen(false);
             window.location.reload();
         } catch (error: any) {
             toast.error(error.response.data.message);
@@ -478,26 +567,26 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
             {/* Sticky Header */}
             <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="container mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
                             <Link href="/orders">
                                 <Button variant="ghost" size="sm" className="gap-2 font-mono">
                                     <ArrowLeft className="h-4 w-4" />
                                     ORDERS
                                 </Button>
                             </Link>
-                            <Separator orientation="vertical" className="h-6" />
-                            <div>
+                            <Separator orientation="vertical" className="h-6 hidden md:block" />
+                            <div className="min-w-0">
                                 <h1 className="text-lg font-bold font-mono">
                                     {order?.data?.order_id}
                                 </h1>
-                                <p className="text-xs text-muted-foreground font-mono">
+                                <p className="text-xs text-muted-foreground font-mono truncate">
                                     {order?.data?.company?.name}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 flex-wrap md:justify-end">
                             <Badge
                                 className={`${FINANCIAL_STATUS[order?.data?.financial_status]?.color} border font-mono text-xs px-3 py-1`}
                             >
@@ -520,9 +609,16 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                     disabled={downloadGoodsForm.isPending}
                                 >
                                     <FileText className="h-3.5 w-3.5" />
-                                    {downloadGoodsForm.isPending
-                                        ? "DOWNLOADING..."
-                                        : "DOWNLOAD GOODS FORM"}
+                                    {downloadGoodsForm.isPending ? (
+                                        "DOWNLOADING..."
+                                    ) : (
+                                        <>
+                                            <span className="hidden sm:inline">
+                                                DOWNLOAD GOODS FORM
+                                            </span>
+                                            <span className="sm:hidden">GOODS FORM</span>
+                                        </>
+                                    )}
                                 </Button>
                             ) : null}
 
@@ -572,7 +668,12 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                     onChange={(e) => {
                                                         const nextStatus = e.target.value;
                                                         setSelectedNextStatus(nextStatus);
-                                                        if (nextStatus !== "DELIVERED")
+                                                        if (
+                                                            ![
+                                                                "DELIVERED",
+                                                                "RETURN_IN_TRANSIT",
+                                                            ].includes(nextStatus)
+                                                        )
                                                             resetDeliveryPhotoState();
                                                     }}
                                                 >
@@ -597,10 +698,14 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                     rows={3}
                                                 />
                                             </div>
-                                            {selectedNextStatus === "DELIVERED" && (
+                                            {["DELIVERED", "RETURN_IN_TRANSIT"].includes(
+                                                selectedNextStatus
+                                            ) && (
                                                 <div className="space-y-2">
                                                     <Label className="font-mono text-xs">
-                                                        DELIVERY PROOF PHOTOS (Optional)
+                                                        {selectedNextStatus === "RETURN_IN_TRANSIT"
+                                                            ? "RETURN TRIP PHOTOS (Optional)"
+                                                            : "DELIVERY PROOF PHOTOS (Optional)"}
                                                     </Label>
                                                     <div className="rounded-md border border-dashed p-3 space-y-3">
                                                         <input
@@ -871,6 +976,99 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                             })()}
 
                         {/* Job Number Card */}
+                        {order?.data?.order_status === "IN_USE" && (
+                            <Card className="border-pink-500/20 bg-pink-500/5">
+                                <CardHeader>
+                                    <CardTitle className="font-mono text-sm flex items-center gap-2">
+                                        <ImagePlus className="h-4 w-4 text-pink-600" />
+                                        ON-SITE PHOTO CAPTURE
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    <p className="text-xs text-muted-foreground">
+                                        Capture installation/assembled-on-site proof while the order
+                                        is in the On Site stage.
+                                    </p>
+                                    <input
+                                        id="on-site-photos"
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        className="hidden"
+                                        onChange={handleOnSitePhotoSelect}
+                                    />
+                                    <label
+                                        htmlFor="on-site-photos"
+                                        className="inline-flex items-center gap-2 text-xs font-mono px-3 py-2 border rounded cursor-pointer hover:bg-muted"
+                                    >
+                                        <ImagePlus className="h-3.5 w-3.5" />
+                                        ADD ON-SITE PHOTOS
+                                    </label>
+
+                                    {(onSitePhotoPreviews.length > 0 ||
+                                        (order?.data?.on_site_photos || []).length > 0) && (
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-muted-foreground font-mono">
+                                                Preview
+                                            </p>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {(order?.data?.on_site_photos || []).map(
+                                                    (photoUrl: string, index: number) => (
+                                                        <a
+                                                            key={`${photoUrl}-${index}`}
+                                                            href={photoUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="relative rounded overflow-hidden border border-border bg-muted aspect-square block"
+                                                        >
+                                                            <Image
+                                                                src={photoUrl}
+                                                                alt={`On-site photo ${index + 1}`}
+                                                                fill
+                                                                className="object-cover"
+                                                            />
+                                                        </a>
+                                                    )
+                                                )}
+                                                {onSitePhotoPreviews.map((previewUrl, index) => (
+                                                    <div
+                                                        key={`${previewUrl}-${index}`}
+                                                        className="relative rounded overflow-hidden border border-border bg-muted aspect-square"
+                                                    >
+                                                        <Image
+                                                            src={previewUrl}
+                                                            alt={`New on-site photo ${index + 1}`}
+                                                            fill
+                                                            className="object-cover"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="absolute top-1 right-1 rounded-full bg-background/90 p-1"
+                                                            onClick={() =>
+                                                                handleOnSitePhotoRemove(index)
+                                                            }
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        size="sm"
+                                        className="font-mono text-xs"
+                                        onClick={handleSaveOnSitePhotos}
+                                        disabled={onSiteUploading || onSitePhotoFiles.length === 0}
+                                    >
+                                        {onSiteUploading ? "SAVING..." : "SAVE ON-SITE PHOTOS"}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Job Number Card */}
                         {order?.data?.job_number !== undefined && (
                             <Card className="border-2 border-primary/20 bg-primary/5">
                                 <CardContent className="pt-6">
@@ -940,157 +1138,96 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                             <Truck className="h-4 w-4 text-secondary" />
                                             DELIVERY SCHEDULE
                                         </CardTitle>
-                                        <Dialog
-                                            open={timeWindowsOpen}
-                                            onOpenChange={setTimeWindowsOpen}
-                                        >
-                                            <DialogTrigger asChild>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className={`font-mono text-xs ${!canEditTimeWindows ? "hidden" : ""}`}
-                                                    disabled={!canEditTimeWindows}
-                                                >
-                                                    <Edit className="h-3 w-3 mr-2" />
-                                                    EDIT
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="sm:max-w-lg overflow-y-auto">
-                                                <DialogHeader>
-                                                    <DialogTitle className="font-mono">
-                                                        UPDATE DELIVERY SCHEDULE
-                                                    </DialogTitle>
-                                                    <DialogDescription className="font-mono text-xs">
-                                                        Set time windows for delivery and pickup
-                                                        coordination
-                                                    </DialogDescription>
-                                                </DialogHeader>
-
-                                                <div className="space-y-6 py-4">
-                                                    <div className="space-y-3">
-                                                        <Label className="font-mono text-sm font-bold">
-                                                            DELIVERY WINDOW
-                                                        </Label>
-                                                        <div className="grid grid-cols-2 gap-4">
-                                                            <div className="space-y-2">
-                                                                <Label className="font-mono text-xs text-muted-foreground">
-                                                                    START
-                                                                </Label>
-                                                                <DateTimePicker
-                                                                    value={
-                                                                        timeWindows.deliveryWindowStart
-                                                                    }
-                                                                    onChange={(date) =>
-                                                                        setTimeWindows((prev) => ({
-                                                                            ...prev,
-                                                                            deliveryWindowStart:
-                                                                                date,
-                                                                        }))
-                                                                    }
-                                                                    placeholder="Select delivery start"
-                                                                    disabledDays={
-                                                                        deliveryDisabledDays
-                                                                    }
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label className="font-mono text-xs text-muted-foreground">
-                                                                    END
-                                                                </Label>
-                                                                <DateTimePicker
-                                                                    value={
-                                                                        timeWindows.deliveryWindowEnd
-                                                                    }
-                                                                    onChange={(date) =>
-                                                                        setTimeWindows((prev) => ({
-                                                                            ...prev,
-                                                                            deliveryWindowEnd: date,
-                                                                        }))
-                                                                    }
-                                                                    placeholder="Select delivery end"
-                                                                    disabledDays={
-                                                                        deliveryDisabledDays
-                                                                    }
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <Separator />
-
-                                                    <div className="space-y-3">
-                                                        <Label className="font-mono text-sm font-bold">
-                                                            PICKUP WINDOW
-                                                        </Label>
-                                                        <div className="grid grid-cols-2 gap-4">
-                                                            <div className="space-y-2">
-                                                                <Label className="font-mono text-xs text-muted-foreground">
-                                                                    START
-                                                                </Label>
-                                                                <DateTimePicker
-                                                                    value={
-                                                                        timeWindows.pickupWindowStart
-                                                                    }
-                                                                    onChange={(date) =>
-                                                                        setTimeWindows((prev) => ({
-                                                                            ...prev,
-                                                                            pickupWindowStart: date,
-                                                                        }))
-                                                                    }
-                                                                    placeholder="Select pickup start"
-                                                                    disabledDays={
-                                                                        pickupDisabledDays
-                                                                    }
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label className="font-mono text-xs text-muted-foreground">
-                                                                    END
-                                                                </Label>
-                                                                <DateTimePicker
-                                                                    value={
-                                                                        timeWindows.pickupWindowEnd
-                                                                    }
-                                                                    onChange={(date) =>
-                                                                        setTimeWindows((prev) => ({
-                                                                            ...prev,
-                                                                            pickupWindowEnd: date,
-                                                                        }))
-                                                                    }
-                                                                    placeholder="Select pickup end"
-                                                                    disabledDays={
-                                                                        pickupDisabledDays
-                                                                    }
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <DialogFooter>
-                                                    <Button
-                                                        variant="outline"
-                                                        disabled={updateTimeWindowsLoading}
-                                                        onClick={() => setTimeWindowsOpen(false)}
-                                                        className="font-mono text-xs"
-                                                    >
-                                                        CANCEL
-                                                    </Button>
-                                                    <Button
-                                                        onClick={handleTimeWindowsSave}
-                                                        disabled={updateTimeWindowsLoading}
-                                                        className="font-mono text-xs"
-                                                    >
-                                                        {updateTimeWindowsLoading
-                                                            ? "Saving..."
-                                                            : "SAVE SCHEDULE"}
-                                                    </Button>
-                                                </DialogFooter>
-                                            </DialogContent>
-                                        </Dialog>
+                                        {canEditTimeWindows ? (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="font-mono text-xs"
+                                                disabled={updateTimeWindowsLoading}
+                                                onClick={handleTimeWindowsSave}
+                                            >
+                                                {updateTimeWindowsLoading
+                                                    ? "SAVING..."
+                                                    : "SAVE SCHEDULE"}
+                                            </Button>
+                                        ) : null}
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
+                                    {canEditTimeWindows ? (
+                                        <div className="space-y-4 rounded-md border border-border p-4 bg-muted/20">
+                                            <p className="text-xs font-mono text-muted-foreground">
+                                                Defaults auto-fill to delivery: event day -1, 08:00
+                                                to 09:00 and pickup: event day +1, 08:00 to 09:00.
+                                            </p>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                        DELIVERY START
+                                                    </Label>
+                                                    <DateTimePicker
+                                                        value={timeWindows.deliveryWindowStart}
+                                                        onChange={(date) =>
+                                                            setTimeWindows((prev) => ({
+                                                                ...prev,
+                                                                deliveryWindowStart: date,
+                                                            }))
+                                                        }
+                                                        placeholder="Select delivery start"
+                                                        disabledDays={deliveryDisabledDays}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                        DELIVERY END
+                                                    </Label>
+                                                    <DateTimePicker
+                                                        value={timeWindows.deliveryWindowEnd}
+                                                        onChange={(date) =>
+                                                            setTimeWindows((prev) => ({
+                                                                ...prev,
+                                                                deliveryWindowEnd: date,
+                                                            }))
+                                                        }
+                                                        placeholder="Select delivery end"
+                                                        disabledDays={deliveryDisabledDays}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                        PICKUP START
+                                                    </Label>
+                                                    <DateTimePicker
+                                                        value={timeWindows.pickupWindowStart}
+                                                        onChange={(date) =>
+                                                            setTimeWindows((prev) => ({
+                                                                ...prev,
+                                                                pickupWindowStart: date,
+                                                            }))
+                                                        }
+                                                        placeholder="Select pickup start"
+                                                        disabledDays={pickupDisabledDays}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                        PICKUP END
+                                                    </Label>
+                                                    <DateTimePicker
+                                                        value={timeWindows.pickupWindowEnd}
+                                                        onChange={(date) =>
+                                                            setTimeWindows((prev) => ({
+                                                                ...prev,
+                                                                pickupWindowEnd: date,
+                                                            }))
+                                                        }
+                                                        placeholder="Select pickup end"
+                                                        disabledDays={pickupDisabledDays}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : null}
                                     {order?.data?.delivery_window?.start ? (
                                         <>
                                             <div className="p-3 bg-green-500/5 border border-green-500/20 rounded">

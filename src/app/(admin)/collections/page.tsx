@@ -65,6 +65,12 @@ export default function CollectionsPage() {
             />
 
             <div className="p-8">
+                <div className="mb-6 flex justify-end">
+                    <Button asChild>
+                        <Link href="/collections/create">Create Collection Builder</Link>
+                    </Button>
+                </div>
+
                 {/* Filters */}
                 <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Search */}

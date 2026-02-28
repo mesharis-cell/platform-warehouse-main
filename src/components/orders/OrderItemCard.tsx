@@ -3,11 +3,8 @@
 import Link from "next/link";
 import { AlertTriangle, Package, Wrench, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useCreateServiceRequest } from "@/hooks/use-service-requests";
 import { Condition } from "@/types";
 import { PrintQrAction } from "@/components/qr/PrintQrAction";
-import { toast } from "sonner";
 
 interface LinkedSr {
     id: string;
@@ -65,8 +62,6 @@ export function OrderItemCard({
     linkedSr,
     onRefresh,
 }: OrderItemCardProps) {
-    const createServiceRequest = useCreateServiceRequest();
-
     const thumbnail =
         item.asset?.on_display_image ||
         (item.asset?.images && item.asset.images.length > 0 ? item.asset.images[0] : null);
@@ -78,46 +73,10 @@ export function OrderItemCard({
     const ConditionIcon = conditionStyle?.icon;
 
     const showWarning = PRE_FULFILLMENT_STATUSES.includes(orderStatus) && isDamaged;
-    // Show Create SR button only as fallback for legacy orders (no auto-created SR)
     const canNeedSR =
         item.asset?.condition === "RED" ||
         (item.asset?.condition === "ORANGE" &&
             item.order_item?.maintenance_decision === "FIX_IN_ORDER");
-    const showCreateSRButton =
-        showWarning && item.asset?.status !== "MAINTENANCE" && canNeedSR && !linkedSr;
-
-    const handleCreateLinkedServiceRequest = async () => {
-        if (!item?.asset?.id || !item?.order_item?.id) return;
-        try {
-            const requestType = "MAINTENANCE";
-            await createServiceRequest.mutateAsync({
-                request_type: requestType,
-                billing_mode: "INTERNAL_ONLY",
-                link_mode: ["DRAFT", "PRICING_REVIEW", "PENDING_APPROVAL", "QUOTED"].includes(
-                    orderStatus
-                )
-                    ? "BUNDLED_WITH_ORDER"
-                    : "SEPARATE_CHANGE_REQUEST",
-                blocks_fulfillment: item.asset.condition === "RED",
-                title: `${requestType} for ${item.asset.name || "asset"}`,
-                description: `Asset condition is ${item.asset.condition}. Created from order workflow.`,
-                related_asset_id: item.asset.id,
-                related_order_id: orderId,
-                related_order_item_id: item.order_item.id,
-                items: [
-                    {
-                        asset_id: item.asset.id,
-                        asset_name: item.asset.name || "Asset",
-                        quantity: item.order_item.quantity || 1,
-                    },
-                ],
-            });
-            if (onRefresh) onRefresh();
-            toast.success("Linked service request created");
-        } catch (error: any) {
-            toast.error(error.message || "Failed to create linked service request");
-        }
-    };
 
     return (
         <div
@@ -219,18 +178,10 @@ export function OrderItemCard({
                     </div>
                 )}
 
-                {showCreateSRButton && (
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        className="text-xs font-mono mt-2 h-7"
-                        onClick={handleCreateLinkedServiceRequest}
-                        disabled={createServiceRequest.isPending}
-                    >
-                        {createServiceRequest.isPending
-                            ? "Creating…"
-                            : "Create Linked Service Request"}
-                    </Button>
+                {showWarning && canNeedSR && !linkedSr && (
+                    <p className="font-mono text-[11px] text-muted-foreground mt-2">
+                        Maintenance service request will be auto-created for this item.
+                    </p>
                 )}
             </div>
         </div>
