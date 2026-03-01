@@ -365,7 +365,11 @@ export interface OrderPricing {
     }>;
     totals?: Record<string, number>;
     base_ops_total?: number;
-    logistics_sub_total?: number;
+    subtotal?: number;
+    vat?: {
+        percent: number;
+        amount: number;
+    };
     margin_percent?: number;
     final_total: number | string;
     calculated_at?: string;
