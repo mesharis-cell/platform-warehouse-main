@@ -192,6 +192,29 @@ export function useAdminOrders(
     });
 }
 
+export function useOrderStatusCount(orderStatus: string) {
+    const { selectedCompanyId } = useCompanyFilter();
+
+    return useQuery({
+        queryKey: ["orders", "status-count", orderStatus, selectedCompanyId || null],
+        queryFn: async () => {
+            try {
+                const queryParams = new URLSearchParams();
+                queryParams.append("page", "1");
+                queryParams.append("limit", "1");
+                queryParams.append("order_status", orderStatus);
+                if (selectedCompanyId) queryParams.append("company_id", selectedCompanyId);
+                const response = await apiClient.get(`/client/v1/order?${queryParams.toString()}`);
+                return Number(response.data?.meta?.total || 0);
+            } catch (error) {
+                throwApiError(error);
+            }
+        },
+        refetchOnWindowFocus: true,
+        refetchInterval: 30000,
+    });
+}
+
 /**
  * Get order details for admin (includes status history)
  */

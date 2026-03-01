@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AddCatalogLineItemModal } from "@/components/orders/AddCatalogLineItemModal";
-import { AddCustomLineItemModal } from "@/components/orders/AddCustomLineItemModal";
+import { RequestLineItemModal } from "@/components/orders/RequestLineItemModal";
 import { OrderLineItemsList } from "@/components/orders/OrderLineItemsList";
 import { ReturnInboundRequestToLogisticsModal } from "./return-to-logistics-modal";
 import { useAdminApproveInboundRequest } from "@/hooks/use-inbound-requests";
@@ -30,7 +30,7 @@ export function PendingApprovalSection({
     const adminApproveRequest = useAdminApproveInboundRequest();
 
     const [addCatalogOpen, setAddCatalogOpen] = useState(false);
-    const [addCustomOpen, setAddCustomOpen] = useState(false);
+    const [requestLineItemOpen, setRequestLineItemOpen] = useState(false);
     const [returnToLogisticsOpen, setReturnToLogisticsOpen] = useState(false);
 
     const pricing = request.request_pricing;
@@ -74,9 +74,9 @@ export function PendingApprovalSection({
                                     <Plus className="h-4 w-4 mr-1" />
                                     Catalog Service
                                 </Button>
-                                <Button size="sm" onClick={() => setAddCustomOpen(true)}>
+                                <Button size="sm" onClick={() => setRequestLineItemOpen(true)}>
                                     <Plus className="h-4 w-4 mr-1" />
-                                    Custom Charge
+                                    Request Line Item
                                 </Button>
                             </div>
                         )}
@@ -170,9 +170,9 @@ export function PendingApprovalSection({
                 targetId={requestId}
                 purposeType="INBOUND_REQUEST"
             />
-            <AddCustomLineItemModal
-                open={addCustomOpen}
-                onOpenChange={setAddCustomOpen}
+            <RequestLineItemModal
+                open={requestLineItemOpen}
+                onOpenChange={setRequestLineItemOpen}
                 targetId={requestId}
                 purposeType="INBOUND_REQUEST"
             />

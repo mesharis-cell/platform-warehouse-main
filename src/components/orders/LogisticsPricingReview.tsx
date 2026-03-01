@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { DollarSign, Plus } from "lucide-react";
 import { OrderLineItemsList } from "./OrderLineItemsList";
 import { AddCatalogLineItemModal } from "./AddCatalogLineItemModal";
-import { AddCustomLineItemModal } from "./AddCustomLineItemModal";
+import { RequestLineItemModal } from "./RequestLineItemModal";
 import { canManageLineItems } from "@/lib/order-helpers";
 import type { OrderPricing } from "@/types/hybrid-pricing";
 import { LogisticsPricing } from "./LogisticsPricing";
@@ -32,7 +32,7 @@ export function LogisticsPricingReview({
 }: LogisticsPricingReviewProps) {
     const { user } = useToken();
     const [addCatalogOpen, setAddCatalogOpen] = useState(false);
-    const [addCustomOpen, setAddCustomOpen] = useState(false);
+    const [requestLineItemOpen, setRequestLineItemOpen] = useState(false);
     const canManagePricing = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.ordersPricingAdjust);
     const canManageServiceItems = canManageLineItems(order?.order_status) && canManagePricing;
 
@@ -53,10 +53,10 @@ export function LogisticsPricingReview({
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => setAddCustomOpen(true)}
+                                    onClick={() => setRequestLineItemOpen(true)}
                                 >
                                     <Plus className="h-3 w-3 mr-1" />
-                                    Add Custom Service
+                                    Request Line Item
                                 </Button>
                             </div>
                         )}
@@ -71,8 +71,8 @@ export function LogisticsPricingReview({
                         }
                     />
                     <p className="text-xs text-muted-foreground mt-3">
-                        Add catalog or custom services. Custom totals are derived as qty × unit
-                        rate.
+                        Add catalog services for pricing, or request a new line item for Platform
+                        Admin approval.
                     </p>
                 </CardContent>
             </Card>
@@ -85,10 +85,10 @@ export function LogisticsPricingReview({
                 onOpenChange={setAddCatalogOpen}
                 targetId={orderId}
             />
-            <AddCustomLineItemModal
-                open={addCustomOpen}
-                onOpenChange={setAddCustomOpen}
-                orderId={orderId}
+            <RequestLineItemModal
+                open={requestLineItemOpen}
+                onOpenChange={setRequestLineItemOpen}
+                targetId={orderId}
             />
         </div>
     );
