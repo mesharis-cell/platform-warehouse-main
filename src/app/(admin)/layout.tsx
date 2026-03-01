@@ -62,6 +62,7 @@ import { usePlatform } from "@/contexts/platform-context";
 import { hasAnyPermission } from "@/lib/auth/permissions";
 import { WAREHOUSE_NAV_PERMISSIONS } from "@/lib/auth/permission-map";
 import { CompanySelector } from "@/components/company/company-selector";
+import { useOrderStatusCount } from "@/hooks/use-orders";
 
 type NavItem = {
     name: string;
@@ -211,6 +212,7 @@ function AdminSidebarContent() {
     const { state } = useSidebar();
     const { logout, user } = useToken();
     const { platform } = usePlatform();
+    const { data: pricingReviewCount } = useOrderStatusCount("PRICING_REVIEW");
 
     const handleSignOut = () => {
         logout();
@@ -222,11 +224,20 @@ function AdminSidebarContent() {
     const visibleSections = navigationSections
         .map((section) => ({
             ...section,
-            items: section.items.filter(
-                (item) =>
-                    !item.requiredAnyPermission ||
-                    hasAnyPermission(user, item.requiredAnyPermission)
-            ),
+            items: section.items
+                .filter(
+                    (item) =>
+                        !item.requiredAnyPermission ||
+                        hasAnyPermission(user, item.requiredAnyPermission)
+                )
+                .map((item) => ({
+                    ...item,
+                    badge:
+                        item.href === "/orders/pricing-review" &&
+                        Number(pricingReviewCount || 0) > 0
+                            ? String(pricingReviewCount)
+                            : undefined,
+                })),
         }))
         .filter((section) => section.items.length > 0);
 
@@ -313,8 +324,8 @@ function AdminSidebarContent() {
                                                                 className={cn(
                                                                     "px-1.5 py-0.5 text-[10px] font-mono rounded uppercase tracking-wider relative z-10 shrink-0",
                                                                     isActive
-                                                                        ? "bg-primary-foreground/20 text-primary-foreground"
-                                                                        : "bg-primary/10 text-primary border border-primary/20"
+                                                                        ? "bg-red-200 text-red-900"
+                                                                        : "bg-red-500 text-white"
                                                                 )}
                                                             >
                                                                 {item.badge}

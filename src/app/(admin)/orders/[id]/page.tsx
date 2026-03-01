@@ -76,6 +76,7 @@ import { LogisticsPricingReview } from "@/components/orders/LogisticsPricingRevi
 import { OrderApprovalRequestSubmitBtn } from "@/components/orders/OrderApprovalRequestSubmitBtn";
 import { LogisticsPricing } from "@/components/orders/LogisticsPricing";
 import { OrderLineItemsList } from "@/components/orders/OrderLineItemsList";
+import { OrderTransportTripsCard } from "@/components/orders/OrderTransportTripsCard";
 import { canManageLineItems } from "@/lib/order-helpers";
 import { useToken } from "@/lib/auth/use-token";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -1300,6 +1301,15 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                             </Card>
                         )}
 
+                        {["CONFIRMED", "IN_PREPARATION", "READY_FOR_DELIVERY"].includes(
+                            order?.data?.order_status
+                        ) ? (
+                            <OrderTransportTripsCard
+                                orderId={order?.data?.id}
+                                canManage={canEditTimeWindows}
+                            />
+                        ) : null}
+
                         {/* Event & Venue */}
                         <Card>
                             <CardHeader>
@@ -1539,8 +1549,8 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                         }
                                     />
                                     <p className="text-xs text-muted-foreground mt-3">
-                                        Add catalog or custom services. Custom totals are derived as
-                                        qty × unit rate.
+                                        Catalog lines are managed here for pricing. Non-catalog
+                                        additions must be requested for Platform Admin approval.
                                     </p>
                                 </CardContent>
                             </Card>

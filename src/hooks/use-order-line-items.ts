@@ -6,7 +6,6 @@ import { mapArraySnakeToCamel, mapCamelToSnake } from "@/lib/utils/helper";
 import type {
     OrderLineItem,
     CreateCatalogLineItemRequest,
-    CreateCustomLineItemRequest,
     UpdateLineItemRequest,
     PatchLineItemMetadataRequest,
     PatchLineItemClientVisibilityRequest,
@@ -19,11 +18,6 @@ import { inboundRequestKeys } from "@/hooks/use-inbound-requests";
 export const lineItemsKeys = {
     list: (targetId: string, purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST") =>
         ["line-items", purposeType, targetId] as const,
-};
-
-// For backward compatibility
-export const orderLineItemsKeys = {
-    list: (orderId: string) => lineItemsKeys.list(orderId, "ORDER"),
 };
 
 const invalidateLineItemRelatedQueries = (
@@ -70,11 +64,6 @@ export function useListLineItems(
     });
 }
 
-// Backward compatible alias for orders
-export function useListOrderLineItems(orderId: string | null) {
-    return useListLineItems(orderId, "ORDER");
-}
-
 // Create catalog line item
 export function useCreateCatalogLineItem(
     targetId: string,
@@ -100,42 +89,6 @@ export function useCreateCatalogLineItem(
                           : { service_request_id: targetId }),
                 };
                 const response = await apiClient.post(`/operations/v1/line-item/catalog`, payload);
-                return response.data.data;
-            } catch (error) {
-                throwApiError(error);
-            }
-        },
-        onSuccess: () => {
-            invalidateLineItemRelatedQueries(queryClient, targetId, purposeType);
-        },
-    });
-}
-
-// Create custom line item
-export function useCreateCustomLineItem(
-    targetId: string,
-    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" = "ORDER"
-) {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async (
-            data: Omit<
-                CreateCustomLineItemRequest,
-                "order_id" | "inbound_request_id" | "service_request_id" | "purpose_type"
-            >
-        ) => {
-            try {
-                const payload: CreateCustomLineItemRequest = {
-                    ...data,
-                    purpose_type: purposeType,
-                    ...(purposeType === "ORDER"
-                        ? { order_id: targetId }
-                        : purposeType === "INBOUND_REQUEST"
-                          ? { inbound_request_id: targetId }
-                          : { service_request_id: targetId }),
-                };
-                const response = await apiClient.post(`/operations/v1/line-item/custom`, payload);
                 return response.data.data;
             } catch (error) {
                 throwApiError(error);
