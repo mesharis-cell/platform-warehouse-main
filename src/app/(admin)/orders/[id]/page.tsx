@@ -70,7 +70,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
-import { apiClient } from "@/lib/api/api-client";
 import { removeUnderScore } from "@/lib/utils/helper";
 import { addDays, endOfDay, isAfter, isBefore, startOfDay, subDays } from "date-fns";
 import { LogisticsPricingReview } from "@/components/orders/LogisticsPricingReview";
@@ -81,6 +80,7 @@ import { canManageLineItems } from "@/lib/order-helpers";
 import { useToken } from "@/lib/auth/use-token";
 import { hasPermission } from "@/lib/auth/permissions";
 import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
+import { patchOrder } from "@/lib/api/order-api-path";
 
 const FINANCIAL_STATUS = {
     PENDING_QUOTE: {
@@ -428,8 +428,17 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                 return;
             }
 
-            await apiClient.patch(`/client/v1/order/${order.data.id}/on-site-photos`, {
-                photos: uploadedUrls,
+            const assetIds = Array.from(
+                new Set(
+                    (order.data.items || [])
+                        .map((item: any) => item?.order_item?.asset_id || item?.asset?.id)
+                        .filter(Boolean)
+                )
+            ) as string[];
+
+            await patchOrder(order.data.id, "/on-site-capture", {
+                media: uploadedUrls.map((url: string) => ({ url })),
+                asset_ids: assetIds,
             });
             toast.success("On-site photos saved");
             setOnSitePhotoFiles([]);
@@ -467,7 +476,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                     });
                 }
             }
-            await apiClient.patch(`/client/v1/order/${order.data.id}/status`, {
+            await patchOrder(order.data.id, "/status", {
                 new_status: selectedNextStatus,
                 notes: statusNotes || undefined,
                 delivery_photos: selectedNextStatus === "DELIVERED" ? deliveryPhotos : undefined,
@@ -502,7 +511,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
 
         try {
             setUpdateTimeWindowsLoading(true);
-            await apiClient.patch(`/client/v1/order/${order.data.id}/time-windows`, {
+            await patchOrder(order.data.id, "/time-windows", {
                 delivery_window_start: timeWindows.deliveryWindowStart.toISOString(),
                 delivery_window_end: timeWindows.deliveryWindowEnd.toISOString(),
                 pickup_window_start: timeWindows.pickupWindowStart.toISOString(),

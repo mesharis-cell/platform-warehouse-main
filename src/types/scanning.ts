@@ -12,7 +12,13 @@
 // Enums
 // ============================================================
 
-export type ScanType = "OUTBOUND" | "INBOUND";
+export type ScanType =
+    | "OUTBOUND"
+    | "INBOUND"
+    | "DERIG_CAPTURE"
+    | "OUTBOUND_TRUCK_PHOTOS"
+    | "RETURN_TRUCK_PHOTOS"
+    | "ON_SITE_CAPTURE";
 export type DiscrepancyReason = "BROKEN" | "LOST" | "OTHER";
 
 // Condition enum is already defined in asset.ts but re-exported here for convenience
@@ -26,7 +32,7 @@ export interface ScanEvent {
     asset: string; // assetId (uuid)
     scanType: ScanType;
     quantity: number;
-    condition: "GREEN" | "ORANGE" | "RED";
+    condition: "GREEN" | "ORANGE" | "RED" | null;
     notes: string | null;
     photos: string[]; // Array of photo URLs
     damage_report_entries?: Array<{ url: string; description?: string }>;
@@ -39,10 +45,27 @@ export interface ScanEventWithDetails {
     id: string;
     scan_type: ScanType;
     quantity: number;
-    condition: "GREEN" | "ORANGE" | "RED";
+    condition: "GREEN" | "ORANGE" | "RED" | null;
     notes: string | null;
     photos: string[]; // Array of photo URLs
     damage_report_entries?: Array<{ url: string; description?: string }>;
+    media?: Array<{
+        id?: string;
+        url: string;
+        note?: string | null;
+        media_kind?: string;
+        sort_order?: number;
+    }>;
+    assets?: Array<{
+        asset_id: string;
+        quantity?: number;
+        asset?: {
+            id: string;
+            name: string;
+            qr_code: string;
+            tracking_method: "INDIVIDUAL" | "BATCH";
+        };
+    }>;
     discrepancy_reason: DiscrepancyReason | null;
     scanned_by: string; // userId
     scanned_at: Date;
@@ -136,7 +159,9 @@ export interface OutboundScanResponse {
 
 export interface UploadTruckPhotosRequest {
     sessionId: string;
-    photos: string[]; // Base64-encoded images
+    photos: string[]; // Uploaded image URLs
+    note?: string;
+    assetIds?: string[];
     tripPhase?: "OUTBOUND" | "RETURN";
 }
 
@@ -177,7 +202,7 @@ export interface InboundScanRequest {
     quantity?: number; // Required for BATCH tracking
     condition: "GREEN" | "ORANGE" | "RED";
     notes?: string; // Required if condition is ORANGE or RED
-    latestReturnImages: string[]; // Base64-encoded latest return images (min 2)
+    latestReturnImages: string[]; // Uploaded latest return images (min 2)
     damageReportEntries?: Array<{
         url: string;
         description?: string;

@@ -52,8 +52,10 @@ export default function DerigCapturePage() {
             .filter(([, c]) => c.photos.length > 0)
             .map(([order_item_id, c]) => ({
                 order_item_id,
-                photos: c.photos.map((p) => p.uploadedUrl ?? p.previewUrl),
-                notes: c.notes.trim() || undefined,
+                media: c.photos.map((p) => ({
+                    url: p.uploadedUrl ?? p.previewUrl,
+                })),
+                note: c.notes.trim() || undefined,
             }));
 
         if (items.length === 0) {
@@ -78,8 +80,10 @@ export default function DerigCapturePage() {
             .filter(([, c]) => c.photos.length > 0)
             .map(([order_item_id, c]) => ({
                 order_item_id,
-                photos: c.photos.map((p) => p.uploadedUrl ?? p.previewUrl),
-                notes: c.notes.trim() || undefined,
+                media: c.photos.map((p) => ({
+                    url: p.uploadedUrl ?? p.previewUrl,
+                })),
+                note: c.notes.trim() || undefined,
             }));
 
         if (items.length === 0) {
