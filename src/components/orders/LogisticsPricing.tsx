@@ -21,8 +21,8 @@ export const LogisticsPricing = ({
     const canRecalculate = ["PRICING_REVIEW", "PENDING_APPROVAL"].includes(order?.order_status);
     const breakdownLines = Array.isArray(pricing?.breakdown_lines)
         ? pricing.breakdown_lines.filter(
-              (line) => !line.is_voided && (line.billing_mode || "BILLABLE") === "BILLABLE"
-          )
+            (line) => !line.is_voided && (line.billing_mode || "BILLABLE") === "BILLABLE"
+        )
         : [];
 
     const handleRecalculate = async () => {
@@ -107,7 +107,7 @@ export const LogisticsPricing = ({
                                 <div className="rounded border border-border/60 overflow-hidden">
                                     <div className="grid grid-cols-12 bg-muted/30 px-3 py-2 text-xs font-medium">
                                         <span className="col-span-8">Line</span>
-                                        <span className="col-span-4 text-right">Buy Total</span>
+                                        <span className="col-span-4 text-right">Total</span>
                                     </div>
                                     {breakdownLines.map((line) => (
                                         <div
@@ -132,9 +132,9 @@ export const LogisticsPricing = ({
                                 <span className="font-mono">
                                     {Number(
                                         pricing.totals?.total ??
-                                            pricing.totals?.buy_total ??
-                                            pricing.final_total ??
-                                            0
+                                        pricing.totals?.buy_total ??
+                                        pricing.final_total ??
+                                        0
                                     ).toFixed(2)}{" "}
                                     AED
                                 </span>

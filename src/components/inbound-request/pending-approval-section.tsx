@@ -36,8 +36,8 @@ export function PendingApprovalSection({
     const pricing = request.request_pricing;
     const breakdownLines = Array.isArray(pricing?.breakdown_lines)
         ? pricing.breakdown_lines.filter(
-              (line: any) => !line.is_voided && (line.billing_mode || "BILLABLE") === "BILLABLE"
-          )
+            (line: any) => !line.is_voided && (line.billing_mode || "BILLABLE") === "BILLABLE"
+        )
         : [];
 
     const handleApprove = async () => {
@@ -103,7 +103,7 @@ export function PendingApprovalSection({
                                 <div className="rounded border border-border/60 overflow-hidden">
                                     <div className="grid grid-cols-12 bg-muted/30 px-3 py-2 text-xs font-medium">
                                         <span className="col-span-8">Line</span>
-                                        <span className="col-span-4 text-right">Buy Total</span>
+                                        <span className="col-span-4 text-right">Total</span>
                                     </div>
                                     {breakdownLines.map((line: any) => (
                                         <div
@@ -128,9 +128,9 @@ export function PendingApprovalSection({
                                 <span className="font-mono">
                                     {Number(
                                         pricing.totals?.total ??
-                                            pricing.totals?.buy_total ??
-                                            pricing.final_total ??
-                                            0
+                                        pricing.totals?.buy_total ??
+                                        pricing.final_total ??
+                                        0
                                     ).toFixed(2)}{" "}
                                     AED
                                 </span>

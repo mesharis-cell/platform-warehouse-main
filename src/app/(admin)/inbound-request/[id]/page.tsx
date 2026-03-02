@@ -35,8 +35,8 @@ export default function InboundRequestDetailsPage({ params }: { params: Promise<
     const pricing = request?.request_pricing;
     const breakdownLines = Array.isArray(pricing?.breakdown_lines)
         ? pricing.breakdown_lines.filter(
-              (line: any) => !line.is_voided && (line.billing_mode || "BILLABLE") === "BILLABLE"
-          )
+            (line: any) => !line.is_voided && (line.billing_mode || "BILLABLE") === "BILLABLE"
+        )
         : [];
     const [addCatalogOpen, setAddCatalogOpen] = useState(false);
     const [addCustomOpen, setAddCustomOpen] = useState(false);
@@ -227,7 +227,7 @@ export default function InboundRequestDetailsPage({ params }: { params: Promise<
                                                 <div className="grid grid-cols-12 bg-muted/30 px-3 py-2 text-xs font-medium">
                                                     <span className="col-span-8">Line</span>
                                                     <span className="col-span-4 text-right">
-                                                        Buy Total
+                                                        Total
                                                     </span>
                                                 </div>
                                                 {breakdownLines.map((line: any) => (
@@ -254,9 +254,9 @@ export default function InboundRequestDetailsPage({ params }: { params: Promise<
                                             <span className="font-mono">
                                                 {Number(
                                                     pricing.totals?.total ??
-                                                        pricing.totals?.buy_total ??
-                                                        pricing.final_total ??
-                                                        0
+                                                    pricing.totals?.buy_total ??
+                                                    pricing.final_total ??
+                                                    0
                                                 ).toFixed(2)}{" "}
                                                 AED
                                             </span>
