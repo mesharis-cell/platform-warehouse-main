@@ -35,8 +35,8 @@ export default function InboundRequestDetailsPage({ params }: { params: Promise<
     const pricing = request?.request_pricing;
     const breakdownLines = Array.isArray(pricing?.breakdown_lines)
         ? pricing.breakdown_lines.filter(
-            (line: any) => !line.is_voided && (line.billing_mode || "BILLABLE") === "BILLABLE"
-        )
+              (line: any) => !line.is_voided && (line.billing_mode || "BILLABLE") === "BILLABLE"
+          )
         : [];
     const [addCatalogOpen, setAddCatalogOpen] = useState(false);
     const [addCustomOpen, setAddCustomOpen] = useState(false);
@@ -254,9 +254,9 @@ export default function InboundRequestDetailsPage({ params }: { params: Promise<
                                             <span className="font-mono">
                                                 {Number(
                                                     pricing.totals?.total ??
-                                                    pricing.totals?.buy_total ??
-                                                    pricing.final_total ??
-                                                    0
+                                                        pricing.totals?.buy_total ??
+                                                        pricing.final_total ??
+                                                        0
                                                 ).toFixed(2)}{" "}
                                                 AED
                                             </span>
