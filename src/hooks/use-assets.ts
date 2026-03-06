@@ -6,6 +6,7 @@ import type { Asset, AssetsDetails, AssetWithDetails, CreateAssetRequest } from 
 import { apiClient } from "@/lib/api/api-client";
 import { throwApiError } from "@/lib/utils/throw-api-error";
 import { useCompanyFilter } from "@/contexts/company-filter-context";
+import { uploadImages, type UploadImagesInput } from "@/lib/utils/upload-images";
 
 // Query keys
 export const assetKeys = {
@@ -83,15 +84,10 @@ async function deleteAsset(id: string): Promise<void> {
 }
 
 // Upload image
-async function uploadImage(formData: FormData): Promise<{ data: { imageUrls: string[] } }> {
+async function uploadImage(input: UploadImagesInput): Promise<{ data: { imageUrls: string[] } }> {
     try {
-        const response = await apiClient.post("/operations/v1/upload/images", formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        });
-
-        return response.data;
+        const imageUrls = await uploadImages(input);
+        return { data: { imageUrls } };
     } catch (error) {
         throwApiError(error);
     }
