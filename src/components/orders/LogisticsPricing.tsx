@@ -107,7 +107,7 @@ export const LogisticsPricing = ({
                                 <div className="rounded border border-border/60 overflow-hidden">
                                     <div className="grid grid-cols-12 bg-muted/30 px-3 py-2 text-xs font-medium">
                                         <span className="col-span-8">Line</span>
-                                        <span className="col-span-4 text-right">Buy Total</span>
+                                        <span className="col-span-4 text-right">Total</span>
                                     </div>
                                     {breakdownLines.map((line) => (
                                         <div

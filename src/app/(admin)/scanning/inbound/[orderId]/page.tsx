@@ -289,9 +289,10 @@ export default function InboundScanningPage() {
             photos.map(async (p) => {
                 if (p.uploadedUrl) return p.uploadedUrl;
                 if (!p.file) return p.previewUrl; // already an S3 URL (existing photo)
-                const fd = new FormData();
-                fd.append("files", p.file);
-                const res = await uploadImage.mutateAsync(fd);
+                const res = await uploadImage.mutateAsync({
+                    files: [p.file],
+                    profile: "photo",
+                });
                 return res.data?.imageUrls?.[0] ?? p.previewUrl;
             })
         );

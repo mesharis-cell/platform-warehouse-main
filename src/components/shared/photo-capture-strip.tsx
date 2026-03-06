@@ -3,40 +3,7 @@
 import { useRef, useState } from "react";
 import { Plus, X, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api/api-client";
-
-// Compress to max 1920px longest edge at 85% JPEG quality.
-// Camera photos on mobile can be 5-10MB — this brings them to ~200-400KB
-// so they upload reliably even on slow mobile connections.
-const compressImage = (file: File, maxDimension = 1920, quality = 0.85): Promise<File> =>
-    new Promise((resolve) => {
-        const blobUrl = URL.createObjectURL(file);
-        const img = new Image();
-        img.onload = () => {
-            URL.revokeObjectURL(blobUrl);
-            const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
-            const canvas = document.createElement("canvas");
-            canvas.width = Math.round(img.width * scale);
-            canvas.height = Math.round(img.height * scale);
-            const ctx = canvas.getContext("2d");
-            if (!ctx) return resolve(file);
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob(
-                (blob) => {
-                    if (!blob) return resolve(file);
-                    const name = file.name.replace(/\.[^.]+$/, ".jpg") || "photo.jpg";
-                    resolve(new File([blob], name, { type: "image/jpeg" }));
-                },
-                "image/jpeg",
-                quality
-            );
-        };
-        img.onerror = () => {
-            URL.revokeObjectURL(blobUrl);
-            resolve(file); // fall back to original on error
-        };
-        img.src = blobUrl;
-    });
+import { uploadImages } from "@/lib/utils/upload-images";
 
 export interface PhotoEntry {
     previewUrl: string;
@@ -106,15 +73,13 @@ export function PhotoCaptureStrip({
         if (uploadOnCapture) {
             setUploading(true);
             try {
-                const compressed = await compressImage(pendingFile);
-                const fd = new FormData();
-                if (companyId) fd.append("companyId", companyId);
-                fd.append("files", compressed);
-                // Do NOT set Content-Type — let the browser set multipart/form-data with boundary
-                const res = await apiClient.post("/operations/v1/upload/images?draft=true", fd, {
-                    headers: { "Content-Type": undefined },
+                const urls = await uploadImages({
+                    files: [pendingFile],
+                    companyId,
+                    draft: true,
+                    profile: "photo",
                 });
-                uploadedUrl = res.data?.data?.imageUrls?.[0];
+                uploadedUrl = urls[0];
                 if (!uploadedUrl) throw new Error("No URL returned from upload");
             } catch (err) {
                 console.error("[photo-upload]", err);

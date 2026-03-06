@@ -17,6 +17,7 @@ import type {
 import { apiClient } from "@/lib/api/api-client";
 import { throwApiError } from "@/lib/utils/throw-api-error";
 import { useCompanyFilter } from "@/contexts/company-filter-context";
+import { uploadImages } from "@/lib/utils/upload-images";
 
 // ========================================
 // Collection Query Hooks
@@ -260,15 +261,8 @@ export function useUploadCollectionImages() {
     return useMutation({
         mutationFn: async (files: File[]) => {
             try {
-                const formData = new FormData();
-
-                files.forEach((file) => {
-                    formData.append("images", file);
-                });
-
-                const response = await apiClient.post("/operations/v1/collection/images", formData);
-
-                return response.data;
+                const imageUrls = await uploadImages({ files, profile: "photo" });
+                return { data: { imageUrls } };
             } catch (error) {
                 throwApiError(error);
             }

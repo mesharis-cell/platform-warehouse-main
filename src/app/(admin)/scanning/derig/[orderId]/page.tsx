@@ -191,7 +191,7 @@ export default function DerigCapturePage() {
                                     <div className="flex items-center gap-2 min-w-0">
                                         {item.asset?.images?.[0] ? (
                                             <img
-                                                src={item.asset.images[0]}
+                                                src={item.asset.images[0]?.url}
                                                 alt={item.asset?.name}
                                                 className="w-10 h-10 rounded object-cover border border-border shrink-0"
                                             />

@@ -227,7 +227,7 @@ export default function InboundRequestDetailsPage({ params }: { params: Promise<
                                                 <div className="grid grid-cols-12 bg-muted/30 px-3 py-2 text-xs font-medium">
                                                     <span className="col-span-8">Line</span>
                                                     <span className="col-span-4 text-right">
-                                                        Buy Total
+                                                        Total
                                                     </span>
                                                 </div>
                                                 {breakdownLines.map((line: any) => (

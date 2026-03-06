@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { useCompanies } from "@/hooks/use-companies";
 import { useCreateCollection, useUploadCollectionImages } from "@/hooks/use-collections";
 import { toast } from "sonner";
@@ -47,12 +54,6 @@ export default function CollectionCreatePage() {
     }, []);
 
     useEffect(() => {
-        if (!companyId && companies.length > 0) {
-            setCompanyId(companies[0].id);
-        }
-    }, [companies, companyId]);
-
-    useEffect(() => {
         const draft: CollectionCreateDraft = {
             name,
             companyId,
@@ -69,6 +70,7 @@ export default function CollectionCreatePage() {
     const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
         setImageFile(file);
         setImagePreview(URL.createObjectURL(file));
         event.target.value = "";
@@ -156,10 +158,25 @@ export default function CollectionCreatePage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-xs font-mono uppercase">Company</Label>
-                                <div className="h-11 px-3 border border-border rounded-md bg-muted/30 flex items-center text-sm font-mono">
-                                    {companyName || "Loading..."}
-                                </div>
+                                <Label className="text-xs font-mono uppercase">Company *</Label>
+                                <Select value={companyId} onValueChange={setCompanyId}>
+                                    <SelectTrigger className="h-11">
+                                        <SelectValue
+                                            placeholder={
+                                                companies.length > 0
+                                                    ? "Select company"
+                                                    : "Loading companies..."
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {companies.map((company) => (
+                                            <SelectItem key={company.id} value={company.id}>
+                                                {company.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="space-y-2">
@@ -185,6 +202,7 @@ export default function CollectionCreatePage() {
                                     onClick={() => {
                                         clearDraft();
                                         setName("");
+                                        setCompanyId("");
                                         setImageFile(null);
                                         setImagePreview(null);
                                     }}

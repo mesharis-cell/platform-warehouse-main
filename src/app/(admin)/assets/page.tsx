@@ -19,6 +19,7 @@ import Image from "next/image";
 import {
     Package,
     Plus,
+    FolderPlus,
     Search,
     Grid3x3,
     List,
@@ -62,8 +63,10 @@ export default function AssetsPage() {
         warehouse: "all",
     });
     const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [showMobileCreateActions, setShowMobileCreateActions] = useState(false);
     const { data: companies } = useCompanies();
     const canCreateAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsCreate);
+    const canCreateCollection = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.collectionsCreate);
     const canBulkUploadAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsBulkUpload);
     const isMobile = useIsMobile();
 
@@ -438,16 +441,65 @@ export default function AssetsPage() {
                 )}
             </div>
 
-            {isMobile && canCreateAsset && (
-                <Link href="/assets/create" className="fixed right-4 bottom-24 z-40">
-                    <Button
-                        size="icon"
-                        className="h-14 w-14 rounded-full shadow-lg border border-primary/30"
-                        title="Create asset"
-                    >
-                        <Plus className="w-6 h-6" />
-                    </Button>
-                </Link>
+            {isMobile && (canCreateAsset || canCreateCollection) && (
+                <>
+                    {showMobileCreateActions && (
+                        <button
+                            type="button"
+                            aria-label="Close create actions"
+                            className="fixed inset-0 z-30 bg-transparent"
+                            onClick={() => setShowMobileCreateActions(false)}
+                        />
+                    )}
+
+                    <div className="fixed right-4 bottom-24 z-40 flex flex-col items-end gap-2">
+                        {showMobileCreateActions && canCreateCollection && (
+                            <Button
+                                onClick={() => {
+                                    setShowMobileCreateActions(false);
+                                    router.push("/collections/create");
+                                }}
+                                className="h-12 rounded-full shadow-lg border border-primary/30 px-4 font-mono"
+                                title="Create collection"
+                            >
+                                <FolderPlus className="w-4 h-4 mr-2" />
+                                Create Collection
+                            </Button>
+                        )}
+
+                        {canCreateAsset ? (
+                            <Button
+                                onClick={() => {
+                                    if (!showMobileCreateActions && canCreateCollection) {
+                                        setShowMobileCreateActions(true);
+                                        return;
+                                    }
+                                    setShowMobileCreateActions(false);
+                                    router.push("/assets/create");
+                                }}
+                                className={`shadow-lg border border-primary/30 font-mono ${
+                                    showMobileCreateActions
+                                        ? "h-12 rounded-full px-4"
+                                        : "h-14 w-14 rounded-full"
+                                }`}
+                                title={showMobileCreateActions ? "Create asset" : "Create options"}
+                            >
+                                <Plus
+                                    className={`w-6 h-6 ${showMobileCreateActions ? "mr-2 w-4 h-4" : ""}`}
+                                />
+                                {showMobileCreateActions && <span>Create Asset</span>}
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={() => router.push("/collections/create")}
+                                className="h-14 w-14 rounded-full shadow-lg border border-primary/30"
+                                title="Create collection"
+                            >
+                                <FolderPlus className="w-6 h-6" />
+                            </Button>
+                        )}
+                    </div>
+                </>
             )}
         </div>
     );
