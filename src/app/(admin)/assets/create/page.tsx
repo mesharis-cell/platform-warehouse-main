@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCreateAsset } from "@/hooks/use-assets";
-import { useAddCollectionItem } from "@/hooks/use-collections";
+import { useAddCollectionItem, useCollection, useUpdateCollection } from "@/hooks/use-collections";
 import { useCompanies } from "@/hooks/use-companies";
 import { useWarehouses } from "@/hooks/use-warehouses";
 import { useZones } from "@/hooks/use-zones";
@@ -111,6 +111,10 @@ export default function MobileCreateAssetPage() {
         : "warehouse.assetCreateDraft.standalone";
 
     const { data: companiesResponse } = useCompanies({ limit: "100" });
+    const { data: collectionResponse, isLoading: collectionLoading } = useCollection(
+        isCollectionFlow ? collectionId || undefined : undefined
+    );
+    const collection = collectionResponse?.data;
     const { data: warehousesResponse } = useWarehouses(
         formData.company_id ? { company_id: formData.company_id } : { limit: "100" }
     );
@@ -145,11 +149,16 @@ export default function MobileCreateAssetPage() {
 
     const createAsset = useCreateAsset();
     const addCollectionItem = useAddCollectionItem(collectionId || "");
+    const updateCollection = useUpdateCollection(collectionId || "");
     const createBrand = useCreateBrand();
 
     const [isNewBrandOpen, setIsNewBrandOpen] = useState(false);
     const [newBrandName, setNewBrandName] = useState("");
     const [isCreatingBrand, setIsCreatingBrand] = useState(false);
+    const [isIdentityDialogOpen, setIsIdentityDialogOpen] = useState(false);
+    const [identityBrandId, setIdentityBrandId] = useState("");
+    const [identityTeamId, setIdentityTeamId] = useState<string | null>(null);
+    const [identityTeamSelected, setIdentityTeamSelected] = useState(false);
 
     const handleQuickCreateBrand = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -171,11 +180,63 @@ export default function MobileCreateAssetPage() {
         }
     };
 
+    const openIdentityDialog = () => {
+        if (!collection) return;
+        setIdentityBrandId(collection.brand_id || "");
+        setIdentityTeamId(collection.team_id ?? null);
+        setIdentityTeamSelected(true);
+        setIsIdentityDialogOpen(true);
+    };
+
+    const handleUpdateCollectionIdentity = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!collectionId) return;
+        if (!identityBrandId) {
+            toast.error("Brand is required");
+            return;
+        }
+        if (!identityTeamSelected) {
+            toast.error("Please select a team or 'No team (shared)'");
+            return;
+        }
+
+        try {
+            await updateCollection.mutateAsync({
+                brand_id: identityBrandId,
+                team_id: identityTeamId,
+            });
+            toast.success("Collection identity updated");
+            setIsIdentityDialogOpen(false);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to update collection");
+        }
+    };
+
     const companies = companiesResponse?.data || [];
     const warehouses = warehousesResponse?.data || [];
     const zones = zonesResponse?.data || [];
     const brands = brandsResponse?.data || [];
     const teams = teamsResponse?.data || [];
+    const collectionIdentityIncomplete =
+        isCollectionFlow && Boolean(collection) && !collection.brand_id;
+
+    useEffect(() => {
+        if (!isCollectionFlow || !collection) return;
+
+        setFormData((prev) => ({
+            ...prev,
+            company_id: collection.company_id,
+            brand_id: collection.brand_id ?? undefined,
+            team_id: collection.team_id ?? null,
+        }));
+        setTeamSelected(true);
+    }, [
+        isCollectionFlow,
+        collection?.id,
+        collection?.company_id,
+        collection?.brand_id,
+        collection?.team_id,
+    ]);
 
     useEffect(() => {
         setIsMounted(true);
@@ -254,11 +315,22 @@ export default function MobileCreateAssetPage() {
 
     const validateStep = (step: Step): boolean => {
         if (step === 0) {
+            if (isCollectionFlow) {
+                if (collectionLoading || !collection) {
+                    toast.error("Loading collection identity");
+                    return false;
+                }
+                if (!collection.brand_id) {
+                    toast.error("Collection identity is incomplete. Set a brand to continue.");
+                    return false;
+                }
+            }
+
             if (!formData.company_id || !formData.name || !formData.category) {
                 toast.error("Complete company, asset name, and category.");
                 return false;
             }
-            if (teams.length > 0 && !teamSelected) {
+            if (!isCollectionFlow && teams.length > 0 && !teamSelected) {
                 toast.error("Please select a team or 'No team (shared)'.");
                 return false;
             }
@@ -320,11 +392,18 @@ export default function MobileCreateAssetPage() {
 
     const handleSubmit = async () => {
         if (!validateStep(0) || !validateStep(1) || !validateStep(2)) return;
+        const lockedCompanyId = isCollectionFlow ? collection?.company_id : formData.company_id;
+        const lockedBrandId = isCollectionFlow ? collection?.brand_id : formData.brand_id;
+        const lockedTeamId = isCollectionFlow
+            ? (collection?.team_id ?? null)
+            : (formData.team_id ?? null);
+
         if (
-            !formData.company_id ||
+            !lockedCompanyId ||
             !formData.warehouse_id ||
             !formData.zone_id ||
-            !formData.category
+            !formData.category ||
+            (isCollectionFlow && !lockedBrandId)
         ) {
             toast.error("Missing required fields.");
             return;
@@ -344,11 +423,11 @@ export default function MobileCreateAssetPage() {
             }));
 
             const createdAssetResult: any = await createAsset.mutateAsync({
-                company_id: formData.company_id,
+                company_id: lockedCompanyId,
                 warehouse_id: formData.warehouse_id,
                 zone_id: formData.zone_id,
-                brand_id: formData.brand_id,
-                team_id: formData.team_id ?? null,
+                brand_id: lockedBrandId,
+                team_id: lockedTeamId,
                 name: formData.name || "",
                 description: formData.description,
                 category: formData.category,
@@ -460,6 +539,15 @@ export default function MobileCreateAssetPage() {
                                 clearDraft();
                                 setCurrentStep(0);
                                 setFormData({
+                                    company_id: isCollectionFlow
+                                        ? collection?.company_id
+                                        : undefined,
+                                    brand_id: isCollectionFlow
+                                        ? collection?.brand_id || undefined
+                                        : undefined,
+                                    team_id: isCollectionFlow
+                                        ? (collection?.team_id ?? null)
+                                        : undefined,
                                     tracking_method: "INDIVIDUAL",
                                     total_quantity: 1,
                                     available_quantity: 1,
@@ -471,7 +559,7 @@ export default function MobileCreateAssetPage() {
                                 });
                                 setConditionReport(DEFAULT_CONDITION);
                                 setCapturedPhotos([]);
-                                setTeamSelected(false);
+                                setTeamSelected(isCollectionFlow ? true : false);
                             }}
                             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                         >
@@ -479,6 +567,23 @@ export default function MobileCreateAssetPage() {
                             Clear
                         </button>
                     </div>
+                )}
+
+                {isCollectionFlow && collectionIdentityIncomplete && (
+                    <Card className="border-amber-500/30 bg-amber-500/5">
+                        <CardContent className="pt-4 space-y-3">
+                            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                                Collection identity is incomplete
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                This collection is missing a brand. Set collection identity first,
+                                then continue asset creation with locked values.
+                            </p>
+                            <Button type="button" variant="outline" onClick={openIdentityDialog}>
+                                Set Collection Identity
+                            </Button>
+                        </CardContent>
+                    </Card>
                 )}
 
                 {/* ── Step 0: Identity ── */}
@@ -492,6 +597,7 @@ export default function MobileCreateAssetPage() {
                                 <Label>Company *</Label>
                                 <Select
                                     value={formData.company_id}
+                                    disabled={isCollectionFlow}
                                     onValueChange={(value) =>
                                         setFormData((prev) => ({
                                             ...prev,
@@ -513,6 +619,11 @@ export default function MobileCreateAssetPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {isCollectionFlow && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Locked from collection identity
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -528,8 +639,8 @@ export default function MobileCreateAssetPage() {
 
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <Label>Brand</Label>
-                                    {formData.company_id && (
+                                    <Label>Brand *</Label>
+                                    {!isCollectionFlow && formData.company_id && (
                                         <button
                                             type="button"
                                             onClick={() => setIsNewBrandOpen(true)}
@@ -540,60 +651,72 @@ export default function MobileCreateAssetPage() {
                                         </button>
                                     )}
                                 </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    disabled={!formData.company_id}
-                                    onClick={() => formData.company_id && setBrandOpen((o) => !o)}
-                                    className="w-full justify-between font-normal"
-                                >
-                                    <span className="truncate text-left">
-                                        {formData.brand_id
-                                            ? (brands.find((b) => b.id === formData.brand_id)
-                                                  ?.name ?? "Select brand")
-                                            : !formData.company_id
-                                              ? "Select company first"
-                                              : "No Brand"}
-                                    </span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                                {brandOpen && formData.company_id && (
-                                    <div className="rounded-md border bg-popover shadow-sm">
-                                        <div className="flex items-center border-b px-3">
-                                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                                            <input
-                                                className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
-                                                placeholder="Search brands..."
-                                                value={brandSearch}
-                                                onChange={(e) => setBrandSearch(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="max-h-48 overflow-y-auto p-1">
-                                            {brandsFetching ? (
-                                                <div className="py-4 text-center text-sm text-muted-foreground">
-                                                    Loading...
+                                {isCollectionFlow ? (
+                                    <>
+                                        <Input
+                                            value={
+                                                collection?.brand?.name ||
+                                                brands.find((b) => b.id === formData.brand_id)
+                                                    ?.name ||
+                                                "Brand not set on collection"
+                                            }
+                                            disabled
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Locked from collection identity
+                                        </p>
+                                        {collectionIdentityIncomplete && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={openIdentityDialog}
+                                            >
+                                                Set Collection Identity
+                                            </Button>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            disabled={!formData.company_id}
+                                            onClick={() =>
+                                                formData.company_id && setBrandOpen((o) => !o)
+                                            }
+                                            className="w-full justify-between font-normal"
+                                        >
+                                            <span className="truncate text-left">
+                                                {formData.brand_id
+                                                    ? (brands.find(
+                                                          (b) => b.id === formData.brand_id
+                                                      )?.name ?? "Select brand")
+                                                    : !formData.company_id
+                                                      ? "Select company first"
+                                                      : "Select brand"}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                        {brandOpen && formData.company_id && (
+                                            <div className="rounded-md border bg-popover shadow-sm">
+                                                <div className="flex items-center border-b px-3">
+                                                    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    <input
+                                                        className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
+                                                        placeholder="Search brands..."
+                                                        value={brandSearch}
+                                                        onChange={(e) =>
+                                                            setBrandSearch(e.target.value)
+                                                        }
+                                                    />
                                                 </div>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setFormData((prev) => ({
-                                                                ...prev,
-                                                                brand_id: undefined,
-                                                            }));
-                                                            setBrandOpen(false);
-                                                            setBrandSearch("");
-                                                            setDebouncedBrandSearch("");
-                                                        }}
-                                                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-                                                    >
-                                                        <Check
-                                                            className={`h-4 w-4 ${!formData.brand_id ? "opacity-100" : "opacity-0"}`}
-                                                        />
-                                                        No Brand
-                                                    </button>
-                                                    {brands.length === 0 ? (
+                                                <div className="max-h-48 overflow-y-auto p-1">
+                                                    {brandsFetching ? (
+                                                        <div className="py-4 text-center text-sm text-muted-foreground">
+                                                            Loading...
+                                                        </div>
+                                                    ) : brands.length === 0 ? (
                                                         <div className="py-2 text-center text-sm text-muted-foreground">
                                                             No brands found
                                                         </div>
@@ -620,10 +743,10 @@ export default function MobileCreateAssetPage() {
                                                             </button>
                                                         ))
                                                     )}
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
 
@@ -679,6 +802,100 @@ export default function MobileCreateAssetPage() {
                                 </DialogContent>
                             </Dialog>
 
+                            <Dialog
+                                open={isIdentityDialogOpen}
+                                onOpenChange={setIsIdentityDialogOpen}
+                            >
+                                <DialogContent className="max-w-sm">
+                                    <DialogHeader>
+                                        <DialogTitle className="font-mono text-sm uppercase">
+                                            Set Collection Identity
+                                        </DialogTitle>
+                                    </DialogHeader>
+                                    <form
+                                        onSubmit={handleUpdateCollectionIdentity}
+                                        className="space-y-4"
+                                    >
+                                        <div className="space-y-2">
+                                            <Label>Brand *</Label>
+                                            <Select
+                                                value={identityBrandId || "__empty__"}
+                                                onValueChange={(value) =>
+                                                    setIdentityBrandId(
+                                                        value === "__empty__" ? "" : value
+                                                    )
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select brand" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="__empty__" disabled>
+                                                        Select brand
+                                                    </SelectItem>
+                                                    {brands.map((brand) => (
+                                                        <SelectItem key={brand.id} value={brand.id}>
+                                                            {brand.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Team *</Label>
+                                            <Select
+                                                value={
+                                                    identityTeamSelected
+                                                        ? identityTeamId || "_none_"
+                                                        : "__unselected__"
+                                                }
+                                                onValueChange={(value) => {
+                                                    if (value === "__unselected__") return;
+                                                    setIdentityTeamSelected(true);
+                                                    setIdentityTeamId(
+                                                        value === "_none_" ? null : value
+                                                    );
+                                                }}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select team or shared" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="__unselected__" disabled>
+                                                        Select team
+                                                    </SelectItem>
+                                                    <SelectItem value="_none_">
+                                                        No team (shared)
+                                                    </SelectItem>
+                                                    {teams.map((team) => (
+                                                        <SelectItem key={team.id} value={team.id}>
+                                                            {team.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="flex-1"
+                                                onClick={() => setIsIdentityDialogOpen(false)}
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                type="submit"
+                                                className="flex-1"
+                                                disabled={updateCollection.isPending}
+                                            >
+                                                {updateCollection.isPending ? "Saving..." : "Save"}
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
+
                             <div className="space-y-2">
                                 <Label>Category *</Label>
                                 <Select
@@ -718,32 +935,50 @@ export default function MobileCreateAssetPage() {
                                 />
                             </div>
 
-                            {/* Team — always shown when teams exist, explicit selection required */}
-                            {teams.length > 0 && (
+                            {(isCollectionFlow || teams.length > 0) && (
                                 <div className="space-y-2">
                                     <Label>Team *</Label>
-                                    <Select
-                                        value={teamSelected ? formData.team_id || "_none_" : ""}
-                                        onValueChange={(value) => {
-                                            setTeamSelected(true);
-                                            setFormData((prev) => ({
-                                                ...prev,
-                                                team_id: value === "_none_" ? null : value,
-                                            }));
-                                        }}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select a team…" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="_none_">No team (shared)</SelectItem>
-                                            {teams.map((t) => (
-                                                <SelectItem key={t.id} value={t.id}>
-                                                    {t.name}
+                                    {isCollectionFlow ? (
+                                        <>
+                                            <Input
+                                                value={
+                                                    collection?.team?.name ||
+                                                    (collection?.team_id === null
+                                                        ? "No team (shared)"
+                                                        : "Team not set")
+                                                }
+                                                disabled
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                Locked from collection identity
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <Select
+                                            value={teamSelected ? formData.team_id || "_none_" : ""}
+                                            onValueChange={(value) => {
+                                                setTeamSelected(true);
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    team_id: value === "_none_" ? null : value,
+                                                }));
+                                            }}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a team…" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="_none_">
+                                                    No team (shared)
                                                 </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                                {teams.map((t) => (
+                                                    <SelectItem key={t.id} value={t.id}>
+                                                        {t.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
                                 </div>
                             )}
                         </CardContent>

@@ -28,8 +28,14 @@ export default function CollectionsPage() {
     // Fetch data
     const { data: collectionsData, isLoading } = useCollections({
         search_term: searchQuery || undefined,
-        company_id: selectedCompany && selectedCompany !== "" ? selectedCompany : undefined,
-        brand_id: selectedBrand && selectedBrand !== "" ? selectedBrand : undefined,
+        company_id:
+            selectedCompany && selectedCompany !== "" && selectedCompany !== "_all_"
+                ? selectedCompany
+                : undefined,
+        brand_id:
+            selectedBrand && selectedBrand !== "" && selectedBrand !== "_all_"
+                ? selectedBrand
+                : undefined,
         limit: 100,
     });
 
@@ -38,7 +44,7 @@ export default function CollectionsPage() {
     // Brands for filter dropdown (based on selectedCompany)
     const { data: brandsData } = useBrands({
         company_id:
-            selectedCompany && selectedCompany !== "" && selectedCompany !== ""
+            selectedCompany && selectedCompany !== "" && selectedCompany !== "_all_"
                 ? selectedCompany
                 : undefined,
         limit: "100",
@@ -226,6 +232,11 @@ export default function CollectionsPage() {
                                         >
                                             <Link href={`/collections/${collection.id}`}>
                                                 View Details
+                                            </Link>
+                                        </Button>
+                                        <Button size="sm" className="flex-1" asChild>
+                                            <Link href={`/collections/builder/${collection.id}`}>
+                                                Continue Builder
                                             </Link>
                                         </Button>
                                     </div>
