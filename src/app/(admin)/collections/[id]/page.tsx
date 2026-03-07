@@ -162,6 +162,13 @@ export default function CollectionDetailPage() {
                             </Badge>
                         </div>
                     </div>
+                    <div className="shrink-0">
+                        <Button asChild>
+                            <Link href={`/collections/builder/${collection.id}`}>
+                                Continue Builder
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
             </div>
 

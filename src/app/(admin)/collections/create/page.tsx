@@ -15,6 +15,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useCompanies } from "@/hooks/use-companies";
+import { useBrands } from "@/hooks/use-brands";
+import { useTeams } from "@/hooks/use-teams";
 import { useCreateCollection, useUploadCollectionImages } from "@/hooks/use-collections";
 import { toast } from "sonner";
 
@@ -23,6 +25,9 @@ const DRAFT_KEY = "warehouse.collectionCreateDraft";
 interface CollectionCreateDraft {
     name: string;
     companyId: string;
+    brandId: string;
+    teamId: string | null;
+    teamSelected: boolean;
     imagePreview?: string;
 }
 
@@ -30,11 +35,18 @@ export default function CollectionCreatePage() {
     const router = useRouter();
     const [name, setName] = useState("");
     const [companyId, setCompanyId] = useState("");
+    const [brandId, setBrandId] = useState("");
+    const [teamId, setTeamId] = useState<string | null>(null);
+    const [teamSelected, setTeamSelected] = useState(false);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     const { data: companiesResponse } = useCompanies({ limit: "100" });
+    const { data: brandsResponse } = useBrands(companyId ? { company_id: companyId } : undefined);
+    const { data: teamsResponse } = useTeams(companyId ? { company_id: companyId } : undefined);
     const companies = companiesResponse?.data || [];
+    const brands = brandsResponse?.data || [];
+    const teams = teamsResponse?.data || [];
 
     const createCollection = useCreateCollection();
     const uploadCollectionImages = useUploadCollectionImages();
@@ -46,6 +58,9 @@ export default function CollectionCreatePage() {
                 const draft = JSON.parse(raw) as CollectionCreateDraft;
                 setName(draft.name || "");
                 setCompanyId(draft.companyId || "");
+                setBrandId(draft.brandId || "");
+                setTeamId(draft.teamId ?? null);
+                setTeamSelected(Boolean(draft.teamSelected));
                 if (draft.imagePreview) setImagePreview(draft.imagePreview);
             } catch {
                 // ignore broken draft
@@ -57,10 +72,13 @@ export default function CollectionCreatePage() {
         const draft: CollectionCreateDraft = {
             name,
             companyId,
+            brandId,
+            teamId,
+            teamSelected,
             imagePreview: imagePreview || undefined,
         };
         localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-    }, [name, companyId, imagePreview]);
+    }, [name, companyId, brandId, teamId, teamSelected, imagePreview]);
 
     const companyName = useMemo(
         () => companies.find((company) => company.id === companyId)?.name || "",
@@ -90,6 +108,14 @@ export default function CollectionCreatePage() {
             toast.error("Company is required");
             return;
         }
+        if (!brandId) {
+            toast.error("Brand is required");
+            return;
+        }
+        if (!teamSelected) {
+            toast.error("Please select a team or 'No team (shared)'");
+            return;
+        }
 
         try {
             let imageUrls: string[] = [];
@@ -100,6 +126,8 @@ export default function CollectionCreatePage() {
 
             const created = await createCollection.mutateAsync({
                 company_id: companyId,
+                brand_id: brandId,
+                team_id: teamId,
                 name: name.trim(),
                 images: imageUrls,
             });
@@ -140,8 +168,8 @@ export default function CollectionCreatePage() {
                             Create Collection
                         </CardTitle>
                         <p className="text-sm text-muted-foreground">
-                            Start with a collection name and optional photo, then add assets in the
-                            builder grid.
+                            Set collection identity (company, brand, team/shared) first, then add
+                            assets in the builder grid with those values locked.
                         </p>
                     </CardHeader>
                     <CardContent>
@@ -159,7 +187,15 @@ export default function CollectionCreatePage() {
 
                             <div className="space-y-2">
                                 <Label className="text-xs font-mono uppercase">Company *</Label>
-                                <Select value={companyId} onValueChange={setCompanyId}>
+                                <Select
+                                    value={companyId}
+                                    onValueChange={(value) => {
+                                        setCompanyId(value);
+                                        setBrandId("");
+                                        setTeamId(null);
+                                        setTeamSelected(false);
+                                    }}
+                                >
                                     <SelectTrigger className="h-11">
                                         <SelectValue
                                             placeholder={
@@ -173,6 +209,69 @@ export default function CollectionCreatePage() {
                                         {companies.map((company) => (
                                             <SelectItem key={company.id} value={company.id}>
                                                 {company.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-xs font-mono uppercase">Brand *</Label>
+                                <Select
+                                    value={brandId || "__empty__"}
+                                    onValueChange={(value) =>
+                                        setBrandId(value === "__empty__" ? "" : value)
+                                    }
+                                    disabled={!companyId}
+                                >
+                                    <SelectTrigger className="h-11">
+                                        <SelectValue
+                                            placeholder={
+                                                companyId ? "Select brand" : "Select company first"
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__empty__" disabled>
+                                            Select brand
+                                        </SelectItem>
+                                        {brands.map((brand) => (
+                                            <SelectItem key={brand.id} value={brand.id}>
+                                                {brand.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-xs font-mono uppercase">Team *</Label>
+                                <Select
+                                    value={teamSelected ? (teamId ?? "_none_") : "__unselected__"}
+                                    onValueChange={(value) => {
+                                        if (value === "__unselected__") return;
+                                        setTeamSelected(true);
+                                        setTeamId(value === "_none_" ? null : value);
+                                    }}
+                                    disabled={!companyId}
+                                >
+                                    <SelectTrigger className="h-11">
+                                        <SelectValue
+                                            placeholder={
+                                                companyId
+                                                    ? "Select team or shared"
+                                                    : "Select company first"
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__unselected__" disabled>
+                                            Select team
+                                        </SelectItem>
+                                        <SelectItem value="_none_">No team (shared)</SelectItem>
+                                        {teams.map((team) => (
+                                            <SelectItem key={team.id} value={team.id}>
+                                                {team.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -203,6 +302,9 @@ export default function CollectionCreatePage() {
                                         clearDraft();
                                         setName("");
                                         setCompanyId("");
+                                        setBrandId("");
+                                        setTeamId(null);
+                                        setTeamSelected(false);
                                         setImageFile(null);
                                         setImagePreview(null);
                                     }}
@@ -213,7 +315,10 @@ export default function CollectionCreatePage() {
                                     type="submit"
                                     disabled={
                                         createCollection.isPending ||
-                                        uploadCollectionImages.isPending
+                                        uploadCollectionImages.isPending ||
+                                        !companyId ||
+                                        !brandId ||
+                                        !teamSelected
                                     }
                                 >
                                     {createCollection.isPending ||

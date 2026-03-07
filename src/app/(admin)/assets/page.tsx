@@ -11,7 +11,7 @@
  * - Scanning indicators and QR code visual language
  */
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAssets } from "@/hooks/use-assets";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -64,11 +64,27 @@ export default function AssetsPage() {
     });
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showMobileCreateActions, setShowMobileCreateActions] = useState(false);
+    const [lastActiveBuilderId, setLastActiveBuilderId] = useState<string | null>(null);
     const { data: companies } = useCompanies();
     const canCreateAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsCreate);
     const canCreateCollection = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.collectionsCreate);
     const canBulkUploadAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsBulkUpload);
     const isMobile = useIsMobile();
+
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem("warehouse.collectionBuilder.lastActive");
+            if (!raw) {
+                setLastActiveBuilderId(null);
+                return;
+            }
+            const parsed = JSON.parse(raw) as { collectionId?: string };
+            setLastActiveBuilderId(parsed.collectionId || null);
+        } catch {
+            localStorage.removeItem("warehouse.collectionBuilder.lastActive");
+            setLastActiveBuilderId(null);
+        }
+    }, []);
 
     // Build query params — company filter comes from global CompanyFilter context
     const queryParams = useMemo(() => {
@@ -453,6 +469,20 @@ export default function AssetsPage() {
                     )}
 
                     <div className="fixed right-4 bottom-24 z-40 flex flex-col items-end gap-2">
+                        {showMobileCreateActions && canCreateCollection && lastActiveBuilderId && (
+                            <Button
+                                onClick={() => {
+                                    setShowMobileCreateActions(false);
+                                    router.push(`/collections/builder/${lastActiveBuilderId}`);
+                                }}
+                                className="h-12 rounded-full shadow-lg border border-primary/30 px-4 font-mono"
+                                title="Resume collection builder"
+                            >
+                                <Grid3x3 className="w-4 h-4 mr-2" />
+                                Resume Collection Builder
+                            </Button>
+                        )}
+
                         {showMobileCreateActions && canCreateCollection && (
                             <Button
                                 onClick={() => {

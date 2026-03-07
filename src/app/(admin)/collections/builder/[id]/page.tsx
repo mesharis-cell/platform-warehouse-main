@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Plus, Layers, Package } from "lucide-react";
@@ -14,22 +14,33 @@ export default function CollectionBuilderPage() {
     const params = useParams();
     const collectionId = params?.id as string;
     const draftKey = `warehouse.collectionBuilderDraft.${collectionId}`;
-    const [restoredDraft, setRestoredDraft] = useState(false);
+    const lastActiveKey = "warehouse.collectionBuilder.lastActive";
     const scrollRef = useRef<HTMLDivElement | null>(null);
 
     const { data: collectionResponse, isLoading } = useCollection(collectionId);
     const collection = collectionResponse?.data;
 
     useEffect(() => {
-        const raw = localStorage.getItem(draftKey);
-        if (!raw) return;
-        setRestoredDraft(true);
-    }, [draftKey]);
+        if (!collectionId) return;
+        const session = { collectionId, lastVisitedAt: Date.now() };
+        localStorage.setItem(draftKey, JSON.stringify(session));
+        localStorage.setItem(lastActiveKey, JSON.stringify(session));
+    }, [collectionId, draftKey, lastActiveKey, collection?.assets?.length]);
 
     useEffect(() => {
-        if (!collectionId) return;
-        localStorage.setItem(draftKey, JSON.stringify({ collectionId, lastVisitedAt: Date.now() }));
-    }, [collectionId, draftKey, collection?.assets?.length]);
+        if (!isLoading && !collection) {
+            const raw = localStorage.getItem(lastActiveKey);
+            if (!raw) return;
+            try {
+                const parsed = JSON.parse(raw) as { collectionId?: string };
+                if (parsed.collectionId === collectionId) {
+                    localStorage.removeItem(lastActiveKey);
+                }
+            } catch {
+                localStorage.removeItem(lastActiveKey);
+            }
+        }
+    }, [collectionId, isLoading, lastActiveKey, collection]);
 
     const assetCards = useMemo(() => collection?.assets || [], [collection?.assets]);
     const builderReturnTo = `/collections/builder/${collectionId}`;
@@ -99,11 +110,9 @@ export default function CollectionBuilderPage() {
                                 the end.
                             </p>
                         </div>
-                        {restoredDraft ? (
-                            <div className="text-xs text-primary font-mono bg-primary/10 border border-primary/20 rounded px-3 py-2 inline-flex">
-                                Builder draft restored
-                            </div>
-                        ) : null}
+                        <div className="text-xs text-muted-foreground font-mono bg-muted/40 border border-border rounded px-3 py-2 inline-flex">
+                            Progress saves locally. Use Continue Builder to resume.
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {assetCards.length === 0 ? (
@@ -183,7 +192,7 @@ export default function CollectionBuilderPage() {
 
                         <div className="flex justify-end gap-2 pt-2">
                             <Button variant="outline" asChild>
-                                <Link href="/collections">Done for now</Link>
+                                <Link href="/collections">Exit Builder</Link>
                             </Button>
                             <Button asChild>
                                 <Link href={createAssetHref}>Add Next Asset</Link>
