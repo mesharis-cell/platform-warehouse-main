@@ -30,6 +30,8 @@ import {
 import { useAsset } from "@/hooks/use-assets";
 import { StatusHistoryTimeline } from "@/components/orders/StatusHistoryTimeline";
 import { PhotoCaptureStrip, PhotoEntry } from "@/components/shared/photo-capture-strip";
+import { EntityAttachmentsCard } from "@/components/shared/entity-attachments-card";
+import { WorkflowRequestsCard } from "@/components/shared/workflow-requests-card";
 
 function conditionBadgeClass(condition: string) {
     if (condition === "RED") return "bg-red-500/10 text-red-600 border-red-500/30";
@@ -283,6 +285,18 @@ export default function ServiceRequestDetailsPage() {
                         </CardContent>
                     </Card>
                 )}
+
+                <WorkflowRequestsCard
+                    entityType="SERVICE_REQUEST"
+                    entityId={request.id}
+                    title="Artwork / Internal Workflows"
+                />
+
+                <EntityAttachmentsCard
+                    entityType="SERVICE_REQUEST"
+                    entityId={request.id}
+                    title="Supporting Documents"
+                />
 
                 {/* Items Card */}
                 <Card>

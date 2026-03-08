@@ -82,6 +82,8 @@ import { useToken } from "@/lib/auth/use-token";
 import { hasPermission } from "@/lib/auth/permissions";
 import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
 import { patchOrder } from "@/lib/api/order-api-path";
+import { EntityAttachmentsCard } from "@/components/shared/entity-attachments-card";
+import { WorkflowRequestsCard } from "@/components/shared/workflow-requests-card";
 
 const FINANCIAL_STATUS = {
     PENDING_QUOTE: {
@@ -1391,6 +1393,106 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                 </p>
                             </CardContent>
                         </Card>
+
+                        {order?.data?.permit_requirements?.requires_permit && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="font-mono text-sm flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-primary" />
+                                        PERMIT / ACCESS
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    <div>
+                                        <Label className="font-mono text-xs text-muted-foreground">
+                                            OWNER
+                                        </Label>
+                                        <p className="font-mono text-sm mt-1">
+                                            {order.data.permit_requirements.permit_owner ===
+                                                "CLIENT" && "Client will arrange permits"}
+                                            {order.data.permit_requirements.permit_owner ===
+                                                "PLATFORM" && "Platform should arrange permits"}
+                                            {order.data.permit_requirements.permit_owner ===
+                                                "UNKNOWN" &&
+                                                "Permit ownership still to be confirmed"}
+                                        </p>
+                                    </div>
+                                    {(order.data.permit_requirements.venue_contact_name ||
+                                        order.data.permit_requirements.venue_contact_email ||
+                                        order.data.permit_requirements.venue_contact_phone) && (
+                                        <div className="space-y-1">
+                                            <Label className="font-mono text-xs text-muted-foreground">
+                                                VENUE CONTACT
+                                            </Label>
+                                            {order.data.permit_requirements.venue_contact_name && (
+                                                <p className="font-mono text-sm">
+                                                    {
+                                                        order.data.permit_requirements
+                                                            .venue_contact_name
+                                                    }
+                                                </p>
+                                            )}
+                                            {order.data.permit_requirements.venue_contact_email && (
+                                                <p className="font-mono text-xs text-muted-foreground">
+                                                    {
+                                                        order.data.permit_requirements
+                                                            .venue_contact_email
+                                                    }
+                                                </p>
+                                            )}
+                                            {order.data.permit_requirements.venue_contact_phone && (
+                                                <p className="font-mono text-xs text-muted-foreground">
+                                                    {
+                                                        order.data.permit_requirements
+                                                            .venue_contact_phone
+                                                    }
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="flex flex-wrap gap-2">
+                                        {order.data.permit_requirements.requires_vehicle_docs && (
+                                            <Badge
+                                                variant="outline"
+                                                className="font-mono text-[10px]"
+                                            >
+                                                VEHICLE DOCS REQUIRED
+                                            </Badge>
+                                        )}
+                                        {order.data.permit_requirements.requires_staff_ids && (
+                                            <Badge
+                                                variant="outline"
+                                                className="font-mono text-[10px]"
+                                            >
+                                                STAFF IDS REQUIRED
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    {order.data.permit_requirements.notes && (
+                                        <div>
+                                            <Label className="font-mono text-xs text-muted-foreground">
+                                                NOTES
+                                            </Label>
+                                            <p className="font-mono text-sm mt-2 p-3 bg-muted/30 rounded border">
+                                                {order.data.permit_requirements.notes}
+                                            </p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        <WorkflowRequestsCard
+                            entityType="ORDER"
+                            entityId={order?.data?.id || null}
+                            title="Artwork / Internal Workflows"
+                        />
+
+                        <EntityAttachmentsCard
+                            entityType="ORDER"
+                            entityId={order?.data?.id || null}
+                            title="Supporting Documents"
+                        />
 
                         {/* Order Items */}
                         <Card>
