@@ -13,13 +13,8 @@ const nextConfig = {
         ],
     },
     // Note: eslint config moved to eslint.config.mjs in Next.js 16
-    typescript: {
-        ignoreBuildErrors: true,
-    },
     productionBrowserSourceMaps: true,
     serverExternalPackages: ["pdfkit"],
-} satisfies NextConfig & {
-    typescript?: { ignoreBuildErrors?: boolean };
-};
+} satisfies NextConfig;
 
 export default nextConfig;
