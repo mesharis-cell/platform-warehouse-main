@@ -18,12 +18,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useAttachmentTypes } from "@/hooks/use-attachments";
 import {
+    useAvailableWorkflowDefinitions,
     useCreateWorkflowRequest,
     useEntityWorkflowRequests,
     type WorkflowEntityType,
 } from "@/hooks/use-workflow-requests";
 import { uploadDocuments } from "@/lib/utils/upload-documents";
-import { BrushCleaning, Plus, Workflow } from "lucide-react";
+import { Plus, Workflow } from "lucide-react";
 
 export function WorkflowRequestsCard({
     entityType,
@@ -35,36 +36,45 @@ export function WorkflowRequestsCard({
     title?: string;
 }) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [selectedWorkflowCode, setSelectedWorkflowCode] = useState("");
     const [titleValue, setTitleValue] = useState("");
     const [description, setDescription] = useState("");
-    const [assignedEmail, setAssignedEmail] = useState("");
     const [files, setFiles] = useState<File[]>([]);
 
     const { data, isLoading } = useEntityWorkflowRequests(entityType, entityId);
-    const { data: attachmentTypesData } = useAttachmentTypes();
+    const { data: definitionsData } = useAvailableWorkflowDefinitions(entityType, entityId);
+    const { data: attachmentTypesData } = useAttachmentTypes("WORKFLOW_REQUEST");
     const createWorkflow = useCreateWorkflowRequest(entityType, entityId);
 
-    const artworkAttachmentType = useMemo(
-        () => (attachmentTypesData?.data || []).find((type) => type.code === "ARTWORK_REFERENCE"),
+    const definitions = definitionsData?.data || [];
+    const selectedDefinition = definitions.find(
+        (definition) => definition.code === selectedWorkflowCode
+    );
+    const referenceAttachmentType = useMemo(
+        () =>
+            (attachmentTypesData?.data || []).find((type) =>
+                ["WORKFLOW_REFERENCE", "ARTWORK_REFERENCE"].includes(type.code)
+            ) || null,
         [attachmentTypesData?.data]
     );
 
     const resetForm = () => {
+        setSelectedWorkflowCode(definitions[0]?.code || "");
         setTitleValue("");
         setDescription("");
-        setAssignedEmail("");
         setFiles([]);
     };
 
     const handleCreate = async () => {
         if (!entityId) return;
+        if (!selectedWorkflowCode) return toast.error("Select a workflow");
         if (!titleValue.trim()) return toast.error("Title is required");
 
         try {
             const attachments =
-                files.length > 0 && artworkAttachmentType
+                files.length > 0 && referenceAttachmentType
                     ? (await uploadDocuments({ files })).map((file) => ({
-                          attachment_type_id: artworkAttachmentType.id,
+                          attachment_type_id: referenceAttachmentType.id,
                           file_url: file.fileUrl,
                           file_name: file.fileName,
                           mime_type: file.mimeType,
@@ -73,19 +83,26 @@ export function WorkflowRequestsCard({
                     : [];
 
             await createWorkflow.mutateAsync({
-                workflow_kind: "ARTWORK_SUPPORT",
+                workflow_code: selectedWorkflowCode,
                 title: titleValue.trim(),
                 ...(description.trim() ? { description: description.trim() } : {}),
-                ...(assignedEmail.trim() ? { assigned_email: assignedEmail.trim() } : {}),
                 ...(attachments.length > 0 ? { attachments } : {}),
             });
-            toast.success("Artwork support requested");
+            toast.success("Workflow requested");
             setIsCreateOpen(false);
             resetForm();
         } catch (error: any) {
-            toast.error(error.message || "Failed to request artwork support");
+            toast.error(error.message || "Failed to create workflow request");
         }
     };
+
+    const groupedWorkflows = useMemo(() => {
+        const rows = data?.data || [];
+        return definitions.map((definition) => ({
+            definition,
+            requests: rows.filter((row) => row.workflow_code === definition.code),
+        }));
+    }, [data?.data, definitions]);
 
     return (
         <Card>
@@ -99,20 +116,45 @@ export function WorkflowRequestsCard({
                         open={isCreateOpen}
                         onOpenChange={(open) => {
                             setIsCreateOpen(open);
-                            if (!open) resetForm();
+                            if (open) {
+                                setSelectedWorkflowCode(definitions[0]?.code || "");
+                            } else {
+                                resetForm();
+                            }
                         }}
                     >
                         <DialogTrigger asChild>
-                            <Button size="sm">
+                            <Button size="sm" disabled={definitions.length === 0}>
                                 <Plus className="h-4 w-4 mr-1" />
-                                Request Artwork Support
+                                Request Workflow
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-lg">
                             <DialogHeader>
-                                <DialogTitle>Request Artwork Support</DialogTitle>
+                                <DialogTitle>Request Internal Workflow</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Workflow</Label>
+                                    <select
+                                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                        value={selectedWorkflowCode}
+                                        onChange={(event) =>
+                                            setSelectedWorkflowCode(event.target.value)
+                                        }
+                                    >
+                                        {definitions.map((definition) => (
+                                            <option key={definition.id} value={definition.code}>
+                                                {definition.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {selectedDefinition?.description ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            {selectedDefinition.description}
+                                        </p>
+                                    ) : null}
+                                </div>
                                 <div className="space-y-2">
                                     <Label>Title</Label>
                                     <Input
@@ -127,16 +169,7 @@ export function WorkflowRequestsCard({
                                         value={description}
                                         onChange={(event) => setDescription(event.target.value)}
                                         rows={4}
-                                        placeholder="Artwork scope, timing, and constraints"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Assigned Email (Optional)</Label>
-                                    <Input
-                                        type="email"
-                                        value={assignedEmail}
-                                        onChange={(event) => setAssignedEmail(event.target.value)}
-                                        placeholder="team@example.com"
+                                        placeholder="Scope, timing, constraints, and context"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -162,7 +195,7 @@ export function WorkflowRequestsCard({
                     </Dialog>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
                 {isLoading && (
                     <>
                         <Skeleton className="h-24 w-full" />
@@ -170,39 +203,53 @@ export function WorkflowRequestsCard({
                     </>
                 )}
 
-                {!isLoading && (data?.data || []).length === 0 && (
+                {!isLoading && groupedWorkflows.length === 0 && (
                     <p className="text-sm text-muted-foreground">
-                        No internal workflow requests have been created yet.
+                        No internal workflow types are enabled for this record.
                     </p>
                 )}
 
-                {(data?.data || []).map((workflow) => (
+                {groupedWorkflows.map(({ definition, requests }) => (
                     <div
-                        key={workflow.id}
-                        className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-2"
+                        key={definition.id}
+                        className="space-y-3 rounded-lg border border-border/60 p-4"
                     >
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <p className="text-xs font-mono uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-                                    <BrushCleaning className="h-3 w-3" />
-                                    {workflow.workflow_kind.replace(/_/g, " ")}
+                        <div>
+                            <p className="text-sm font-semibold">{definition.label}</p>
+                            {definition.description ? (
+                                <p className="text-xs text-muted-foreground">
+                                    {definition.description}
                                 </p>
-                                <p className="font-semibold">{workflow.title}</p>
-                                {workflow.description && (
-                                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                                        {workflow.description}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="text-right text-xs font-mono text-muted-foreground">
-                                <p>{workflow.status.replace(/_/g, " ")}</p>
-                                <p>{new Date(workflow.requested_at).toLocaleString()}</p>
-                            </div>
+                            ) : null}
                         </div>
-                        {workflow.assigned_email && (
-                            <p className="text-xs text-muted-foreground">
-                                Assigned email: {workflow.assigned_email}
+                        {requests.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                                No requests created for this workflow yet.
                             </p>
+                        ) : (
+                            requests.map((workflow) => (
+                                <div
+                                    key={workflow.id}
+                                    className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-2"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="font-semibold">{workflow.title}</p>
+                                            {workflow.description ? (
+                                                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                                                    {workflow.description}
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                        <div className="text-right text-xs font-mono text-muted-foreground">
+                                            <p>{workflow.status.replace(/_/g, " ")}</p>
+                                            <p>
+                                                {new Date(workflow.requested_at).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
                         )}
                     </div>
                 ))}

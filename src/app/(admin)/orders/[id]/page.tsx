@@ -1485,7 +1485,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                         <WorkflowRequestsCard
                             entityType="ORDER"
                             entityId={order?.data?.id || null}
-                            title="Artwork / Internal Workflows"
+                            title="Internal Workflows"
                         />
 
                         <EntityAttachmentsCard

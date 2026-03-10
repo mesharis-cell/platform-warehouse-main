@@ -32,6 +32,7 @@ import {
     Calendar,
     ClipboardList,
     FileSpreadsheet,
+    Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -97,6 +98,12 @@ const navigationSections: NavSection[] = [
                 name: "Service Requests",
                 href: "/service-requests",
                 icon: ClipboardList,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.serviceRequests,
+            },
+            {
+                name: "Workflow Inbox",
+                href: "/workflow-inbox",
+                icon: Workflow,
                 requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.serviceRequests,
             },
             {

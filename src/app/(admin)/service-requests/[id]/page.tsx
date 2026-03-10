@@ -289,7 +289,7 @@ export default function ServiceRequestDetailsPage() {
                 <WorkflowRequestsCard
                     entityType="SERVICE_REQUEST"
                     entityId={request.id}
-                    title="Artwork / Internal Workflows"
+                    title="Internal Workflows"
                 />
 
                 <EntityAttachmentsCard
