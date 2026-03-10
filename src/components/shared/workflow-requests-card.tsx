@@ -29,7 +29,7 @@ import { Plus, Workflow } from "lucide-react";
 export function WorkflowRequestsCard({
     entityType,
     entityId,
-    title = "Internal Workflows",
+    title = "Workflows",
 }: {
     entityType: WorkflowEntityType;
     entityId: string | null;
@@ -154,6 +154,12 @@ export function WorkflowRequestsCard({
                                             {selectedDefinition.description}
                                         </p>
                                     ) : null}
+                                    {selectedDefinition?.workflow_family ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            {selectedDefinition.workflow_family} ·{" "}
+                                            {selectedDefinition.status_model_key}
+                                        </p>
+                                    ) : null}
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Title</Label>
@@ -243,6 +249,7 @@ export function WorkflowRequestsCard({
                                         </div>
                                         <div className="text-right text-xs font-mono text-muted-foreground">
                                             <p>{workflow.status.replace(/_/g, " ")}</p>
+                                            <p>{workflow.workflow_label}</p>
                                             <p>
                                                 {new Date(workflow.requested_at).toLocaleString()}
                                             </p>

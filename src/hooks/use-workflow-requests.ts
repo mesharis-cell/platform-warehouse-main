@@ -6,14 +6,23 @@ import { throwApiError } from "@/lib/utils/throw-api-error";
 
 export type WorkflowEntityType = "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST";
 export type WorkflowLifecycleState = "OPEN" | "ACTIVE" | "DONE" | "CANCELLED";
+export type WorkflowRole = "ADMIN" | "LOGISTICS" | "CLIENT";
 
 export interface WorkflowDefinitionRecord {
     id: string;
     code: string;
     label: string;
     description: string | null;
+    workflow_family: string;
+    status_model_key: string;
     allowed_entity_types: WorkflowEntityType[];
-    requester_roles: ("ADMIN" | "LOGISTICS")[];
+    requester_roles: WorkflowRole[];
+    viewer_roles: WorkflowRole[];
+    actor_roles: WorkflowRole[];
+    priority_enabled: boolean;
+    sla_hours: number | null;
+    blocks_fulfillment_default: boolean;
+    intake_schema: Record<string, unknown>;
     is_active: boolean;
     sort_order: number;
 }
@@ -25,6 +34,9 @@ export interface WorkflowRequestRecord {
     entity_id: string;
     workflow_definition_id: string;
     workflow_code: string;
+    workflow_label: string;
+    workflow_family: string;
+    status_model_key: string;
     status: string;
     lifecycle_state: WorkflowLifecycleState;
     title: string;

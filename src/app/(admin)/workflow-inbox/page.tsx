@@ -36,8 +36,6 @@ export default function WorkflowInboxPage() {
 
     const definitions = definitionsData?.data || [];
     const workflows = useMemo(() => data?.data || [], [data?.data]);
-    const labelMap = new Map(definitions.map((definition) => [definition.code, definition.label]));
-
     return (
         <div className="space-y-6 p-6">
             <div>
@@ -109,9 +107,8 @@ export default function WorkflowInboxPage() {
                                             </Badge>
                                         </div>
                                         <p className="text-sm text-muted-foreground">
-                                            {labelMap.get(workflow.workflow_code) ||
-                                                workflow.workflow_code}{" "}
-                                            · {workflow.entity_type.replace(/_/g, " ")} ·{" "}
+                                            {workflow.workflow_label} · {workflow.workflow_family} ·{" "}
+                                            {workflow.entity_type.replace(/_/g, " ")} ·{" "}
                                             {workflow.status.replace(/_/g, " ")}
                                         </p>
                                     </div>
