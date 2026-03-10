@@ -8,6 +8,22 @@ export type WorkflowEntityType = "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST"
 export type WorkflowLifecycleState = "OPEN" | "ACTIVE" | "DONE" | "CANCELLED";
 export type WorkflowRole = "ADMIN" | "LOGISTICS" | "CLIENT";
 
+export interface WorkflowFamilyMeta {
+    key: string;
+    label: string;
+    description: string;
+    component_key: string;
+    supportedStatusModels: string[];
+}
+
+export interface WorkflowStatusModelMeta {
+    key: string;
+    label: string;
+    statuses: string[];
+    initialStatus: string;
+    lifecycleMap: Record<string, WorkflowLifecycleState>;
+}
+
 export interface WorkflowDefinitionRecord {
     id: string;
     code: string;
@@ -25,6 +41,14 @@ export interface WorkflowDefinitionRecord {
     intake_schema: Record<string, unknown>;
     is_active: boolean;
     sort_order: number;
+    family?: WorkflowFamilyMeta | null;
+    status_model?: WorkflowStatusModelMeta | null;
+    company_overrides?: Array<{
+        company_id: string;
+        is_enabled: boolean;
+        label_override?: string | null;
+        sort_order_override?: number | null;
+    }>;
 }
 
 export interface WorkflowRequestRecord {

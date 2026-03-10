@@ -1,7 +1,12 @@
-// Permission Templates
-export type PermissionTemplate = "PLATFORM_ADMIN" | "LOGISTICS_STAFF" | "CLIENT_USER";
-
 export type UserRole = "ADMIN" | "LOGISTICS" | "CLIENT";
+
+export interface AccessPolicy {
+    id: string;
+    code: string;
+    name: string;
+    role: UserRole;
+    is_active: boolean;
+}
 
 // Permission strings for granular access control
 export type Permission =
@@ -155,11 +160,15 @@ export interface User {
     name: string;
     role: UserRole;
     permissions: string[];
+    effective_permissions?: string[];
+    access_policy_id?: string | null;
+    access_policy?: AccessPolicy | null;
+    permission_grants?: string[];
+    permission_revokes?: string[];
     company?: {
         id: string;
         name: string;
     } | null;
-    permission_template: PermissionTemplate | null;
     is_super_admin: boolean;
     is_active: boolean;
     last_login_at: Date | null;
@@ -180,8 +189,9 @@ export interface CreateUserRequest {
     name: string;
     password: string;
     role: UserRole;
-    permission_template?: PermissionTemplate | null;
-    permissions?: string[];
+    access_policy_id?: string | null;
+    permission_grants?: string[];
+    permission_revokes?: string[];
     company_id?: string | null;
     is_active?: boolean;
 }
@@ -190,16 +200,17 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
     name?: string;
     role?: UserRole;
-    permissions?: string[];
+    access_policy_id?: string | null;
+    permission_grants?: string[];
+    permission_revokes?: string[];
     company_id?: string | null;
-    permission_template?: PermissionTemplate | null;
     is_active?: boolean;
 }
 
 // User list query params
 export interface UserListParams {
     company_id?: string;
-    permissionTemplate?: PermissionTemplate;
+    access_policy_id?: string;
     isActive?: boolean;
     search?: string;
     limit?: number;
@@ -307,75 +318,4 @@ export const PERMISSION_GROUPS = {
         "notifications:retry",
     ],
     Analytics: ["analytics:view_revenue", "analytics:track_margin", "analytics:filter_by_company"],
-};
-
-// Permission template default configurations
-export const PERMISSION_TEMPLATES: Record<
-    PermissionTemplate,
-    {
-        permissions: string[];
-    }
-> = {
-    PLATFORM_ADMIN: {
-        permissions: [
-            "auth:*",
-            "users:*",
-            "companies:*",
-            "brands:*",
-            "warehouses:*",
-            "zones:*",
-            "orders:*",
-            "pricing:*",
-            "invoices:*",
-            "lifecycle:*",
-            "notifications:*",
-            "analytics:*",
-            "system:*",
-            "assets:*",
-            "collections:*",
-            "conditions:*",
-            "inventory:*",
-            "quotes:*",
-            "scanning:*",
-        ],
-    },
-    LOGISTICS_STAFF: {
-        permissions: [
-            "auth:*",
-            "users:read",
-            "companies:read",
-            "brands:read",
-            "warehouses:read",
-            "zones:read",
-            "assets:*",
-            "collections:*",
-            "orders:read",
-            "orders:update",
-            "orders:add_time_windows", // Phase 10
-            "pricing:review",
-            "pricing:adjust",
-            "lifecycle:progress_status", // Phase 10
-            "lifecycle:receive_notifications", // Phase 10
-            "scanning:*",
-            "inventory:*",
-            "conditions:*",
-        ],
-    },
-    CLIENT_USER: {
-        permissions: [
-            "auth:*",
-            "companies:read",
-            "brands:read",
-            "assets:read",
-            "collections:read",
-            "orders:create",
-            "orders:read",
-            "orders:update",
-            "quotes:approve",
-            "quotes:decline",
-            "invoices:read",
-            "invoices:download",
-            "lifecycle:receive_notifications",
-        ],
-    },
 };
