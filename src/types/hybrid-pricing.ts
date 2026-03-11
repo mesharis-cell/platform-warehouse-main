@@ -292,30 +292,65 @@ export interface OrderPricing {
         label: string;
         quantity: number;
         unit: string;
-        unit_price?: number;
-        total?: number;
         buy_unit_price?: number;
         buy_total?: number;
+        sell_unit_price?: number;
+        sell_total?: number;
+        unit_price?: number;
+        total?: number;
         billing_mode?: string;
         client_price_visible?: boolean;
         is_voided?: boolean;
         notes?: string | null;
     }>;
     totals?: {
-        base_ops_total?: number;
-        rate_card_total?: number;
-        custom_total?: number;
-        total?: number;
         buy_base_ops_total?: number;
         buy_rate_card_total?: number;
         buy_custom_total?: number;
         buy_total?: number;
+        sell_base_ops_total?: number;
+        sell_rate_card_total?: number;
+        sell_custom_total?: number;
+        sell_total?: number;
+        margin_amount?: number;
+        subtotal?: number;
+        vat_percent?: number;
+        vat_amount?: number;
+        sell_total_with_vat?: number;
+        base_ops_total?: number;
+        rate_card_total?: number;
+        custom_total?: number;
+        total?: number;
     };
+    margin_policy?: {
+        percent: number;
+        is_override: boolean;
+        override_reason: string | null;
+    };
+    warehouse_ops_rate?: number;
     base_ops_total?: number;
+    sell?: {
+        base_ops_total: number;
+        subtotal?: number;
+        vat_amount?: number;
+        final_total: number;
+    };
     line_items?: {
         catalog_total: number;
         custom_total: number;
     };
+    margin?: {
+        percent: number;
+        amount: number;
+        is_override: boolean;
+        override_reason: string | null;
+    };
+    margin_percent?: number;
+    vat?: {
+        percent: number;
+        amount: number;
+    };
+    subtotal?: number | string;
     final_total: number | string;
     calculated_at?: string;
 }

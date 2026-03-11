@@ -92,7 +92,11 @@ const entityBasePath: Record<WorkflowEntityType, string> = {
     SERVICE_REQUEST: "service-request",
 };
 
-export function useEntityWorkflowRequests(entityType: WorkflowEntityType, entityId: string | null) {
+export function useEntityWorkflowRequests(
+    entityType: WorkflowEntityType,
+    entityId: string | null,
+    enabled = true
+) {
     return useQuery({
         queryKey: ["workflow-requests", entityType, entityId],
         queryFn: async (): Promise<{ data: WorkflowRequestRecord[] }> => {
@@ -106,13 +110,14 @@ export function useEntityWorkflowRequests(entityType: WorkflowEntityType, entity
                 throwApiError(error);
             }
         },
-        enabled: !!entityId,
+        enabled: !!entityId && enabled,
     });
 }
 
 export function useAvailableWorkflowDefinitions(
     entityType: WorkflowEntityType,
-    entityId: string | null
+    entityId: string | null,
+    enabled = true
 ) {
     return useQuery({
         queryKey: ["workflow-definitions", "available", entityType, entityId],
@@ -127,7 +132,7 @@ export function useAvailableWorkflowDefinitions(
                 throwApiError(error);
             }
         },
-        enabled: !!entityId,
+        enabled: !!entityId && enabled,
     });
 }
 
