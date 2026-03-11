@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Plus, Workflow } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,55 +18,207 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { useAttachmentTypes } from "@/hooks/use-attachments";
 import {
+    useAvailableWorkflowDefinitions,
     useCreateWorkflowRequest,
     useEntityWorkflowRequests,
+    useUpdateWorkflowRequest,
+    type WorkflowDefinitionRecord,
     type WorkflowEntityType,
+    type WorkflowLifecycleState,
+    type WorkflowRequestRecord,
 } from "@/hooks/use-workflow-requests";
+import { usePlatform } from "@/contexts/platform-context";
 import { uploadDocuments } from "@/lib/utils/upload-documents";
-import { BrushCleaning, Plus, Workflow } from "lucide-react";
+
+const LIFECYCLE_BADGE_VARIANT: Record<WorkflowLifecycleState, "default" | "secondary" | "outline"> =
+    {
+        OPEN: "outline",
+        ACTIVE: "secondary",
+        DONE: "default",
+        CANCELLED: "outline",
+    };
+
+type WorkflowSectionProps = {
+    definition: WorkflowDefinitionRecord;
+    requests: WorkflowRequestRecord[];
+    draftStatuses: Record<string, string>;
+    draftNotes: Record<string, string>;
+    onStatusChange: (id: string, value: string) => void;
+    onNoteChange: (id: string, value: string) => void;
+    onSave: (id: string, currentStatus: string) => void;
+};
+
+const renderSimpleRequestSection = ({
+    definition,
+    requests,
+    draftStatuses,
+    draftNotes,
+    onStatusChange,
+    onNoteChange,
+    onSave,
+}: WorkflowSectionProps) => (
+    <div key={definition.id} className="space-y-3 rounded-lg border border-border/60 p-4">
+        <div>
+            <p className="text-sm font-semibold">{definition.label}</p>
+            {definition.description ? (
+                <p className="text-xs text-muted-foreground">{definition.description}</p>
+            ) : null}
+            <p className="mt-1 text-xs text-muted-foreground">
+                {definition.family?.label || definition.workflow_family} ·{" "}
+                {definition.status_model?.label || definition.status_model_key}
+            </p>
+        </div>
+        {requests.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+                No requests created for this workflow yet.
+            </p>
+        ) : (
+            requests.map((workflow) => (
+                <div
+                    key={workflow.id}
+                    className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-3"
+                >
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <p className="font-semibold">{workflow.title}</p>
+                            {workflow.description ? (
+                                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                                    {workflow.description}
+                                </p>
+                            ) : null}
+                        </div>
+                        <div className="space-y-1 text-right text-xs font-mono text-muted-foreground">
+                            <Badge variant={LIFECYCLE_BADGE_VARIANT[workflow.lifecycle_state]}>
+                                {workflow.lifecycle_state}
+                            </Badge>
+                            <p>{new Date(workflow.requested_at).toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-[180px_1fr_auto]">
+                        <Select
+                            value={draftStatuses[workflow.id] || workflow.status}
+                            onValueChange={(value) => onStatusChange(workflow.id, value)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(definition.status_model?.statuses || [workflow.status]).map(
+                                    (status) => (
+                                        <SelectItem key={status} value={status}>
+                                            {status.replace(/_/g, " ")}
+                                        </SelectItem>
+                                    )
+                                )}
+                            </SelectContent>
+                        </Select>
+                        <Textarea
+                            value={draftNotes[workflow.id] || ""}
+                            onChange={(event) => onNoteChange(workflow.id, event.target.value)}
+                            rows={2}
+                            placeholder="Optional note"
+                        />
+                        <Button
+                            variant="outline"
+                            onClick={() => onSave(workflow.id, workflow.status)}
+                        >
+                            Save
+                        </Button>
+                    </div>
+                </div>
+            ))
+        )}
+    </div>
+);
+
+const WORKFLOW_SECTION_RENDERERS: Record<string, (props: WorkflowSectionProps) => ReactNode> = {
+    simple_request: renderSimpleRequestSection,
+    document_collection: renderSimpleRequestSection,
+    approval: renderSimpleRequestSection,
+};
 
 export function WorkflowRequestsCard({
     entityType,
     entityId,
-    title = "Internal Workflows",
+    title = "Workflows",
 }: {
     entityType: WorkflowEntityType;
     entityId: string | null;
     title?: string;
 }) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [selectedWorkflowCode, setSelectedWorkflowCode] = useState("");
+    const [selectedAttachmentTypeId, setSelectedAttachmentTypeId] = useState("");
     const [titleValue, setTitleValue] = useState("");
     const [description, setDescription] = useState("");
-    const [assignedEmail, setAssignedEmail] = useState("");
     const [files, setFiles] = useState<File[]>([]);
+    const [draftStatuses, setDraftStatuses] = useState<Record<string, string>>({});
+    const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
 
-    const { data, isLoading } = useEntityWorkflowRequests(entityType, entityId);
-    const { data: attachmentTypesData } = useAttachmentTypes();
+    const { platform } = usePlatform();
+    const workflowFeatureEnabled = platform?.features?.enable_workflows !== false;
+    const attachmentFeatureEnabled = platform?.features?.enable_attachments !== false;
+
+    const { data, isLoading } = useEntityWorkflowRequests(
+        entityType,
+        entityId,
+        workflowFeatureEnabled
+    );
+    const { data: definitionsData } = useAvailableWorkflowDefinitions(
+        entityType,
+        entityId,
+        workflowFeatureEnabled
+    );
+    const { data: attachmentTypesData } = useAttachmentTypes({
+        entityType: "WORKFLOW_REQUEST",
+        mode: "upload",
+        contextEntityType: entityType,
+        contextEntityId: entityId,
+        enabled: workflowFeatureEnabled && attachmentFeatureEnabled && isCreateOpen && !!entityId,
+    });
     const createWorkflow = useCreateWorkflowRequest(entityType, entityId);
+    const updateWorkflow = useUpdateWorkflowRequest();
 
-    const artworkAttachmentType = useMemo(
-        () => (attachmentTypesData?.data || []).find((type) => type.code === "ARTWORK_REFERENCE"),
+    const definitions = definitionsData?.data || [];
+    const selectedDefinition = definitions.find(
+        (definition) => definition.code === selectedWorkflowCode
+    );
+    const workflowAttachmentTypes = useMemo(
+        () => (attachmentTypesData?.data || []).filter((type) => type.is_active),
         [attachmentTypesData?.data]
     );
 
     const resetForm = () => {
+        setSelectedWorkflowCode(definitions[0]?.code || "");
+        setSelectedAttachmentTypeId(workflowAttachmentTypes[0]?.id || "");
         setTitleValue("");
         setDescription("");
-        setAssignedEmail("");
         setFiles([]);
     };
 
     const handleCreate = async () => {
         if (!entityId) return;
+        if (!selectedWorkflowCode) return toast.error("Select a workflow");
         if (!titleValue.trim()) return toast.error("Title is required");
+        if (files.length > 0 && !selectedAttachmentTypeId) {
+            return toast.error("Select an attachment type for the uploaded files");
+        }
 
         try {
             const attachments =
-                files.length > 0 && artworkAttachmentType
+                files.length > 0
                     ? (await uploadDocuments({ files })).map((file) => ({
-                          attachment_type_id: artworkAttachmentType.id,
+                          attachment_type_id: selectedAttachmentTypeId,
                           file_url: file.fileUrl,
                           file_name: file.fileName,
                           mime_type: file.mimeType,
@@ -73,19 +227,47 @@ export function WorkflowRequestsCard({
                     : [];
 
             await createWorkflow.mutateAsync({
-                workflow_kind: "ARTWORK_SUPPORT",
+                workflow_code: selectedWorkflowCode,
                 title: titleValue.trim(),
                 ...(description.trim() ? { description: description.trim() } : {}),
-                ...(assignedEmail.trim() ? { assigned_email: assignedEmail.trim() } : {}),
                 ...(attachments.length > 0 ? { attachments } : {}),
             });
-            toast.success("Artwork support requested");
+            toast.success("Workflow requested");
             setIsCreateOpen(false);
             resetForm();
         } catch (error: any) {
-            toast.error(error.message || "Failed to request artwork support");
+            toast.error(error.message || "Failed to create workflow request");
         }
     };
+
+    const handleSave = async (id: string, currentStatus: string) => {
+        try {
+            await updateWorkflow.mutateAsync({
+                id,
+                payload: {
+                    status: draftStatuses[id] || currentStatus,
+                    metadata: draftNotes[id]?.trim()
+                        ? { admin_note: draftNotes[id].trim() }
+                        : undefined,
+                },
+            });
+            toast.success("Workflow updated");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to update workflow");
+        }
+    };
+
+    const groupedWorkflows = useMemo(() => {
+        const rows = data?.data || [];
+        return definitions.map((definition) => ({
+            definition,
+            requests: rows.filter((row) => row.workflow_code === definition.code),
+        }));
+    }, [data?.data, definitions]);
+
+    if (!workflowFeatureEnabled) {
+        return null;
+    }
 
     return (
         <Card>
@@ -99,20 +281,57 @@ export function WorkflowRequestsCard({
                         open={isCreateOpen}
                         onOpenChange={(open) => {
                             setIsCreateOpen(open);
-                            if (!open) resetForm();
+                            if (open) {
+                                setSelectedWorkflowCode(definitions[0]?.code || "");
+                                setSelectedAttachmentTypeId(workflowAttachmentTypes[0]?.id || "");
+                            } else {
+                                resetForm();
+                            }
                         }}
                     >
                         <DialogTrigger asChild>
-                            <Button size="sm">
-                                <Plus className="h-4 w-4 mr-1" />
-                                Request Artwork Support
+                            <Button size="sm" disabled={definitions.length === 0}>
+                                <Plus className="mr-1 h-4 w-4" />
+                                Request Workflow
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-lg">
                             <DialogHeader>
-                                <DialogTitle>Request Artwork Support</DialogTitle>
+                                <DialogTitle>Request Internal Workflow</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Workflow</Label>
+                                    <Select
+                                        value={selectedWorkflowCode}
+                                        onValueChange={setSelectedWorkflowCode}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select workflow" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {definitions.map((definition) => (
+                                                <SelectItem
+                                                    key={definition.id}
+                                                    value={definition.code}
+                                                >
+                                                    {definition.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {selectedDefinition?.description ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            {selectedDefinition.description}
+                                        </p>
+                                    ) : null}
+                                    {selectedDefinition?.family ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            {selectedDefinition.family.label} ·{" "}
+                                            {selectedDefinition.status_model?.label}
+                                        </p>
+                                    ) : null}
+                                </div>
                                 <div className="space-y-2">
                                     <Label>Title</Label>
                                     <Input
@@ -127,28 +346,51 @@ export function WorkflowRequestsCard({
                                         value={description}
                                         onChange={(event) => setDescription(event.target.value)}
                                         rows={4}
-                                        placeholder="Artwork scope, timing, and constraints"
+                                        placeholder="Scope, timing, constraints, and context"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Assigned Email (Optional)</Label>
-                                    <Input
-                                        type="email"
-                                        value={assignedEmail}
-                                        onChange={(event) => setAssignedEmail(event.target.value)}
-                                        placeholder="team@example.com"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Reference Files (Optional)</Label>
-                                    <Input
-                                        type="file"
-                                        multiple
-                                        onChange={(event) =>
-                                            setFiles(Array.from(event.target.files || []))
-                                        }
-                                    />
-                                </div>
+                                {attachmentFeatureEnabled ? (
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label>Reference Files (Optional)</Label>
+                                            <Input
+                                                type="file"
+                                                multiple
+                                                onChange={(event) =>
+                                                    setFiles(Array.from(event.target.files || []))
+                                                }
+                                            />
+                                        </div>
+                                        {files.length > 0 && workflowAttachmentTypes.length > 0 ? (
+                                            <div className="space-y-2">
+                                                <Label>Attachment Type</Label>
+                                                <Select
+                                                    value={selectedAttachmentTypeId}
+                                                    onValueChange={setSelectedAttachmentTypeId}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select attachment type" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {workflowAttachmentTypes.map((type) => (
+                                                            <SelectItem
+                                                                key={type.id}
+                                                                value={type.id}
+                                                            >
+                                                                {type.label}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        ) : files.length > 0 ? (
+                                            <p className="text-xs text-muted-foreground">
+                                                No uploadable workflow attachment types are
+                                                available.
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                ) : null}
                             </div>
                             <DialogFooter>
                                 <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
@@ -162,7 +404,7 @@ export function WorkflowRequestsCard({
                     </Dialog>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
                 {isLoading && (
                     <>
                         <Skeleton className="h-24 w-full" />
@@ -170,42 +412,28 @@ export function WorkflowRequestsCard({
                     </>
                 )}
 
-                {!isLoading && (data?.data || []).length === 0 && (
+                {!isLoading && groupedWorkflows.length === 0 && (
                     <p className="text-sm text-muted-foreground">
-                        No internal workflow requests have been created yet.
+                        No internal workflow types are enabled for this record.
                     </p>
                 )}
 
-                {(data?.data || []).map((workflow) => (
-                    <div
-                        key={workflow.id}
-                        className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-2"
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <p className="text-xs font-mono uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-                                    <BrushCleaning className="h-3 w-3" />
-                                    {workflow.workflow_kind.replace(/_/g, " ")}
-                                </p>
-                                <p className="font-semibold">{workflow.title}</p>
-                                {workflow.description && (
-                                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                                        {workflow.description}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="text-right text-xs font-mono text-muted-foreground">
-                                <p>{workflow.status.replace(/_/g, " ")}</p>
-                                <p>{new Date(workflow.requested_at).toLocaleString()}</p>
-                            </div>
-                        </div>
-                        {workflow.assigned_email && (
-                            <p className="text-xs text-muted-foreground">
-                                Assigned email: {workflow.assigned_email}
-                            </p>
-                        )}
-                    </div>
-                ))}
+                {groupedWorkflows.map(({ definition, requests }) => {
+                    const renderer =
+                        WORKFLOW_SECTION_RENDERERS[definition.workflow_family] ||
+                        renderSimpleRequestSection;
+                    return renderer({
+                        definition,
+                        requests,
+                        draftStatuses,
+                        draftNotes,
+                        onStatusChange: (id, value) =>
+                            setDraftStatuses((prev) => ({ ...prev, [id]: value })),
+                        onNoteChange: (id, value) =>
+                            setDraftNotes((prev) => ({ ...prev, [id]: value })),
+                        onSave: handleSave,
+                    });
+                })}
             </CardContent>
         </Card>
     );

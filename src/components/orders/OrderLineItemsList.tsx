@@ -41,6 +41,14 @@ const EMPTY_DRAFT: EditDraft = {
     metadataJson: "",
 };
 
+const getSystemLineCopy = (item: OrderLineItem) => {
+    if (item.systemKey === "BASE_OPS") {
+        return "Calculated from total volume and warehouse operations rate.";
+    }
+
+    return "Calculated automatically by the platform.";
+};
+
 const mapDraftFromItem = (item: OrderLineItem): EditDraft => {
     const metadata = item.metadata && typeof item.metadata === "object" ? item.metadata : undefined;
     const metadataJson =
@@ -81,9 +89,12 @@ export function OrderLineItemsList({
         (item: OrderLineItem) => item.lineItemType === "CATALOG"
     );
     const customItems = activeItems.filter((item: OrderLineItem) => item.lineItemType === "CUSTOM");
+    const systemItems = activeItems.filter((item: OrderLineItem) => item.lineItemType === "SYSTEM");
+    const visibilityEligibleItems = activeItems;
 
     const allClientVisible =
-        activeItems.length > 0 && activeItems.every((item) => item.clientPriceVisible);
+        visibilityEligibleItems.length > 0 &&
+        visibilityEligibleItems.every((item) => item.clientPriceVisible);
 
     const openVoidDialog = (item: OrderLineItem) => {
         setSelectedItem(item);
@@ -189,7 +200,7 @@ export function OrderLineItemsList({
         try {
             await patchBulkVisibility.mutateAsync({
                 clientPriceVisible: next,
-                lineItemIds: activeItems.map((item) => item.id),
+                lineItemIds: visibilityEligibleItems.map((item) => item.id),
             });
             toast.success(
                 next ? "All line prices shown to client" : "All line prices hidden from client"
@@ -219,7 +230,10 @@ export function OrderLineItemsList({
 
     const renderLineItem = (item: OrderLineItem, highlighted = false) => {
         const isEditing = editingItemId === item.id;
-        const pricingLocked = item.canEditPricingFields === false;
+        const isSystemLine = item.lineItemType === "SYSTEM";
+        const pricingLocked = isSystemLine || item.canEditPricingFields === false;
+        const canMutateLine = canManage && !isSystemLine;
+        const canManageVisibility = allowClientVisibilityControls && canManage;
         const visibilityBusy = patchLineVisibility.isPending || patchBulkVisibility.isPending;
 
         return (
@@ -238,9 +252,13 @@ export function OrderLineItemsList({
                         </Badge>
                     )}
                     <Badge variant={pricingLocked ? "outline" : "default"} className="text-xs">
-                        {pricingLocked ? "Pricing Locked" : "Pricing Editable"}
+                        {isSystemLine
+                            ? "System Managed"
+                            : pricingLocked
+                              ? "Pricing Locked"
+                              : "Pricing Editable"}
                     </Badge>
-                    {allowClientVisibilityControls && canManage ? (
+                    {canManageVisibility ? (
                         <div className="ml-auto flex items-center gap-2 rounded-md border border-border px-2 py-1">
                             <Label className="text-[11px] text-muted-foreground">
                                 Client price
@@ -261,8 +279,13 @@ export function OrderLineItemsList({
                     ) : null}
                 </div>
 
-                {pricingLocked && item.lockReason ? (
+                {pricingLocked && item.lockReason && !isSystemLine ? (
                     <p className="text-[11px] text-muted-foreground mt-1">{item.lockReason}</p>
+                ) : null}
+                {isSystemLine && item.systemKey ? (
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                        Auto-managed charge: {item.systemKey.replaceAll("_", " ")}
+                    </p>
                 ) : null}
 
                 {!isEditing ? (
@@ -271,10 +294,16 @@ export function OrderLineItemsList({
                             {item.quantity || 0} {item.unit || "unit"} ×{" "}
                             {item.unitRate?.toFixed(2) || "0.00"} AED
                         </p>
+                        {isSystemLine ? (
+                            <p className="text-xs text-muted-foreground mt-1">
+                                {getSystemLineCopy(item)}
+                            </p>
+                        ) : null}
                         {item.notes && (
                             <p className="text-xs text-muted-foreground mt-1">Note: {item.notes}</p>
                         )}
-                        {item.metadata &&
+                        {!isSystemLine &&
+                        item.metadata &&
                         typeof item.metadata === "object" &&
                         Object.keys(item.metadata).length > 0 ? (
                             <pre className="mt-2 rounded border border-border/60 bg-background/70 p-2 text-[11px] whitespace-pre-wrap break-all">
@@ -372,7 +401,7 @@ export function OrderLineItemsList({
 
                 <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
                     <span className="font-mono font-semibold">{item.total.toFixed(2)} AED</span>
-                    {canManage ? (
+                    {canMutateLine ? (
                         <div className="flex items-center gap-1">
                             {isEditing ? (
                                 <>
@@ -421,7 +450,7 @@ export function OrderLineItemsList({
 
     return (
         <div className="space-y-4">
-            {allowClientVisibilityControls && canManage ? (
+            {allowClientVisibilityControls && canManage && visibilityEligibleItems.length > 0 ? (
                 <div className="flex items-center justify-end gap-2">
                     <Button
                         size="sm"
@@ -452,6 +481,17 @@ export function OrderLineItemsList({
                     </h4>
                     <div className="space-y-2">
                         {customItems.map((item) => renderLineItem(item, true))}
+                    </div>
+                </div>
+            )}
+
+            {systemItems.length > 0 && (
+                <div>
+                    <h4 className="text-sm font-semibold mb-2 text-muted-foreground">
+                        Auto-Calculated Charges
+                    </h4>
+                    <div className="space-y-2">
+                        {systemItems.map((item) => renderLineItem(item))}
                     </div>
                 </div>
             )}
