@@ -255,13 +255,13 @@ function AdminSidebarContent() {
             <SidebarHeader className="relative border-b border-border bg-white">
                 {!isCollapsed && (
                     <div className="absolute top-4 left-4 text-[10px] font-mono text-muted-foreground/40 tracking-[0.2em] uppercase z-0">
-                        ADMIN-01
+                        LOGISTICS-01
                     </div>
                 )}
 
                 <div className="flex justify-center items-center gap-3 ">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/30 relative overflow-hidden shrink-0">
-                        <Box className="h-5 w-5 text-primary relative z-10" strokeWidth={2.5} />
+                        <Warehouse className="h-5 w-5 text-primary relative z-10" strokeWidth={2.5} />
                         <div className="absolute inset-0 bg-primary/5 animate-pulse" />
                     </div>
                     {!isCollapsed && (
@@ -270,7 +270,7 @@ function AdminSidebarContent() {
                                 {platform?.platform_name}
                             </h2>
                             <p className="text-[10px] font-mono text-muted-foreground tracking-[0.15em] uppercase">
-                                Operations Command
+                                Logistics Operations
                             </p>
                         </div>
                     )}
@@ -412,9 +412,9 @@ function AdminSidebarContent() {
                                 <p className="text-sm font-mono font-semibold truncate">
                                     {user?.name || "Admin User"}
                                 </p>
-                                <p className="text-[10px] font-mono text-muted-foreground tracking-[0.15em] uppercase">
-                                    {user?.role === "ADMIN" && "Admin"}
-                                    {user?.role === "LOGISTICS" && "Logistics"}
+                                <p className="text-[10px] font-mono tracking-[0.15em] uppercase">
+                                    {user?.role === "ADMIN" && <span className="text-muted-foreground">Admin</span>}
+                                    {user?.role === "LOGISTICS" && <span className="text-primary font-semibold">Logistics</span>}
                                 </p>
                             </div>
                         )}
@@ -424,7 +424,7 @@ function AdminSidebarContent() {
                 {/* Bottom zone marker */}
                 {!isCollapsed && (
                     <div className="text-[9px] font-mono text-muted-foreground/30 tracking-[0.2em] uppercase text-center pt-2">
-                        Platform Asset Fulfillment v1.0
+                        Logistics Operations Hub v1.0
                     </div>
                 )}
             </SidebarFooter>

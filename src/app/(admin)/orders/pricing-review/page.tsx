@@ -143,10 +143,15 @@ export default function PricingReviewPage() {
                                                 <span>Order Total</span>
                                             </div>
                                             <p className="font-medium font-mono">
-                                                {Number(order.order_pricing?.final_total).toFixed(
-                                                    2
-                                                )}
+                                                {Number(order.order_pricing?.totals?.sell_total_with_vat ?? order.order_pricing?.final_total ?? 0).toFixed(2)}
                                             </p>
+                                            {Number(order.order_pricing?.vat?.percent ?? order.order_pricing?.totals?.vat_percent ?? 0) > 0 && (
+                                                <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                                                    {Number(order.order_pricing?.vat?.amount ?? order.order_pricing?.totals?.vat_amount ?? 0) > 0
+                                                        ? `VAT (${Number(order.order_pricing?.vat?.percent ?? order.order_pricing?.totals?.vat_percent ?? 0)}%) ${Number(order.order_pricing?.vat?.amount ?? order.order_pricing?.totals?.vat_amount ?? 0).toFixed(2)}`
+                                                        : `VAT included (${Number(order.order_pricing?.vat?.percent ?? order.order_pricing?.totals?.vat_percent ?? 0)}%)`}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 

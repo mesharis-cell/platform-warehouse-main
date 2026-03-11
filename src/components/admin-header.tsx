@@ -22,7 +22,7 @@ interface AdminHeaderProps {
 
 export function AdminHeader({ icon: Icon, title, description, stats, actions }: AdminHeaderProps) {
     return (
-        <div className="border-b border-border bg-muted/30 relative overflow-hidden">
+        <div className="border-b border-border border-l-4 border-l-primary bg-muted/30 relative overflow-hidden">
             {/* Industrial grid background */}
             <div
                 className="absolute inset-0 opacity-[0.02]"
