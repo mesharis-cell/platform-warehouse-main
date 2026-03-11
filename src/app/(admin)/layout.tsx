@@ -261,7 +261,10 @@ function AdminSidebarContent() {
 
                 <div className="flex justify-center items-center gap-3 ">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/30 relative overflow-hidden shrink-0">
-                        <Warehouse className="h-5 w-5 text-primary relative z-10" strokeWidth={2.5} />
+                        <Warehouse
+                            className="h-5 w-5 text-primary relative z-10"
+                            strokeWidth={2.5}
+                        />
                         <div className="absolute inset-0 bg-primary/5 animate-pulse" />
                     </div>
                     {!isCollapsed && (
@@ -413,8 +416,14 @@ function AdminSidebarContent() {
                                     {user?.name || "Admin User"}
                                 </p>
                                 <p className="text-[10px] font-mono tracking-[0.15em] uppercase">
-                                    {user?.role === "ADMIN" && <span className="text-muted-foreground">Admin</span>}
-                                    {user?.role === "LOGISTICS" && <span className="text-primary font-semibold">Logistics</span>}
+                                    {user?.role === "ADMIN" && (
+                                        <span className="text-muted-foreground">Admin</span>
+                                    )}
+                                    {user?.role === "LOGISTICS" && (
+                                        <span className="text-primary font-semibold">
+                                            Logistics
+                                        </span>
+                                    )}
                                 </p>
                             </div>
                         )}

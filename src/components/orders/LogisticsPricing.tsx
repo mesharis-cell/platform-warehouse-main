@@ -127,16 +127,26 @@ export const LogisticsPricing = ({
                                     ))}
                                 </div>
                             )}
-                            {Number(pricing.vat?.percent ?? pricing.totals?.vat_percent ?? 0) > 0 && (
+                            {Number(pricing.vat?.percent ?? pricing.totals?.vat_percent ?? 0) >
+                                0 && (
                                 <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">
-                                        {Number(pricing.vat?.amount ?? pricing.totals?.vat_amount ?? 0) > 0
+                                        {Number(
+                                            pricing.vat?.amount ?? pricing.totals?.vat_amount ?? 0
+                                        ) > 0
                                             ? `VAT (${Number(pricing.vat?.percent ?? pricing.totals?.vat_percent ?? 0)}%)`
                                             : `VAT included (${Number(pricing.vat?.percent ?? pricing.totals?.vat_percent ?? 0)}%)`}
                                     </span>
-                                    {Number(pricing.vat?.amount ?? pricing.totals?.vat_amount ?? 0) > 0 && (
+                                    {Number(
+                                        pricing.vat?.amount ?? pricing.totals?.vat_amount ?? 0
+                                    ) > 0 && (
                                         <span className="font-mono">
-                                            {Number(pricing.vat?.amount ?? pricing.totals?.vat_amount ?? 0).toFixed(2)} AED
+                                            {Number(
+                                                pricing.vat?.amount ??
+                                                    pricing.totals?.vat_amount ??
+                                                    0
+                                            ).toFixed(2)}{" "}
+                                            AED
                                         </span>
                                     )}
                                 </div>
