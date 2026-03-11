@@ -30,6 +30,7 @@ import {
     useAvailableWorkflowDefinitions,
     useCreateWorkflowRequest,
     useEntityWorkflowRequests,
+    useUpdateWorkflowRequest,
     type WorkflowDefinitionRecord,
     type WorkflowEntityType,
     type WorkflowLifecycleState,
@@ -49,16 +50,29 @@ const LIFECYCLE_BADGE_VARIANT: Record<WorkflowLifecycleState, "default" | "secon
 type WorkflowSectionProps = {
     definition: WorkflowDefinitionRecord;
     requests: WorkflowRequestRecord[];
+    draftStatuses: Record<string, string>;
+    draftNotes: Record<string, string>;
+    onStatusChange: (id: string, value: string) => void;
+    onNoteChange: (id: string, value: string) => void;
+    onSave: (id: string, currentStatus: string) => void;
 };
 
-const renderSimpleRequestSection = ({ definition, requests }: WorkflowSectionProps) => (
+const renderSimpleRequestSection = ({
+    definition,
+    requests,
+    draftStatuses,
+    draftNotes,
+    onStatusChange,
+    onNoteChange,
+    onSave,
+}: WorkflowSectionProps) => (
     <div key={definition.id} className="space-y-3 rounded-lg border border-border/60 p-4">
         <div>
             <p className="text-sm font-semibold">{definition.label}</p>
             {definition.description ? (
                 <p className="text-xs text-muted-foreground">{definition.description}</p>
             ) : null}
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
                 {definition.family?.label || definition.workflow_family} ·{" "}
                 {definition.status_model?.label || definition.status_model_key}
             </p>
@@ -71,7 +85,7 @@ const renderSimpleRequestSection = ({ definition, requests }: WorkflowSectionPro
             requests.map((workflow) => (
                 <div
                     key={workflow.id}
-                    className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-2"
+                    className="rounded-lg border border-border/60 bg-muted/10 p-4 space-y-3"
                 >
                     <div className="flex items-start justify-between gap-3">
                         <div>
@@ -86,9 +100,40 @@ const renderSimpleRequestSection = ({ definition, requests }: WorkflowSectionPro
                             <Badge variant={LIFECYCLE_BADGE_VARIANT[workflow.lifecycle_state]}>
                                 {workflow.lifecycle_state}
                             </Badge>
-                            <p>{workflow.status.replace(/_/g, " ")}</p>
                             <p>{new Date(workflow.requested_at).toLocaleString()}</p>
                         </div>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-[180px_1fr_auto]">
+                        <Select
+                            value={draftStatuses[workflow.id] || workflow.status}
+                            onValueChange={(value) => onStatusChange(workflow.id, value)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(definition.status_model?.statuses || [workflow.status]).map(
+                                    (status) => (
+                                        <SelectItem key={status} value={status}>
+                                            {status.replace(/_/g, " ")}
+                                        </SelectItem>
+                                    )
+                                )}
+                            </SelectContent>
+                        </Select>
+                        <Textarea
+                            value={draftNotes[workflow.id] || ""}
+                            onChange={(event) => onNoteChange(workflow.id, event.target.value)}
+                            rows={2}
+                            placeholder="Optional note"
+                        />
+                        <Button
+                            variant="outline"
+                            onClick={() => onSave(workflow.id, workflow.status)}
+                        >
+                            Save
+                        </Button>
                     </div>
                 </div>
             ))
@@ -117,6 +162,8 @@ export function WorkflowRequestsCard({
     const [titleValue, setTitleValue] = useState("");
     const [description, setDescription] = useState("");
     const [files, setFiles] = useState<File[]>([]);
+    const [draftStatuses, setDraftStatuses] = useState<Record<string, string>>({});
+    const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
 
     const { platform } = usePlatform();
     const workflowFeatureEnabled = platform?.features?.enable_workflows !== false;
@@ -126,6 +173,7 @@ export function WorkflowRequestsCard({
     const { data: definitionsData } = useAvailableWorkflowDefinitions(entityType, entityId);
     const { data: attachmentTypesData } = useAttachmentTypes("WORKFLOW_REQUEST");
     const createWorkflow = useCreateWorkflowRequest(entityType, entityId);
+    const updateWorkflow = useUpdateWorkflowRequest();
 
     const definitions = definitionsData?.data || [];
     const selectedDefinition = definitions.find(
@@ -175,6 +223,23 @@ export function WorkflowRequestsCard({
             resetForm();
         } catch (error: any) {
             toast.error(error.message || "Failed to create workflow request");
+        }
+    };
+
+    const handleSave = async (id: string, currentStatus: string) => {
+        try {
+            await updateWorkflow.mutateAsync({
+                id,
+                payload: {
+                    status: draftStatuses[id] || currentStatus,
+                    metadata: draftNotes[id]?.trim()
+                        ? { admin_note: draftNotes[id].trim() }
+                        : undefined,
+                },
+            });
+            toast.success("Workflow updated");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to update workflow");
         }
     };
 
@@ -338,7 +403,17 @@ export function WorkflowRequestsCard({
                     const renderer =
                         WORKFLOW_SECTION_RENDERERS[definition.workflow_family] ||
                         renderSimpleRequestSection;
-                    return renderer({ definition, requests });
+                    return renderer({
+                        definition,
+                        requests,
+                        draftStatuses,
+                        draftNotes,
+                        onStatusChange: (id, value) =>
+                            setDraftStatuses((prev) => ({ ...prev, [id]: value })),
+                        onNoteChange: (id, value) =>
+                            setDraftNotes((prev) => ({ ...prev, [id]: value })),
+                        onSave: handleSave,
+                    });
                 })}
             </CardContent>
         </Card>

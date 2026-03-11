@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
     Dialog,
     DialogContent,
@@ -35,6 +36,13 @@ import { uploadDocuments } from "@/lib/utils/upload-documents";
 import { usePlatform } from "@/contexts/platform-context";
 import { Download, FileText, Plus, Trash2 } from "lucide-react";
 
+const formatFileSize = (bytes: number | null): string => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 export function EntityAttachmentsCard({
     entityType,
     entityId,
@@ -49,6 +57,7 @@ export function EntityAttachmentsCard({
     const [note, setNote] = useState("");
     const [visibleToClient, setVisibleToClient] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const { platform } = usePlatform();
 
     const { data, isLoading } = useEntityAttachments(entityType, entityId);
@@ -61,6 +70,7 @@ export function EntityAttachmentsCard({
         [attachmentTypesData?.data]
     );
     const selectedType = attachmentTypes.find((type) => type.id === selectedTypeId);
+    const confirmDeleteAttachment = (data?.data || []).find((a) => a.id === confirmDeleteId);
 
     if (platform?.features?.enable_attachments === false) {
         return null;
@@ -77,6 +87,9 @@ export function EntityAttachmentsCard({
         if (!entityId) return;
         if (!selectedTypeId) return toast.error("Select an attachment type");
         if (files.length === 0) return toast.error("Choose at least one file");
+        if (selectedType?.required_note && !note.trim()) {
+            return toast.error("A note is required for this attachment type");
+        }
 
         try {
             const uploaded = await uploadDocuments({ files });
@@ -154,7 +167,12 @@ export function EntityAttachmentsCard({
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Note</Label>
+                                    <Label>
+                                        Note
+                                        {selectedType?.required_note && (
+                                            <span className="text-destructive ml-1">*</span>
+                                        )}
+                                    </Label>
                                     <Textarea
                                         value={note}
                                         onChange={(event) => setNote(event.target.value)}
@@ -219,8 +237,14 @@ export function EntityAttachmentsCard({
                                     {attachment.attachment_type.label}
                                 </p>
                                 <p className="font-medium break-all">{attachment.file_name}</p>
-                                <div className="flex flex-wrap gap-2 mt-2 text-[11px] font-mono text-muted-foreground">
+                                <div className="flex flex-wrap gap-2 mt-2 text-xs font-mono text-muted-foreground">
                                     <span>{new Date(attachment.created_at).toLocaleString()}</span>
+                                    {attachment.file_size_bytes ? (
+                                        <span>{formatFileSize(attachment.file_size_bytes)}</span>
+                                    ) : null}
+                                    {attachment.uploaded_by_user?.name ? (
+                                        <span>by {attachment.uploaded_by_user.name}</span>
+                                    ) : null}
                                     {attachment.visible_to_client && (
                                         <span className="rounded-full border px-2 py-0.5">
                                             Client visible
@@ -247,7 +271,7 @@ export function EntityAttachmentsCard({
                                 <Button
                                     size="icon"
                                     variant="outline"
-                                    onClick={() => deleteAttachment.mutate(attachment.id)}
+                                    onClick={() => setConfirmDeleteId(attachment.id)}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -256,6 +280,23 @@ export function EntityAttachmentsCard({
                     </div>
                 ))}
             </CardContent>
+
+            <ConfirmDialog
+                open={!!confirmDeleteId}
+                onOpenChange={(open) => {
+                    if (!open) setConfirmDeleteId(null);
+                }}
+                onConfirm={() => {
+                    if (confirmDeleteId) {
+                        deleteAttachment.mutate(confirmDeleteId);
+                        setConfirmDeleteId(null);
+                    }
+                }}
+                title="Delete Attachment"
+                description={`Are you sure you want to delete "${confirmDeleteAttachment?.file_name || "this attachment"}"? This cannot be undone.`}
+                confirmText="Delete"
+                variant="destructive"
+            />
         </Card>
     );
 }
