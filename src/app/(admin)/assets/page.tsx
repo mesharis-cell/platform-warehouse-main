@@ -49,9 +49,11 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCompanyFilter } from "@/contexts/company-filter-context";
+import { usePlatform } from "@/contexts/platform-context";
 
 export default function AssetsPage() {
     const { user } = useToken();
+    const { platform } = usePlatform();
     const router = useRouter();
     const { selectedCompanyId } = useCompanyFilter();
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -69,6 +71,7 @@ export default function AssetsPage() {
     const canCreateAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsCreate);
     const canCreateCollection = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.collectionsCreate);
     const canBulkUploadAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsBulkUpload);
+    const bulkUploadEnabled = platform?.features?.enable_asset_bulk_upload === true;
     const isMobile = useIsMobile();
 
     useEffect(() => {
@@ -139,9 +142,9 @@ export default function AssetsPage() {
                 description="Physical Items · QR Codes · Tracking"
                 stats={data ? { label: "TOTAL ASSETS", value: data.meta.total } : undefined}
                 actions={
-                    canCreateAsset || canBulkUploadAsset ? (
+                    canCreateAsset || (canBulkUploadAsset && bulkUploadEnabled) ? (
                         <div className="flex gap-2">
-                            {canBulkUploadAsset && !isMobile && (
+                            {canBulkUploadAsset && bulkUploadEnabled && !isMobile && (
                                 <Button
                                     variant="outline"
                                     size="lg"
@@ -149,7 +152,7 @@ export default function AssetsPage() {
                                     onClick={() => router.push("/admin/assets/bulk-upload")}
                                 >
                                     <Upload className="w-4 h-4 mr-2" />
-                                    Bulk Upload
+                                    Bulk Upload (Stub)
                                 </Button>
                             )}
                             {canCreateAsset && !isMobile && (
