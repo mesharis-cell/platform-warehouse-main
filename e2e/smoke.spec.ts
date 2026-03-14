@@ -36,6 +36,7 @@ test("warehouse staging smoke", async ({ page }) => {
         await expect(page.getByRole("heading", { name: firstFamilyName })).toBeVisible();
     }
     await expect(page.getByText(/stock records/i).first()).toBeVisible();
+    await expect(page.getByTestId("family-availability-stats")).toBeVisible();
 
     await page.goto(
         `/collections/${requireEnv(collectionSmokeId, "WAREHOUSE_COLLECTION_SMOKE_ID")}`,
