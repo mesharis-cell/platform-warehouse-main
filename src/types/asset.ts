@@ -7,12 +7,13 @@ export interface AssetImage {
 
 // Tracking Method
 export type TrackingMethod = "INDIVIDUAL" | "BATCH";
+export type StockMode = "SERIALIZED" | "POOLED";
 
 // Condition
 export type Condition = "GREEN" | "ORANGE" | "RED";
 
 // Asset Status
-export type AssetStatus = "AVAILABLE" | "BOOKED" | "OUT" | "IN_MAINTENANCE" | "TRANSFORMED";
+export type AssetStatus = "AVAILABLE" | "BOOKED" | "OUT" | "MAINTENANCE" | "TRANSFORMED";
 
 // Handling Tags
 export type HandlingTag = "Fragile" | "HighValue" | "HeavyLift" | "AssemblyRequired";
@@ -24,6 +25,8 @@ export type AssetCategory = "Furniture" | "Glassware" | "Installation" | "Decor"
 // Feedback #4 & #5: Removed quantity fields, availability calculated from asset_bookings
 export interface Asset {
     id: string;
+    family_id?: string | null;
+    familyId?: string | null;
     company: {
         id: string;
         name: string;
@@ -131,6 +134,7 @@ export interface AssetConditionHistoryEntry {
 export interface CreateAssetRequest {
     company_id: string; // uuid
     brand_id?: string; // uuid
+    family_id?: string | null;
     warehouse_id: string; // uuid
     zone_id: string; // uuid
     name: string;
@@ -160,6 +164,7 @@ export interface CreateAssetRequest {
 // Update Asset Request
 export interface UpdateAssetRequest {
     brand_id?: string; // uuid
+    family_id?: string | null;
     warehouse_id?: string; // uuid
     zone_id?: string; // uuid
     name?: string;
@@ -240,6 +245,8 @@ export interface AssetsDetails {
     warehouse_id: string;
     zone_id: string;
     brand_id: string | null;
+    family_id?: string | null;
+    familyId?: string | null;
 
     name: string;
     description: string | null;

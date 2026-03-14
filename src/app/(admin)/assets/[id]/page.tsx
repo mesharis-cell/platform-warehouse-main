@@ -197,7 +197,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 return "bg-secondary/10 text-secondary border-secondary/20";
             case "OUT":
                 return "bg-purple-500/10 text-purple-600 border-purple-500/20";
-            case "IN_MAINTENANCE":
+            case "MAINTENANCE":
                 return "bg-muted-foreground/10 text-muted-foreground border-muted-foreground/20";
             default:
                 return "bg-gray-500/10 text-gray-600 border-gray-500/20";
@@ -303,6 +303,23 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                 <span className="text-sm text-muted-foreground font-mono">
                                     {asset.tracking_method}
                                 </span>
+                                {asset.family_id && (
+                                    <>
+                                        <span className="text-sm text-muted-foreground font-mono">
+                                            •
+                                        </span>
+                                        <Button
+                                            variant="link"
+                                            size="sm"
+                                            asChild
+                                            className="h-auto p-0 font-mono text-sm"
+                                        >
+                                            <Link href={`/assets/families/${asset.family_id}`}>
+                                                View Family
+                                            </Link>
+                                        </Button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

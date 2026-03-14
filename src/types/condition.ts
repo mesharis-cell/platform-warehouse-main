@@ -18,7 +18,7 @@ export interface UpdateConditionResponse {
     asset: {
         id: string;
         condition: Condition;
-        status: "AVAILABLE" | "BOOKED" | "OUT" | "IN_MAINTENANCE";
+        status: "AVAILABLE" | "BOOKED" | "OUT" | "MAINTENANCE";
         updatedAt: string;
     };
     conditionHistory: {
@@ -84,7 +84,7 @@ export interface ItemNeedingAttention {
     name: string;
     qrCode: string;
     condition: "RED" | "ORANGE";
-    status: "AVAILABLE" | "IN_MAINTENANCE";
+    status: "AVAILABLE" | "MAINTENANCE";
     company: {
         id: string;
         name: string;
@@ -162,7 +162,7 @@ export interface AssetWithCondition {
     name: string;
     qrCode: string;
     condition: Condition;
-    status: "AVAILABLE" | "BOOKED" | "OUT" | "IN_MAINTENANCE";
+    status: "AVAILABLE" | "BOOKED" | "OUT" | "MAINTENANCE";
     company: {
         id: string;
         name: string;

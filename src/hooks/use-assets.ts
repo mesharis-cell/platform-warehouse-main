@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Asset, AssetsDetails, AssetWithDetails, CreateAssetRequest } from "@/types/asset";
+import { assetFamilyKeys } from "@/hooks/use-asset-families";
 import { apiClient } from "@/lib/api/api-client";
 import { throwApiError } from "@/lib/utils/throw-api-error";
 import { useCompanyFilter } from "@/contexts/company-filter-context";
@@ -180,6 +181,7 @@ export function useCreateAsset() {
         mutationFn: createAsset,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: assetKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: assetFamilyKeys.all });
         },
     });
 }
@@ -205,6 +207,7 @@ export function useUpdateAsset() {
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: assetKeys.lists() });
             queryClient.invalidateQueries({ queryKey: assetKeys.detail(variables.id) });
+            queryClient.invalidateQueries({ queryKey: assetFamilyKeys.all });
         },
     });
 }
@@ -218,6 +221,7 @@ export function useAddAssetUnits() {
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: assetKeys.lists() });
             queryClient.invalidateQueries({ queryKey: assetKeys.detail(variables.id) });
+            queryClient.invalidateQueries({ queryKey: assetFamilyKeys.all });
         },
     });
 }
@@ -229,6 +233,7 @@ export function useDeleteAsset() {
         mutationFn: deleteAsset,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: assetKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: assetFamilyKeys.all });
         },
     });
 }

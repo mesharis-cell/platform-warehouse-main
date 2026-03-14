@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useCollection, useCollectionAvailability } from "@/hooks/use-collections";
-import { useAssets } from "@/hooks/use-assets";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,9 +17,25 @@ import {
     Building2,
     Tag,
     Calendar,
+    ChevronRight,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+
+const getAssetImageUrl = (images: unknown): string | null => {
+    if (!Array.isArray(images) || images.length === 0) return null;
+    const firstImage = images[0];
+    if (typeof firstImage === "string") return firstImage;
+    if (
+        firstImage &&
+        typeof firstImage === "object" &&
+        "url" in firstImage &&
+        typeof firstImage.url === "string"
+    ) {
+        return firstImage.url;
+    }
+    return null;
+};
 
 export default function CollectionDetailPage() {
     const params = useParams();
@@ -58,14 +73,6 @@ export default function CollectionDetailPage() {
     const { data: collectionData, isLoading } = useCollection(collectionId);
 
     const collection = collectionData?.data;
-
-    // Fetch assets for adding to collection
-    const companyId = collection?.company_id;
-
-    const { data: assetsData } = useAssets({
-        company_id: typeof companyId === "string" ? companyId : undefined,
-        limit: "200",
-    });
 
     if (isLoading) {
         return (
@@ -278,9 +285,9 @@ export default function CollectionDetailPage() {
                                     <div className="flex gap-6">
                                         {/* Asset Image */}
                                         <div className="w-24 h-24 rounded-lg overflow-hidden border border-border shrink-0">
-                                            {item?.asset?.images?.length > 0 ? (
+                                            {getAssetImageUrl(item?.asset?.images) ? (
                                                 <Image
-                                                    src={item?.asset?.images?.[0]}
+                                                    src={getAssetImageUrl(item?.asset?.images)!}
                                                     alt={item?.asset?.name}
                                                     width={96}
                                                     height={96}
@@ -297,9 +304,25 @@ export default function CollectionDetailPage() {
                                         <div className="flex-1">
                                             <div className="flex items-start justify-between mb-2">
                                                 <div>
-                                                    <h3 className="text-lg font-semibold mb-1">
-                                                        {item?.asset.name}
-                                                    </h3>
+                                                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                                                        <h3 className="text-lg font-semibold">
+                                                            {item?.asset.name}
+                                                        </h3>
+                                                        {item?.asset?.family?.id &&
+                                                            item?.asset?.family?.name && (
+                                                                <Link
+                                                                    href={`/assets/families/${item.asset.family.id}`}
+                                                                >
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className="gap-1 hover:border-primary/50"
+                                                                    >
+                                                                        <ChevronRight className="w-3 h-3" />
+                                                                        {item.asset.family.name}
+                                                                    </Badge>
+                                                                </Link>
+                                                            )}
+                                                    </div>
                                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                         <span>{item?.asset.category}</span>
                                                         <span>•</span>

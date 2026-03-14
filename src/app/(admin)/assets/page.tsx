@@ -1,33 +1,13 @@
 "use client";
 
-/**
- * Asset Management Page - Industrial Warehouse Aesthetic
- * Phase 3: Asset Management & QR Code Generation
- *
- * Design Concept: "Warehouse Operations Terminal"
- * - Monospace typography for data precision
- * - Orange accent for interactive elements (warehouse safety color)
- * - Grid-based layout mimicking inventory shelving
- * - Scanning indicators and QR code visual language
- */
-
 import { useEffect, useMemo, useState } from "react";
-import { useAssets } from "@/hooks/use-assets";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import {
-    Package,
-    Plus,
-    FolderPlus,
-    Search,
-    Grid3x3,
-    List,
-    QrCode,
-    Box,
-    ChevronRight,
-    Upload,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { FolderPlus, Grid3x3, Layers3, List, Plus, Search, Upload } from "lucide-react";
+import { useAssetFamilies } from "@/hooks/use-asset-families";
+import { CreateAssetDialog } from "@/components/assets/create-asset-dialog";
+import { AdminHeader } from "@/components/admin-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -40,39 +20,109 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CreateAssetDialog } from "@/components/assets/create-asset-dialog";
-import { AdminHeader } from "@/components/admin-header";
-import { PrintQrAction } from "@/components/qr/PrintQrAction";
-import { useCompanies } from "@/hooks/use-companies";
 import { useToken } from "@/lib/auth/use-token";
 import { hasPermission } from "@/lib/auth/permissions";
 import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useCompanyFilter } from "@/contexts/company-filter-context";
 import { usePlatform } from "@/contexts/platform-context";
+import { useIsMobile } from "@/hooks/use-mobile";
+import type { AssetFamily } from "@/types/asset-family";
+
+const DEFAULT_CATEGORIES = ["Furniture", "Glassware", "Installation", "Decor"];
+
+const formatStockMode = (stockMode?: string | null) =>
+    stockMode ? stockMode.replace(/_/g, " ") : "Unknown";
+
+const formatCount = (value?: number) => (typeof value === "number" ? value : 0);
+
+function FamilyCard({ family, compact = false }: { family: AssetFamily; compact?: boolean }) {
+    const redCount = formatCount(family.condition_summary?.red);
+    const orangeCount = formatCount(family.condition_summary?.orange);
+    const stockRecordCount = formatCount(family.stock_record_count ?? family.asset_count);
+    const totalQuantity = formatCount(family.total_quantity);
+    const availableQuantity = formatCount(family.available_quantity);
+    const imageUrl = family.on_display_image || family.images[0]?.url || null;
+
+    return (
+        <Link href={`/assets/families/${family.id}`}>
+            <Card className="group h-full overflow-hidden transition-colors hover:border-primary/50">
+                <div className={`relative bg-muted ${compact ? "h-32" : "aspect-[4/3]"}`}>
+                    {imageUrl ? (
+                        <Image
+                            src={imageUrl}
+                            alt={family.name}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                        />
+                    ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                            <Layers3 className="h-10 w-10 opacity-40" />
+                        </div>
+                    )}
+                    <div className="absolute left-3 top-3 flex gap-2">
+                        <Badge variant="secondary" className="font-mono text-[10px]">
+                            {formatStockMode(family.stock_mode)}
+                        </Badge>
+                        {(redCount > 0 || orangeCount > 0) && (
+                            <Badge variant="destructive" className="font-mono text-[10px]">
+                                {redCount} red / {orangeCount} orange
+                            </Badge>
+                        )}
+                    </div>
+                </div>
+                <CardContent className="space-y-3 p-4">
+                    <div>
+                        <h3 className="line-clamp-1 font-mono text-sm font-semibold transition-colors group-hover:text-primary">
+                            {family.name}
+                        </h3>
+                        <p className="mt-1 text-xs font-mono text-muted-foreground">
+                            {family.company?.name || "Unknown company"} • {family.category}
+                        </p>
+                        {family.brand?.name && (
+                            <p className="mt-1 text-xs font-mono text-muted-foreground">
+                                Brand: {family.brand.name}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+                        <div className="rounded border border-border p-2">
+                            <div className="text-muted-foreground">Stock</div>
+                            <div className="mt-1 font-semibold">{stockRecordCount}</div>
+                        </div>
+                        <div className="rounded border border-border p-2">
+                            <div className="text-muted-foreground">Units</div>
+                            <div className="mt-1 font-semibold">{totalQuantity}</div>
+                        </div>
+                        <div className="rounded border border-border p-2">
+                            <div className="text-muted-foreground">Available</div>
+                            <div className="mt-1 font-semibold">{availableQuantity}</div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </Link>
+    );
+}
 
 export default function AssetsPage() {
     const { user } = useToken();
     const { platform } = usePlatform();
     const router = useRouter();
-    const { selectedCompanyId } = useCompanyFilter();
+    const isMobile = useIsMobile();
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
-    const [filters, setFilters] = useState({
-        category: "all",
-        condition: "all",
-        status: "all",
-        warehouse: "all",
-    });
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showMobileCreateActions, setShowMobileCreateActions] = useState(false);
     const [lastActiveBuilderId, setLastActiveBuilderId] = useState<string | null>(null);
-    const { data: companies } = useCompanies();
+    const [filters, setFilters] = useState({
+        category: "all",
+        stockMode: "all",
+    });
+
     const canCreateAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsCreate);
     const canCreateCollection = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.collectionsCreate);
     const canBulkUploadAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsBulkUpload);
     const bulkUploadEnabled = platform?.features?.enable_asset_bulk_upload === true;
-    const isMobile = useIsMobile();
 
     useEffect(() => {
         try {
@@ -89,58 +139,24 @@ export default function AssetsPage() {
         }
     }, []);
 
-    // Build query params — company filter comes from global CompanyFilter context
     const queryParams = useMemo(() => {
         const params: Record<string, string> = {};
         if (searchQuery) params.search_term = searchQuery;
-        if (filters.category && filters.category !== "all") params.category = filters.category;
-        if (filters.condition && filters.condition !== "all") params.condition = filters.condition;
-        if (filters.status && filters.status !== "all") params.status = filters.status;
-        if (filters.warehouse && filters.warehouse !== "all")
-            params.warehouse_id = filters.warehouse;
-        if (selectedCompanyId) params.company_id = selectedCompanyId;
+        if (filters.category !== "all") params.category = filters.category;
+        if (filters.stockMode !== "all") params.stock_mode = filters.stockMode;
         return params;
-    }, [searchQuery, filters, selectedCompanyId]);
+    }, [filters, searchQuery]);
 
-    // Fetch assets
-    const { data, isLoading: loading } = useAssets(queryParams);
-    const assets = data?.data || [];
-
-    function getConditionColor(condition: string) {
-        switch (condition) {
-            case "GREEN":
-                return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-            case "ORANGE":
-                return "bg-amber-500/10 text-amber-600 border-amber-500/20";
-            case "RED":
-                return "bg-red-500/10 text-red-600 border-red-500/20";
-            default:
-                return "bg-gray-500/10 text-gray-600 border-gray-500/20";
-        }
-    }
-
-    function getStatusColor(status: string) {
-        switch (status) {
-            case "AVAILABLE":
-                return "bg-primary/10 text-primary border-primary/20";
-            case "BOOKED":
-                return "bg-secondary/10 text-secondary border-secondary/20";
-            case "OUT":
-                return "bg-purple-500/10 text-purple-600 border-purple-500/20";
-            case "IN_MAINTENANCE":
-                return "bg-muted-foreground/10 text-muted-foreground border-muted-foreground/20";
-            default:
-                return "bg-gray-500/10 text-gray-600 border-gray-500/20";
-        }
-    }
+    const { data, isLoading } = useAssetFamilies(queryParams);
+    const families = data?.data || [];
 
     return (
         <div className="min-h-screen bg-background">
             <AdminHeader
-                icon={Package}
-                title="ASSET INVENTORY"
-                description="Physical Items · QR Codes · Tracking"
-                stats={data ? { label: "TOTAL ASSETS", value: data.meta.total } : undefined}
+                icon={Layers3}
+                title="ASSET FAMILIES"
+                description="Catalog Identity · Stock Overview · Physical Records"
+                stats={{ label: "TOTAL FAMILIES", value: families.length }}
                 actions={
                     canCreateAsset || (canBulkUploadAsset && bulkUploadEnabled) ? (
                         <div className="flex gap-2">
@@ -149,9 +165,9 @@ export default function AssetsPage() {
                                     variant="outline"
                                     size="lg"
                                     className="font-mono"
-                                    onClick={() => router.push("/admin/assets/bulk-upload")}
+                                    onClick={() => router.push("/assets/bulk-upload")}
                                 >
-                                    <Upload className="w-4 h-4 mr-2" />
+                                    <Upload className="mr-2 h-4 w-4" />
                                     Bulk Upload (Stub)
                                 </Button>
                             )}
@@ -159,9 +175,7 @@ export default function AssetsPage() {
                                 <CreateAssetDialog
                                     open={showCreateDialog}
                                     onOpenChange={setShowCreateDialog}
-                                    onSuccess={() => {
-                                        setShowCreateDialog(false);
-                                    }}
+                                    onSuccess={() => setShowCreateDialog(false)}
                                 />
                             )}
                         </div>
@@ -169,27 +183,24 @@ export default function AssetsPage() {
                 }
             />
 
-            <div className="max-w-[1600px] mx-auto px-6 py-8">
-                {/* Search and filters bar */}
+            <div className="mx-auto max-w-[1600px] px-6 py-8">
                 <div className="mb-6 space-y-4">
-                    <div className="flex flex-col lg:flex-row gap-4">
-                        {/* Search */}
+                    <div className="flex flex-col gap-4 lg:flex-row">
                         <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
-                                placeholder="Search assets by name..."
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10 font-mono bg-background"
+                                onChange={(event) => setSearchQuery(event.target.value)}
+                                placeholder="Search asset families..."
+                                className="bg-background pl-10 font-mono"
                             />
                         </div>
 
-                        {/* Filters */}
-                        <div className="flex gap-2 flex-wrap">
+                        <div className="flex flex-wrap gap-2">
                             <Select
                                 value={filters.category}
                                 onValueChange={(value) =>
-                                    setFilters({ ...filters, category: value })
+                                    setFilters((current) => ({ ...current, category: value }))
                                 }
                             >
                                 <SelectTrigger className="w-[160px] font-mono">
@@ -197,55 +208,38 @@ export default function AssetsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Categories</SelectItem>
-                                    <SelectItem value="Furniture">Furniture</SelectItem>
-                                    <SelectItem value="Glassware">Glassware</SelectItem>
-                                    <SelectItem value="Installation">Installation</SelectItem>
-                                    <SelectItem value="Decor">Decor</SelectItem>
+                                    {DEFAULT_CATEGORIES.map((category) => (
+                                        <SelectItem key={category} value={category}>
+                                            {category}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
 
                             <Select
-                                value={filters.condition}
+                                value={filters.stockMode}
                                 onValueChange={(value) =>
-                                    setFilters({ ...filters, condition: value })
+                                    setFilters((current) => ({ ...current, stockMode: value }))
                                 }
                             >
                                 <SelectTrigger className="w-[160px] font-mono">
-                                    <SelectValue placeholder="Condition" />
+                                    <SelectValue placeholder="Stock Mode" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Conditions</SelectItem>
-                                    <SelectItem value="GREEN">Green</SelectItem>
-                                    <SelectItem value="ORANGE">Orange</SelectItem>
-                                    <SelectItem value="RED">Red</SelectItem>
+                                    <SelectItem value="all">All Stock Modes</SelectItem>
+                                    <SelectItem value="SERIALIZED">Serialized</SelectItem>
+                                    <SelectItem value="POOLED">Pooled</SelectItem>
                                 </SelectContent>
                             </Select>
 
-                            <Select
-                                value={filters.status}
-                                onValueChange={(value) => setFilters({ ...filters, status: value })}
-                            >
-                                <SelectTrigger className="w-[160px] font-mono">
-                                    <SelectValue placeholder="Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="AVAILABLE">Available</SelectItem>
-                                    <SelectItem value="BOOKED">Booked</SelectItem>
-                                    <SelectItem value="OUT">Out</SelectItem>
-                                    <SelectItem value="IN_MAINTENANCE">Maintenance</SelectItem>
-                                </SelectContent>
-                            </Select>
-
-                            {/* View mode toggle */}
-                            <div className="flex border border-border rounded-lg overflow-hidden">
+                            <div className="flex overflow-hidden rounded-lg border border-border">
                                 <Button
                                     variant={viewMode === "grid" ? "default" : "ghost"}
                                     size="sm"
                                     onClick={() => setViewMode("grid")}
                                     className="rounded-none border-r border-border"
                                 >
-                                    <Grid3x3 className="w-4 h-4" />
+                                    <Grid3x3 className="h-4 w-4" />
                                 </Button>
                                 <Button
                                     variant={viewMode === "list" ? "default" : "ghost"}
@@ -253,208 +247,62 @@ export default function AssetsPage() {
                                     onClick={() => setViewMode("list")}
                                     className="rounded-none"
                                 >
-                                    <List className="w-4 h-4" />
+                                    <List className="h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Asset grid/list */}
-            <div className="max-w-[1600px] mx-auto px-6 py-8">
-                {loading ? (
+                {isLoading ? (
                     <div
                         className={
                             viewMode === "grid"
-                                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                                ? "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
                                 : "space-y-4"
                         }
                     >
-                        {[...Array(8)].map((_, i) => (
-                            <Card key={i} className="overflow-hidden">
-                                <Skeleton className="w-full h-48" />
-                                <CardContent className="p-4 space-y-2">
-                                    <Skeleton className="h-4 w-3/4" />
-                                    <Skeleton className="h-3 w-1/2" />
+                        {Array.from({ length: 6 }).map((_, index) => (
+                            <Card key={index} className="overflow-hidden">
+                                <Skeleton className="h-48 w-full" />
+                                <CardContent className="space-y-3 p-4">
+                                    <Skeleton className="h-4 w-1/2" />
+                                    <Skeleton className="h-3 w-2/3" />
+                                    <Skeleton className="h-16 w-full" />
                                 </CardContent>
                             </Card>
                         ))}
                     </div>
-                ) : assets.length === 0 ? (
+                ) : families.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="p-4 bg-muted/50 rounded-full mb-4">
-                            <Package className="w-12 h-12 text-muted-foreground" />
+                        <div className="mb-4 rounded-full bg-muted/50 p-4">
+                            <Layers3 className="h-12 w-12 text-muted-foreground" />
                         </div>
-                        <h3 className="text-lg font-semibold font-mono mb-2">No Assets Found</h3>
-                        <p className="text-muted-foreground font-mono text-sm mb-6 max-w-md">
-                            Create your first asset to start tracking inventory with QR codes
+                        <h3 className="mb-2 font-mono text-lg font-semibold">
+                            No asset families found
+                        </h3>
+                        <p className="mb-6 max-w-md text-sm font-mono text-muted-foreground">
+                            Family-first browsing only shows grouped catalog identity. Adjust the
+                            company/category filters or continue creating stock from the existing
+                            asset workflows.
                         </p>
-                        {canCreateAsset ? (
+                        {canCreateAsset && !isMobile ? (
                             <Button onClick={() => setShowCreateDialog(true)}>
-                                <Plus className="w-4 h-4 mr-2" />
+                                <Plus className="mr-2 h-4 w-4" />
                                 Create Asset
                             </Button>
                         ) : null}
                     </div>
                 ) : viewMode === "grid" ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {assets.map((asset) => (
-                            <Link key={asset.id} href={`/assets/${asset.id}`}>
-                                <Card className="group overflow-hidden hover:border-primary/50 transition-all duration-300 hover:shadow-lg cursor-pointer">
-                                    {/* Asset image */}
-                                    <div className="relative aspect-4/3 bg-muted overflow-hidden">
-                                        {asset.images.length > 0 ? (
-                                            <Image
-                                                src={asset.images[0].url}
-                                                alt={asset.name}
-                                                fill
-                                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                        ) : (
-                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                <Box className="w-12 h-12 text-muted-foreground/30" />
-                                            </div>
-                                        )}
-
-                                        {/* QR indicator overlay */}
-                                        <div className="absolute top-2 right-2 p-1.5 bg-background/90 backdrop-blur-sm rounded-md border border-border">
-                                            <QrCode className="w-4 h-4 text-primary" />
-                                        </div>
-
-                                        {/* Condition indicator */}
-                                        <div className="absolute bottom-2 left-2">
-                                            <Badge
-                                                variant="outline"
-                                                className={`${getConditionColor(asset.condition)} font-mono text-[10px]`}
-                                            >
-                                                {asset.condition}
-                                            </Badge>
-                                        </div>
-                                    </div>
-
-                                    <CardContent className="p-4 space-y-3">
-                                        {/* Asset name */}
-                                        <div>
-                                            <h3 className="font-semibold font-mono text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                                                {asset.name}
-                                            </h3>
-                                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                                <p className="text-xs text-muted-foreground font-mono">
-                                                    {asset.category}
-                                                </p>
-                                                {(asset as any).team && (
-                                                    <Badge
-                                                        variant="outline"
-                                                        className="text-[10px] font-mono px-1 py-0 h-4"
-                                                    >
-                                                        {(asset as any).team.name}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Status and availability */}
-                                        <div className="flex items-center justify-between text-xs font-mono">
-                                            <Badge
-                                                variant="outline"
-                                                className={`${getStatusColor(asset.status)} text-[10px]`}
-                                            >
-                                                {asset.status.replace("_", " ")}
-                                            </Badge>
-                                            <span
-                                                className="text-muted-foreground"
-                                                title="Total quantity in stock. Availability calculated per event dates."
-                                            >
-                                                {asset.total_quantity} units
-                                            </span>
-                                        </div>
-
-                                        {/* Tracking method */}
-                                        <div className="pt-2 border-t border-border flex items-center justify-between">
-                                            <span className="text-xs text-muted-foreground font-mono">
-                                                {asset.tracking_method}
-                                            </span>
-                                            <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {families.map((family) => (
+                            <FamilyCard key={family.id} family={family} />
                         ))}
                     </div>
                 ) : (
-                    <div className="gap-y-4 flex flex-col">
-                        {assets.map((asset) => (
-                            <Link key={asset.id} href={`/assets/${asset.id}`}>
-                                <Card className="group hover:border-primary/50 transition-all hover:shadow-md cursor-pointer">
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center gap-4">
-                                            {/* Thumbnail */}
-                                            <div className="relative w-20 h-20 bg-muted rounded-lg overflow-hidden shrink-0">
-                                                {asset.images.length > 0 ? (
-                                                    <Image
-                                                        src={asset.images[0].url}
-                                                        alt={asset.name}
-                                                        fill
-                                                        className="object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="absolute inset-0 flex items-center justify-center">
-                                                        <Box className="w-8 h-8 text-muted-foreground/30" />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Details */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between gap-4">
-                                                    <div>
-                                                        <h3 className="font-semibold font-mono text-sm group-hover:text-primary transition-colors">
-                                                            {asset.name}
-                                                        </h3>
-                                                        <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                                                            {asset.category} •{" "}
-                                                            {asset.tracking_method}
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2">
-                                                        <Badge
-                                                            variant="outline"
-                                                            className={`${getConditionColor(asset.condition)} font-mono text-[10px]`}
-                                                        >
-                                                            {asset.condition}
-                                                        </Badge>
-                                                        <Badge
-                                                            variant="outline"
-                                                            className={`${getStatusColor(asset.status)} font-mono text-[10px]`}
-                                                        >
-                                                            {asset.status.replace("_", " ")}
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-
-                                                <div className="mt-2 flex items-center gap-4 text-xs font-mono text-muted-foreground">
-                                                    <span>{asset.total_quantity} total</span>
-                                                    <span>•</span>
-                                                    <span>{asset.volume_per_unit}m³</span>
-                                                    <span>•</span>
-                                                    <span className="flex items-center gap-1">
-                                                        <QrCode className="w-3 h-3" />
-                                                        {asset.qr_code}
-                                                    </span>
-                                                    <PrintQrAction
-                                                        qrCode={asset.qr_code}
-                                                        assetName={asset.name}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
+                    <div className="space-y-4">
+                        {families.map((family) => (
+                            <FamilyCard key={family.id} family={family} compact />
                         ))}
                     </div>
                 )}
@@ -471,17 +319,16 @@ export default function AssetsPage() {
                         />
                     )}
 
-                    <div className="fixed right-4 bottom-24 z-40 flex flex-col items-end gap-2">
+                    <div className="fixed bottom-24 right-4 z-40 flex flex-col items-end gap-2">
                         {showMobileCreateActions && canCreateCollection && lastActiveBuilderId && (
                             <Button
                                 onClick={() => {
                                     setShowMobileCreateActions(false);
                                     router.push(`/collections/builder/${lastActiveBuilderId}`);
                                 }}
-                                className="h-12 rounded-full shadow-lg border border-primary/30 px-4 font-mono"
-                                title="Resume collection builder"
+                                className="h-12 rounded-full border border-primary/30 px-4 font-mono shadow-lg"
                             >
-                                <Grid3x3 className="w-4 h-4 mr-2" />
+                                <Grid3x3 className="mr-2 h-4 w-4" />
                                 Resume Collection Builder
                             </Button>
                         )}
@@ -492,10 +339,9 @@ export default function AssetsPage() {
                                     setShowMobileCreateActions(false);
                                     router.push("/collections/create");
                                 }}
-                                className="h-12 rounded-full shadow-lg border border-primary/30 px-4 font-mono"
-                                title="Create collection"
+                                className="h-12 rounded-full border border-primary/30 px-4 font-mono shadow-lg"
                             >
-                                <FolderPlus className="w-4 h-4 mr-2" />
+                                <FolderPlus className="mr-2 h-4 w-4" />
                                 Create Collection
                             </Button>
                         )}
@@ -510,27 +356,25 @@ export default function AssetsPage() {
                                     setShowMobileCreateActions(false);
                                     router.push("/assets/create");
                                 }}
-                                className={`shadow-lg border border-primary/30 font-mono ${
+                                className={`border border-primary/30 font-mono shadow-lg ${
                                     showMobileCreateActions
                                         ? "h-12 rounded-full px-4"
                                         : "h-14 w-14 rounded-full"
                                 }`}
-                                title={showMobileCreateActions ? "Create asset" : "Create options"}
                             >
                                 <Plus
-                                    className={`w-6 h-6 ${showMobileCreateActions ? "mr-2 w-4 h-4" : ""}`}
+                                    className={`h-6 w-6 ${showMobileCreateActions ? "mr-2 h-4 w-4" : ""}`}
                                 />
                                 {showMobileCreateActions && <span>Create Asset</span>}
                             </Button>
-                        ) : (
+                        ) : canCreateCollection ? (
                             <Button
                                 onClick={() => router.push("/collections/create")}
-                                className="h-14 w-14 rounded-full shadow-lg border border-primary/30"
-                                title="Create collection"
+                                className="h-14 w-14 rounded-full border border-primary/30 shadow-lg"
                             >
-                                <FolderPlus className="w-6 h-6" />
+                                <FolderPlus className="h-6 w-6" />
                             </Button>
-                        )}
+                        ) : null}
                     </div>
                 </>
             )}

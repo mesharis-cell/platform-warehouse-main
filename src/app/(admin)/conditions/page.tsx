@@ -98,7 +98,7 @@ export default function ItemsNeedingAttentionPage() {
     };
 
     const getStatusBadge = (status: AssetStatus) => {
-        if (status === "IN_MAINTENANCE") {
+        if (status === "MAINTENANCE") {
             return (
                 <Badge variant="secondary" className="font-mono text-xs uppercase tracking-wider">
                     In Maintenance

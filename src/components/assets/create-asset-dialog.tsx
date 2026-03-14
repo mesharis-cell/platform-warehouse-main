@@ -12,6 +12,7 @@ import { useCompanies } from "@/hooks/use-companies";
 import { useWarehouses } from "@/hooks/use-warehouses";
 import { useZones } from "@/hooks/use-zones";
 import { useBrands } from "@/hooks/use-brands";
+import { useAssetFamilies } from "@/hooks/use-asset-families";
 import { useCreateAsset, useUploadImage } from "@/hooks/use-assets";
 import {
     Plus,
@@ -114,11 +115,20 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
               }
             : undefined
     );
+    const { data: assetFamiliesData } = useAssetFamilies(
+        formData.company_id
+            ? {
+                  company_id: formData.company_id,
+                  ...(formData.brand_id ? { brand_id: formData.brand_id } : {}),
+              }
+            : undefined
+    );
 
     const companies = companiesData?.data || [];
     const warehouses = warehousesData?.data || [];
     const zones = zonesData?.data || [];
     const brands = brandsData?.data || [];
+    const assetFamilies = assetFamiliesData?.data || [];
 
     // Mutations
     const createMutation = useCreateAsset();
@@ -434,6 +444,8 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                                 setFormData({
                                                     ...formData,
                                                     company_id: value,
+                                                    brand_id: undefined,
+                                                    family_id: null,
                                                 })
                                             }
                                         >
@@ -509,6 +521,7 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                                                     setFormData({
                                                                         ...formData,
                                                                         brand_id: brand.id,
+                                                                        family_id: null,
                                                                     });
                                                                     setBrandOpen(false);
                                                                     setBrandSearch("");
@@ -527,6 +540,40 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                             </div>
                                         )}
                                     </div>
+                                </div>
+
+                                <div className="space-y-2 sm:col-span-2">
+                                    <Label className="font-mono text-xs">Asset Family</Label>
+                                    <Select
+                                        value={formData.family_id || "__none__"}
+                                        onValueChange={(value) =>
+                                            setFormData({
+                                                ...formData,
+                                                family_id: value === "__none__" ? null : value,
+                                            })
+                                        }
+                                        disabled={!formData.company_id}
+                                    >
+                                        <SelectTrigger className="font-mono">
+                                            <SelectValue
+                                                placeholder={
+                                                    !formData.company_id
+                                                        ? "Select company first"
+                                                        : assetFamilies.length === 0
+                                                          ? "No families available"
+                                                          : "Select family"
+                                                }
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__none__">No family</SelectItem>
+                                            {assetFamilies.map((family) => (
+                                                <SelectItem key={family.id} value={family.id}>
+                                                    {family.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 <div className="space-y-2">
@@ -1122,7 +1169,7 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                                     | "AVAILABLE"
                                                     | "BOOKED"
                                                     | "OUT"
-                                                    | "IN_MAINTENANCE",
+                                                    | "MAINTENANCE",
                                             })
                                         }
                                     >
@@ -1133,7 +1180,7 @@ export function CreateAssetDialog({ open, onOpenChange, onSuccess }: CreateAsset
                                             <SelectItem value="AVAILABLE">Available</SelectItem>
                                             <SelectItem value="BOOKED">Booked</SelectItem>
                                             <SelectItem value="OUT">Out</SelectItem>
-                                            <SelectItem value="IN_MAINTENANCE">
+                                            <SelectItem value="MAINTENANCE">
                                                 In Maintenance
                                             </SelectItem>
                                         </SelectContent>
