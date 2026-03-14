@@ -45,4 +45,9 @@ test("warehouse staging smoke", async ({ page }) => {
     );
     await expect(page.getByRole("heading", { name: /collection items/i })).toBeVisible();
     await expect(page.locator('a[href^="/assets/families/"]').first()).toBeVisible();
+
+    await page.goto("/conditions", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: /condition management/i })).toBeVisible();
+    await expect(page.getByTestId("condition-family-list")).toBeVisible();
+    await expect(page.getByTestId("condition-family-card").first()).toBeVisible();
 });

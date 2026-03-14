@@ -129,7 +129,7 @@ async function generateQRCode(qrCode: string): Promise<{ qrCodeImage: string }> 
 }
 
 // Hooks
-export function useAssets(params?: Record<string, string>) {
+export function useAssets(params?: Record<string, string>, options?: { enabled?: boolean }) {
     const { selectedCompanyId } = useCompanyFilter();
     const effectiveParams = useMemo(() => {
         const nextParams = { ...(params || {}) };
@@ -143,6 +143,7 @@ export function useAssets(params?: Record<string, string>) {
     return useQuery({
         queryKey: assetKeys.list(effectiveParams),
         queryFn: () => fetchAssets(effectiveParams),
+        enabled: options?.enabled ?? true,
     });
 }
 
