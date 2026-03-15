@@ -103,10 +103,12 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
     }, [asset?.qr_code]);
 
     // Handle error
-    if (error) {
-        toast.error("Failed to load asset");
-        router.push("/assets");
-    }
+    useEffect(() => {
+        if (error) {
+            toast.error("Failed to load asset");
+            router.push("/assets");
+        }
+    }, [error, router]);
 
     function downloadQRCode() {
         if (!qrCodeImage || !asset) return;
@@ -231,7 +233,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                     <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                     <h2 className="text-xl font-semibold font-mono mb-2">Asset Not Found</h2>
                     <Button asChild>
-                        <Link href="/admin/assets">
+                        <Link href="/assets">
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Back to Assets
                         </Link>
@@ -248,9 +250,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="max-w-[1400px] mx-auto px-6 py-6">
                     <div className="flex items-center justify-between mb-4">
                         <Button variant="ghost" asChild className="font-mono">
-                            <Link href="/assets">
+                            <Link href={asset.family_id || asset.familyId ? `/assets/families/${asset.family_id || asset.familyId}` : "/assets"}>
                                 <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back to Assets
+                                {asset.family_id || asset.familyId ? "Back to Family" : "Back to Assets"}
                             </Link>
                         </Button>
 
@@ -498,7 +500,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                             Length
                                         </p>
                                         <p className="text-sm font-semibold font-mono">
-                                            {asset?.dimensions?.length} cm
+                                            {asset?.dimensions?.length != null ? `${asset.dimensions.length} cm` : "—"}
                                         </p>
                                     </div>
                                     <div className="space-y-1">
@@ -506,7 +508,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                             Width
                                         </p>
                                         <p className="text-sm font-semibold font-mono">
-                                            {asset?.dimensions?.width} cm
+                                            {asset?.dimensions?.width != null ? `${asset.dimensions.width} cm` : "—"}
                                         </p>
                                     </div>
                                     <div className="space-y-1">
@@ -514,7 +516,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                             Height
                                         </p>
                                         <p className="text-sm font-semibold font-mono">
-                                            {asset?.dimensions?.height} cm
+                                            {asset?.dimensions?.height != null ? `${asset.dimensions.height} cm` : "—"}
                                         </p>
                                     </div>
                                     <div className="space-y-1">

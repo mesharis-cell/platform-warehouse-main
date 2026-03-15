@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FolderPlus, Grid3x3, Layers3, List, Plus, Search, Upload } from "lucide-react";
 import { useAssetFamilies } from "@/hooks/use-asset-families";
 import { CreateAssetDialog } from "@/components/assets/create-asset-dialog";
+import { CreateAssetFamilyDialog } from "@/components/assets/create-asset-family-dialog";
 import { AdminHeader } from "@/components/admin-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,13 +112,21 @@ export default function AssetsPage() {
     const isMobile = useIsMobile();
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [showCreateFamilyDialog, setShowCreateFamilyDialog] = useState(false);
     const [showMobileCreateActions, setShowMobileCreateActions] = useState(false);
     const [lastActiveBuilderId, setLastActiveBuilderId] = useState<string | null>(null);
     const [filters, setFilters] = useState({
         category: "all",
         stockMode: "all",
     });
+
+    const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+    useEffect(() => {
+        debounceRef.current = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+        return () => clearTimeout(debounceRef.current);
+    }, [searchQuery]);
 
     const canCreateAsset = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.assetsCreate);
     const canCreateCollection = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.collectionsCreate);
@@ -141,11 +150,11 @@ export default function AssetsPage() {
 
     const queryParams = useMemo(() => {
         const params: Record<string, string> = {};
-        if (searchQuery) params.search_term = searchQuery;
+        if (debouncedSearch) params.search_term = debouncedSearch;
         if (filters.category !== "all") params.category = filters.category;
         if (filters.stockMode !== "all") params.stock_mode = filters.stockMode;
         return params;
-    }, [filters, searchQuery]);
+    }, [filters, debouncedSearch]);
 
     const { data, isLoading } = useAssetFamilies(queryParams);
     const families = data?.data || [];
@@ -172,11 +181,18 @@ export default function AssetsPage() {
                                 </Button>
                             )}
                             {canCreateAsset && !isMobile && (
-                                <CreateAssetDialog
-                                    open={showCreateDialog}
-                                    onOpenChange={setShowCreateDialog}
-                                    onSuccess={() => setShowCreateDialog(false)}
-                                />
+                                <>
+                                    <CreateAssetFamilyDialog
+                                        open={showCreateFamilyDialog}
+                                        onOpenChange={setShowCreateFamilyDialog}
+                                        onSuccess={() => setShowCreateFamilyDialog(false)}
+                                    />
+                                    <CreateAssetDialog
+                                        open={showCreateDialog}
+                                        onOpenChange={setShowCreateDialog}
+                                        onSuccess={() => setShowCreateDialog(false)}
+                                    />
+                                </>
                             )}
                         </div>
                     ) : undefined
