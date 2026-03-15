@@ -180,7 +180,10 @@ export function EditAssetFamilyDialog({
                             <Select
                                 value={formData.brand_id || "__none__"}
                                 onValueChange={(v) =>
-                                    setFormData({ ...formData, brand_id: v === "__none__" ? null : v })
+                                    setFormData({
+                                        ...formData,
+                                        brand_id: v === "__none__" ? null : v,
+                                    })
                                 }
                             >
                                 <SelectTrigger className="font-mono">
@@ -201,7 +204,10 @@ export function EditAssetFamilyDialog({
                             <Select
                                 value={formData.team_id || "__none__"}
                                 onValueChange={(v) =>
-                                    setFormData({ ...formData, team_id: v === "__none__" ? null : v })
+                                    setFormData({
+                                        ...formData,
+                                        team_id: v === "__none__" ? null : v,
+                                    })
                                 }
                             >
                                 <SelectTrigger className="font-mono">
@@ -237,7 +243,9 @@ export function EditAssetFamilyDialog({
                                 <Button
                                     key={tag}
                                     type="button"
-                                    variant={formData.handling_tags.includes(tag) ? "default" : "outline"}
+                                    variant={
+                                        formData.handling_tags.includes(tag) ? "default" : "outline"
+                                    }
                                     size="sm"
                                     className="font-mono"
                                     onClick={() => toggleHandlingTag(tag)}
@@ -248,7 +256,11 @@ export function EditAssetFamilyDialog({
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="outline" onClick={() => onOpenChange(false)} className="font-mono">
+                        <Button
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            className="font-mono"
+                        >
                             Cancel
                         </Button>
                         <Button
@@ -256,7 +268,9 @@ export function EditAssetFamilyDialog({
                             disabled={updateMutation.isPending}
                             className="font-mono"
                         >
-                            {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {updateMutation.isPending && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
                             Save Changes
                         </Button>
                     </div>

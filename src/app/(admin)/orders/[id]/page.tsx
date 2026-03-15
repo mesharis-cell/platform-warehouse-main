@@ -338,8 +338,8 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
             const suffix =
                 formType === "AUTO"
                     ? ["AWAITING_RETURN", "RETURN_IN_TRANSIT", "CLOSED"].includes(
-                        order.data.order_status
-                    )
+                          order.data.order_status
+                      )
                         ? "goods-in"
                         : "goods-out"
                     : formType.toLowerCase().replace("_", "-");
@@ -566,14 +566,14 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
 
     const deliveryDisabledDays = eventStartDate
         ? (date: Date) =>
-            isBefore(date, startOfDay(subDays(eventStartDate, 5))) ||
-            isAfter(date, endOfDay(subDays(eventStartDate, 1)))
+              isBefore(date, startOfDay(subDays(eventStartDate, 5))) ||
+              isAfter(date, endOfDay(subDays(eventStartDate, 1)))
         : undefined;
 
     const pickupDisabledDays = eventEndDate
         ? (date: Date) =>
-            isBefore(date, startOfDay(addDays(eventEndDate, 1))) ||
-            isAfter(date, endOfDay(addDays(eventEndDate, 3)))
+              isBefore(date, startOfDay(addDays(eventEndDate, 1))) ||
+              isAfter(date, endOfDay(addDays(eventEndDate, 3)))
         : undefined;
 
     return (
@@ -715,63 +715,63 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                             {["DELIVERED", "RETURN_IN_TRANSIT"].includes(
                                                 selectedNextStatus
                                             ) && (
-                                                    <div className="space-y-2">
-                                                        <Label className="font-mono text-xs">
-                                                            {selectedNextStatus === "RETURN_IN_TRANSIT"
-                                                                ? "RETURN TRIP PHOTOS (Optional)"
-                                                                : "DELIVERY PROOF PHOTOS (Optional)"}
-                                                        </Label>
-                                                        <div className="rounded-md border border-dashed p-3 space-y-3">
-                                                            <input
-                                                                id="delivery-proof-photos"
-                                                                type="file"
-                                                                accept="image/*"
-                                                                multiple
-                                                                className="hidden"
-                                                                onChange={handleDeliveryPhotoSelect}
-                                                            />
-                                                            <label
-                                                                htmlFor="delivery-proof-photos"
-                                                                className="inline-flex items-center gap-2 text-xs font-mono px-3 py-2 border rounded cursor-pointer hover:bg-muted"
-                                                            >
-                                                                <ImagePlus className="h-3.5 w-3.5" />
-                                                                ADD DELIVERY PHOTOS
-                                                            </label>
-                                                            {deliveryPhotoPreviews.length > 0 && (
-                                                                <div className="grid grid-cols-3 gap-2">
-                                                                    {deliveryPhotoPreviews.map(
-                                                                        (preview, idx) => (
-                                                                            <div
-                                                                                key={preview}
-                                                                                className="relative aspect-square rounded border overflow-hidden"
+                                                <div className="space-y-2">
+                                                    <Label className="font-mono text-xs">
+                                                        {selectedNextStatus === "RETURN_IN_TRANSIT"
+                                                            ? "RETURN TRIP PHOTOS (Optional)"
+                                                            : "DELIVERY PROOF PHOTOS (Optional)"}
+                                                    </Label>
+                                                    <div className="rounded-md border border-dashed p-3 space-y-3">
+                                                        <input
+                                                            id="delivery-proof-photos"
+                                                            type="file"
+                                                            accept="image/*"
+                                                            multiple
+                                                            className="hidden"
+                                                            onChange={handleDeliveryPhotoSelect}
+                                                        />
+                                                        <label
+                                                            htmlFor="delivery-proof-photos"
+                                                            className="inline-flex items-center gap-2 text-xs font-mono px-3 py-2 border rounded cursor-pointer hover:bg-muted"
+                                                        >
+                                                            <ImagePlus className="h-3.5 w-3.5" />
+                                                            ADD DELIVERY PHOTOS
+                                                        </label>
+                                                        {deliveryPhotoPreviews.length > 0 && (
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                {deliveryPhotoPreviews.map(
+                                                                    (preview, idx) => (
+                                                                        <div
+                                                                            key={preview}
+                                                                            className="relative aspect-square rounded border overflow-hidden"
+                                                                        >
+                                                                            <Image
+                                                                                src={preview}
+                                                                                alt={`Delivery proof ${idx + 1}`}
+                                                                                fill
+                                                                                className="object-cover"
+                                                                            />
+                                                                            <Button
+                                                                                type="button"
+                                                                                size="icon"
+                                                                                variant="destructive"
+                                                                                className="absolute top-1 right-1 h-6 w-6"
+                                                                                onClick={() =>
+                                                                                    handleDeliveryPhotoRemove(
+                                                                                        idx
+                                                                                    )
+                                                                                }
                                                                             >
-                                                                                <Image
-                                                                                    src={preview}
-                                                                                    alt={`Delivery proof ${idx + 1}`}
-                                                                                    fill
-                                                                                    className="object-cover"
-                                                                                />
-                                                                                <Button
-                                                                                    type="button"
-                                                                                    size="icon"
-                                                                                    variant="destructive"
-                                                                                    className="absolute top-1 right-1 h-6 w-6"
-                                                                                    onClick={() =>
-                                                                                        handleDeliveryPhotoRemove(
-                                                                                            idx
-                                                                                        )
-                                                                                    }
-                                                                                >
-                                                                                    <Trash2 className="h-3 w-3" />
-                                                                                </Button>
-                                                                            </div>
-                                                                        )
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                                                <Trash2 className="h-3 w-3" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    )
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <DialogFooter>
@@ -943,7 +943,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                             order?.data?.final_pricing
                                                                 ?.quote_sent_at
                                                         ).getTime()) /
-                                                    (1000 * 60 * 60 * 24)
+                                                        (1000 * 60 * 60 * 24)
                                                 )}{" "}
                                                 days ago
                                                 {Math.floor(
@@ -952,7 +952,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                             order?.data?.final_pricing
                                                                 ?.quote_sent_at
                                                         ).getTime()) /
-                                                    (1000 * 60 * 60 * 24)
+                                                        (1000 * 60 * 60 * 24)
                                                 ) >= 2 && " - Consider following up with client"}
                                             </p>
                                         </div>
@@ -1021,54 +1021,54 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
 
                                     {(onSitePhotoPreviews.length > 0 ||
                                         (order?.data?.on_site_photos || []).length > 0) && (
-                                            <div className="space-y-2">
-                                                <p className="text-xs text-muted-foreground font-mono">
-                                                    Preview
-                                                </p>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {(order?.data?.on_site_photos || []).map(
-                                                        (photoUrl: string, index: number) => (
-                                                            <a
-                                                                key={`${photoUrl}-${index}`}
-                                                                href={photoUrl}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="relative rounded overflow-hidden border border-border bg-muted aspect-square block"
-                                                            >
-                                                                <Image
-                                                                    src={photoUrl}
-                                                                    alt={`On-site photo ${index + 1}`}
-                                                                    fill
-                                                                    className="object-cover"
-                                                                />
-                                                            </a>
-                                                        )
-                                                    )}
-                                                    {onSitePhotoPreviews.map((previewUrl, index) => (
-                                                        <div
-                                                            key={`${previewUrl}-${index}`}
-                                                            className="relative rounded overflow-hidden border border-border bg-muted aspect-square"
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-muted-foreground font-mono">
+                                                Preview
+                                            </p>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {(order?.data?.on_site_photos || []).map(
+                                                    (photoUrl: string, index: number) => (
+                                                        <a
+                                                            key={`${photoUrl}-${index}`}
+                                                            href={photoUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="relative rounded overflow-hidden border border-border bg-muted aspect-square block"
                                                         >
                                                             <Image
-                                                                src={previewUrl}
-                                                                alt={`New on-site photo ${index + 1}`}
+                                                                src={photoUrl}
+                                                                alt={`On-site photo ${index + 1}`}
                                                                 fill
                                                                 className="object-cover"
                                                             />
-                                                            <button
-                                                                type="button"
-                                                                className="absolute top-1 right-1 rounded-full bg-background/90 p-1"
-                                                                onClick={() =>
-                                                                    handleOnSitePhotoRemove(index)
-                                                                }
-                                                            >
-                                                                <Trash2 className="h-3 w-3" />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                        </a>
+                                                    )
+                                                )}
+                                                {onSitePhotoPreviews.map((previewUrl, index) => (
+                                                    <div
+                                                        key={`${previewUrl}-${index}`}
+                                                        className="relative rounded overflow-hidden border border-border bg-muted aspect-square"
+                                                    >
+                                                        <Image
+                                                            src={previewUrl}
+                                                            alt={`New on-site photo ${index + 1}`}
+                                                            fill
+                                                            className="object-cover"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="absolute top-1 right-1 rounded-full bg-background/90 p-1"
+                                                            onClick={() =>
+                                                                handleOnSitePhotoRemove(index)
+                                                            }
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        )}
+                                        </div>
+                                    )}
 
                                     <Button
                                         size="sm"
@@ -1157,165 +1157,165 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                         {["CONFIRMED", "IN_PREPARATION", "READY_FOR_DELIVERY"].includes(
                             order?.data?.order_status
                         ) && (
-                                <Card>
-                                    <CardHeader>
-                                        <div className="flex items-center justify-between">
-                                            <CardTitle className="font-mono text-sm flex items-center gap-2">
-                                                <Truck className="h-4 w-4 text-secondary" />
-                                                DELIVERY SCHEDULE
-                                            </CardTitle>
-                                            {canEditTimeWindows ? (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="font-mono text-xs"
-                                                    disabled={updateTimeWindowsLoading}
-                                                    onClick={handleTimeWindowsSave}
-                                                >
-                                                    {updateTimeWindowsLoading
-                                                        ? "SAVING..."
-                                                        : "SAVE SCHEDULE"}
-                                                </Button>
-                                            ) : null}
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3">
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="font-mono text-sm flex items-center gap-2">
+                                            <Truck className="h-4 w-4 text-secondary" />
+                                            DELIVERY SCHEDULE
+                                        </CardTitle>
                                         {canEditTimeWindows ? (
-                                            <div className="space-y-4 rounded-md border border-border p-4 bg-muted/20">
-                                                <p className="text-xs font-mono text-muted-foreground">
-                                                    Defaults auto-fill to delivery: event day -1, 08:00
-                                                    to 09:00 and pickup: event day +1, 08:00 to 09:00.
-                                                </p>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <Label className="font-mono text-xs text-muted-foreground">
-                                                            DELIVERY START
-                                                        </Label>
-                                                        <DateTimePicker
-                                                            value={timeWindows.deliveryWindowStart}
-                                                            onChange={(date) =>
-                                                                setTimeWindows((prev) => ({
-                                                                    ...prev,
-                                                                    deliveryWindowStart: date,
-                                                                }))
-                                                            }
-                                                            placeholder="Select delivery start"
-                                                            disabledDays={deliveryDisabledDays}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="font-mono text-xs text-muted-foreground">
-                                                            DELIVERY END
-                                                        </Label>
-                                                        <DateTimePicker
-                                                            value={timeWindows.deliveryWindowEnd}
-                                                            onChange={(date) =>
-                                                                setTimeWindows((prev) => ({
-                                                                    ...prev,
-                                                                    deliveryWindowEnd: date,
-                                                                }))
-                                                            }
-                                                            placeholder="Select delivery end"
-                                                            disabledDays={deliveryDisabledDays}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="font-mono text-xs text-muted-foreground">
-                                                            PICKUP START
-                                                        </Label>
-                                                        <DateTimePicker
-                                                            value={timeWindows.pickupWindowStart}
-                                                            onChange={(date) =>
-                                                                setTimeWindows((prev) => ({
-                                                                    ...prev,
-                                                                    pickupWindowStart: date,
-                                                                }))
-                                                            }
-                                                            placeholder="Select pickup start"
-                                                            disabledDays={pickupDisabledDays}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="font-mono text-xs text-muted-foreground">
-                                                            PICKUP END
-                                                        </Label>
-                                                        <DateTimePicker
-                                                            value={timeWindows.pickupWindowEnd}
-                                                            onChange={(date) =>
-                                                                setTimeWindows((prev) => ({
-                                                                    ...prev,
-                                                                    pickupWindowEnd: date,
-                                                                }))
-                                                            }
-                                                            placeholder="Select pickup end"
-                                                            disabledDays={pickupDisabledDays}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="font-mono text-xs"
+                                                disabled={updateTimeWindowsLoading}
+                                                onClick={handleTimeWindowsSave}
+                                            >
+                                                {updateTimeWindowsLoading
+                                                    ? "SAVING..."
+                                                    : "SAVE SCHEDULE"}
+                                            </Button>
                                         ) : null}
-                                        {order?.data?.delivery_window?.start ? (
-                                            <>
-                                                <div className="p-3 bg-green-500/5 border border-green-500/20 rounded">
-                                                    <Label className="font-mono text-[10px] text-muted-foreground">
-                                                        DELIVERY
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    {canEditTimeWindows ? (
+                                        <div className="space-y-4 rounded-md border border-border p-4 bg-muted/20">
+                                            <p className="text-xs font-mono text-muted-foreground">
+                                                Defaults auto-fill to delivery: event day -1, 08:00
+                                                to 09:00 and pickup: event day +1, 08:00 to 09:00.
+                                            </p>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                        DELIVERY START
                                                     </Label>
-                                                    <p className="font-mono text-xs mt-1">
-                                                        {new Date(
-                                                            order?.data?.delivery_window?.start
-                                                        ).toLocaleString("en-US", {
-                                                            month: "short",
-                                                            day: "numeric",
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        })}
-                                                        {" → "}
-                                                        {new Date(
-                                                            order?.data?.delivery_window?.end
-                                                        ).toLocaleTimeString("en-US", {
-                                                            month: "short",
-                                                            day: "numeric",
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        })}
-                                                    </p>
+                                                    <DateTimePicker
+                                                        value={timeWindows.deliveryWindowStart}
+                                                        onChange={(date) =>
+                                                            setTimeWindows((prev) => ({
+                                                                ...prev,
+                                                                deliveryWindowStart: date,
+                                                            }))
+                                                        }
+                                                        placeholder="Select delivery start"
+                                                        disabledDays={deliveryDisabledDays}
+                                                    />
                                                 </div>
-                                                <div className="p-3 bg-orange-500/5 border border-orange-500/20 rounded">
-                                                    <Label className="font-mono text-[10px] text-muted-foreground">
-                                                        PICKUP
+                                                <div className="space-y-2">
+                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                        DELIVERY END
                                                     </Label>
-                                                    <p className="font-mono text-xs mt-1">
-                                                        {new Date(
-                                                            order?.data?.pickup_window?.start
-                                                        ).toLocaleString("en-US", {
-                                                            month: "short",
-                                                            day: "numeric",
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        })}
-                                                        {" → "}
-                                                        {new Date(
-                                                            order?.data?.pickup_window?.end
-                                                        ).toLocaleString("en-US", {
-                                                            month: "short",
-                                                            day: "numeric",
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        })}
-                                                    </p>
+                                                    <DateTimePicker
+                                                        value={timeWindows.deliveryWindowEnd}
+                                                        onChange={(date) =>
+                                                            setTimeWindows((prev) => ({
+                                                                ...prev,
+                                                                deliveryWindowEnd: date,
+                                                            }))
+                                                        }
+                                                        placeholder="Select delivery end"
+                                                        disabledDays={deliveryDisabledDays}
+                                                    />
                                                 </div>
-                                            </>
-                                        ) : (
-                                            <div className="p-8 text-center bg-muted/20 rounded border-2 border-dashed">
-                                                <Clock className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                                                <p className="font-mono text-xs text-muted-foreground">
-                                                    NO SCHEDULE SET
+                                                <div className="space-y-2">
+                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                        PICKUP START
+                                                    </Label>
+                                                    <DateTimePicker
+                                                        value={timeWindows.pickupWindowStart}
+                                                        onChange={(date) =>
+                                                            setTimeWindows((prev) => ({
+                                                                ...prev,
+                                                                pickupWindowStart: date,
+                                                            }))
+                                                        }
+                                                        placeholder="Select pickup start"
+                                                        disabledDays={pickupDisabledDays}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="font-mono text-xs text-muted-foreground">
+                                                        PICKUP END
+                                                    </Label>
+                                                    <DateTimePicker
+                                                        value={timeWindows.pickupWindowEnd}
+                                                        onChange={(date) =>
+                                                            setTimeWindows((prev) => ({
+                                                                ...prev,
+                                                                pickupWindowEnd: date,
+                                                            }))
+                                                        }
+                                                        placeholder="Select pickup end"
+                                                        disabledDays={pickupDisabledDays}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : null}
+                                    {order?.data?.delivery_window?.start ? (
+                                        <>
+                                            <div className="p-3 bg-green-500/5 border border-green-500/20 rounded">
+                                                <Label className="font-mono text-[10px] text-muted-foreground">
+                                                    DELIVERY
+                                                </Label>
+                                                <p className="font-mono text-xs mt-1">
+                                                    {new Date(
+                                                        order?.data?.delivery_window?.start
+                                                    ).toLocaleString("en-US", {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })}
+                                                    {" → "}
+                                                    {new Date(
+                                                        order?.data?.delivery_window?.end
+                                                    ).toLocaleTimeString("en-US", {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })}
                                                 </p>
                                             </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            )}
+                                            <div className="p-3 bg-orange-500/5 border border-orange-500/20 rounded">
+                                                <Label className="font-mono text-[10px] text-muted-foreground">
+                                                    PICKUP
+                                                </Label>
+                                                <p className="font-mono text-xs mt-1">
+                                                    {new Date(
+                                                        order?.data?.pickup_window?.start
+                                                    ).toLocaleString("en-US", {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })}
+                                                    {" → "}
+                                                    {new Date(
+                                                        order?.data?.pickup_window?.end
+                                                    ).toLocaleString("en-US", {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })}
+                                                </p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="p-8 text-center bg-muted/20 rounded border-2 border-dashed">
+                                            <Clock className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                                            <p className="font-mono text-xs text-muted-foreground">
+                                                NO SCHEDULE SET
+                                            </p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {["CONFIRMED", "IN_PREPARATION", "READY_FOR_DELIVERY"].includes(
                             order?.data?.order_status
@@ -1432,36 +1432,36 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                     {(order.data.permit_requirements.venue_contact_name ||
                                         order.data.permit_requirements.venue_contact_email ||
                                         order.data.permit_requirements.venue_contact_phone) && (
-                                            <div className="space-y-1">
-                                                <Label className="font-mono text-xs text-muted-foreground">
-                                                    VENUE CONTACT
-                                                </Label>
-                                                {order.data.permit_requirements.venue_contact_name && (
-                                                    <p className="font-mono text-sm">
-                                                        {
-                                                            order.data.permit_requirements
-                                                                .venue_contact_name
-                                                        }
-                                                    </p>
-                                                )}
-                                                {order.data.permit_requirements.venue_contact_email && (
-                                                    <p className="font-mono text-xs text-muted-foreground">
-                                                        {
-                                                            order.data.permit_requirements
-                                                                .venue_contact_email
-                                                        }
-                                                    </p>
-                                                )}
-                                                {order.data.permit_requirements.venue_contact_phone && (
-                                                    <p className="font-mono text-xs text-muted-foreground">
-                                                        {
-                                                            order.data.permit_requirements
-                                                                .venue_contact_phone
-                                                        }
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
+                                        <div className="space-y-1">
+                                            <Label className="font-mono text-xs text-muted-foreground">
+                                                VENUE CONTACT
+                                            </Label>
+                                            {order.data.permit_requirements.venue_contact_name && (
+                                                <p className="font-mono text-sm">
+                                                    {
+                                                        order.data.permit_requirements
+                                                            .venue_contact_name
+                                                    }
+                                                </p>
+                                            )}
+                                            {order.data.permit_requirements.venue_contact_email && (
+                                                <p className="font-mono text-xs text-muted-foreground">
+                                                    {
+                                                        order.data.permit_requirements
+                                                            .venue_contact_email
+                                                    }
+                                                </p>
+                                            )}
+                                            {order.data.permit_requirements.venue_contact_phone && (
+                                                <p className="font-mono text-xs text-muted-foreground">
+                                                    {
+                                                        order.data.permit_requirements
+                                                            .venue_contact_phone
+                                                    }
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                     <div className="flex flex-wrap gap-2">
                                         {order.data.permit_requirements.requires_vehicle_docs && (
                                             <Badge
@@ -1551,14 +1551,14 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                         (sr: any) =>
                                             !["COMPLETED", "CANCELLED"].includes(sr.request_status)
                                     ) && (
-                                            <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200">
-                                                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                                                <p className="text-xs text-amber-800">
-                                                    Remember to add maintenance/repair line items to
-                                                    this order for the attached service requests.
-                                                </p>
-                                            </div>
-                                        )}
+                                        <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200">
+                                            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                                            <p className="text-xs text-amber-800">
+                                                Remember to add maintenance/repair line items to
+                                                this order for the attached service requests.
+                                            </p>
+                                        </div>
+                                    )}
                                     <div className="divide-y divide-border">
                                         {(order?.data?.linked_service_requests ?? []).map(
                                             (sr: any) => (
@@ -1582,8 +1582,8 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                                     ? "default"
                                                                     : sr.request_status ===
                                                                         "CANCELLED"
-                                                                        ? "destructive"
-                                                                        : "secondary"
+                                                                      ? "destructive"
+                                                                      : "secondary"
                                                             }
                                                             className="font-mono text-xs"
                                                         >
@@ -1626,18 +1626,18 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                             "CLOSED",
                             "PRICING_REVIEW",
                         ].includes(order?.data?.order_status) && (
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="font-mono text-sm flex items-center gap-2">
-                                            <ScanLine className="h-4 w-4 text-primary" />
-                                            SCANNING ACTIVITY
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ScanActivityTimeline orderId={order?.data?.order_id} />
-                                    </CardContent>
-                                </Card>
-                            )}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="font-mono text-sm flex items-center gap-2">
+                                        <ScanLine className="h-4 w-4 text-primary" />
+                                        SCANNING ACTIVITY
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <ScanActivityTimeline orderId={order?.data?.order_id} />
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* NEW: PRICING_REVIEW - Logistics Review Section */}
                         {order.data.order_status === "PRICING_REVIEW" && (

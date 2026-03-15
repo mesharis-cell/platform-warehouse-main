@@ -250,9 +250,19 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="max-w-[1400px] mx-auto px-6 py-6">
                     <div className="flex items-center justify-between mb-4">
                         <Button variant="ghost" asChild className="font-mono">
-                            <Link href={asset.family_id || asset.familyId ? `/assets/families/${asset.family_id || asset.familyId}` : "/assets"}>
+                            <Link
+                                href={
+                                    asset.family_id || asset.familyId
+                                        ? `/assets/families/${asset.family_id || asset.familyId}`
+                                        : "/assets"
+                                }
+                            >
                                 <ArrowLeft className="w-4 h-4 mr-2" />
-                                {asset.family_id || asset.familyId ? "Back to Family" : "Back to Assets"}
+                                {asset.family
+                                    ? (asset.family as any)?.name || "Back to Family"
+                                    : asset.family_id || asset.familyId
+                                      ? "Back to Family"
+                                      : "All Families"}
                             </Link>
                         </Button>
 
@@ -301,11 +311,26 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                 <span className="text-sm text-muted-foreground font-mono">
                                     {asset.category}
                                 </span>
-                                <span className="text-sm text-muted-foreground font-mono">•</span>
-                                <span className="text-sm text-muted-foreground font-mono">
-                                    {asset.tracking_method}
-                                </span>
-                                {asset.family_id && (
+                                {asset.family && (
+                                    <>
+                                        <span className="text-sm text-muted-foreground font-mono">
+                                            •
+                                        </span>
+                                        <Button
+                                            variant="link"
+                                            size="sm"
+                                            asChild
+                                            className="h-auto p-0 font-mono text-sm"
+                                        >
+                                            <Link
+                                                href={`/assets/families/${asset.family_id || asset.familyId}`}
+                                            >
+                                                {(asset.family as any)?.name || "View Family"}
+                                            </Link>
+                                        </Button>
+                                    </>
+                                )}
+                                {!asset.family && asset.family_id && (
                                     <>
                                         <span className="text-sm text-muted-foreground font-mono">
                                             •
@@ -500,7 +525,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                             Length
                                         </p>
                                         <p className="text-sm font-semibold font-mono">
-                                            {asset?.dimensions?.length != null ? `${asset.dimensions.length} cm` : "—"}
+                                            {asset?.dimensions?.length != null
+                                                ? `${asset.dimensions.length} cm`
+                                                : "—"}
                                         </p>
                                     </div>
                                     <div className="space-y-1">
@@ -508,7 +535,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                             Width
                                         </p>
                                         <p className="text-sm font-semibold font-mono">
-                                            {asset?.dimensions?.width != null ? `${asset.dimensions.width} cm` : "—"}
+                                            {asset?.dimensions?.width != null
+                                                ? `${asset.dimensions.width} cm`
+                                                : "—"}
                                         </p>
                                     </div>
                                     <div className="space-y-1">
@@ -516,7 +545,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                             Height
                                         </p>
                                         <p className="text-sm font-semibold font-mono">
-                                            {asset?.dimensions?.height != null ? `${asset.dimensions.height} cm` : "—"}
+                                            {asset?.dimensions?.height != null
+                                                ? `${asset.dimensions.height} cm`
+                                                : "—"}
                                         </p>
                                     </div>
                                     <div className="space-y-1">
@@ -638,7 +669,13 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                                 qrCode={asset?.qr_code}
                                                 assetName={asset?.name}
                                                 meta={
-                                                    [asset?.category, asset?.tracking_method]
+                                                    [
+                                                        asset?.category,
+                                                        (asset?.family as any)?.stock_mode?.replace(
+                                                            /_/g,
+                                                            " "
+                                                        ) || asset?.tracking_method,
+                                                    ]
                                                         .filter(Boolean)
                                                         .join(" · ") || undefined
                                                 }

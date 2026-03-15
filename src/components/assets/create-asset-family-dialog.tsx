@@ -178,7 +178,10 @@ export function CreateAssetFamilyDialog({
                             <Select
                                 value={formData.brand_id || "__none__"}
                                 onValueChange={(v) =>
-                                    setFormData({ ...formData, brand_id: v === "__none__" ? null : v })
+                                    setFormData({
+                                        ...formData,
+                                        brand_id: v === "__none__" ? null : v,
+                                    })
                                 }
                                 disabled={!formData.company_id}
                             >
@@ -235,8 +238,12 @@ export function CreateAssetFamilyDialog({
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="SERIALIZED">Serialized (one unit per record)</SelectItem>
-                                <SelectItem value="POOLED">Pooled (multiple units per record)</SelectItem>
+                                <SelectItem value="SERIALIZED">
+                                    Serialized (one unit per record)
+                                </SelectItem>
+                                <SelectItem value="POOLED">
+                                    Pooled (multiple units per record)
+                                </SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -281,7 +288,9 @@ export function CreateAssetFamilyDialog({
                                 <Button
                                     key={tag}
                                     type="button"
-                                    variant={formData.handling_tags.includes(tag) ? "default" : "outline"}
+                                    variant={
+                                        formData.handling_tags.includes(tag) ? "default" : "outline"
+                                    }
                                     size="sm"
                                     className="font-mono"
                                     onClick={() => toggleHandlingTag(tag)}
@@ -292,7 +301,11 @@ export function CreateAssetFamilyDialog({
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="outline" onClick={() => onOpenChange(false)} className="font-mono">
+                        <Button
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            className="font-mono"
+                        >
                             Cancel
                         </Button>
                         <Button

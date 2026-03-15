@@ -1,54 +1,73 @@
-import { expect, test, type Page } from "@playwright/test";
+import { test, expect, requireEnv } from "./fixtures";
 
-const logisticsEmail = process.env.LOGISTICS_EMAIL;
-const logisticsPassword = process.env.LOGISTICS_PASSWORD;
-const collectionSmokeId = process.env.WAREHOUSE_COLLECTION_SMOKE_ID;
+// ---------------------------------------------------------------------------
+// Asset Families
+// ---------------------------------------------------------------------------
 
-const requireEnv = (value: string | undefined, name: string) => {
-    if (!value) {
-        throw new Error(`Missing required Playwright env: ${name}`);
-    }
-    return value;
-};
+test.describe("Asset Families", () => {
+    test("lists families and navigates to detail", async ({ authedPage: page }) => {
+        await page.goto("/assets", { waitUntil: "domcontentloaded" });
+        await expect(page.getByRole("heading", { name: /asset families/i })).toBeVisible();
+        await expect(page.getByTestId("family-list")).toBeVisible();
 
-async function login(page: Page) {
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: /access control/i })).toBeVisible();
-    await page.getByLabel(/email address/i).fill(requireEnv(logisticsEmail, "LOGISTICS_EMAIL"));
-    await page.getByLabel(/password/i).fill(requireEnv(logisticsPassword, "LOGISTICS_PASSWORD"));
-    await page.getByRole("button", { name: /grant access/i }).click();
-    await page.waitForURL(/\/orders$/, { timeout: 60_000 });
-}
+        const firstFamilyLink = page.locator('a[href^="/assets/families/"]').first();
+        await expect(firstFamilyLink).toBeVisible();
 
-test("warehouse staging smoke", async ({ page }) => {
-    await login(page);
+        const firstFamilyName = (await firstFamilyLink.locator("h3").first().textContent())?.trim();
+        await firstFamilyLink.click();
 
-    await page.goto("/assets", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: /asset families/i })).toBeVisible();
-
-    const firstFamilyLink = page.locator('a[href^="/assets/families/"]').first();
-    await expect(firstFamilyLink).toBeVisible();
-    const firstFamilyName = (await firstFamilyLink.locator("h3").first().textContent())?.trim();
-    await firstFamilyLink.click();
-
-    await expect(page).toHaveURL(/\/assets\/families\//);
-    if (firstFamilyName) {
-        await expect(page.getByRole("heading", { name: firstFamilyName })).toBeVisible();
-    }
-    await expect(page.getByText(/stock records/i).first()).toBeVisible();
-    await expect(page.getByTestId("family-availability-stats")).toBeVisible();
-
-    await page.goto(
-        `/collections/${requireEnv(collectionSmokeId, "WAREHOUSE_COLLECTION_SMOKE_ID")}`,
-        {
-            waitUntil: "domcontentloaded",
+        await expect(page).toHaveURL(/\/assets\/families\//);
+        if (firstFamilyName) {
+            await expect(page.getByRole("heading", { name: firstFamilyName })).toBeVisible();
         }
-    );
-    await expect(page.getByRole("heading", { name: /collection items/i })).toBeVisible();
-    await expect(page.locator('a[href^="/assets/families/"]').first()).toBeVisible();
+    });
 
-    await page.goto("/conditions", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: /condition management/i })).toBeVisible();
-    await expect(page.getByTestId("condition-family-list")).toBeVisible();
-    await expect(page.getByTestId("condition-family-card").first()).toBeVisible();
+    test("family detail shows availability stats and stock records", async ({
+        authedPage: page,
+    }) => {
+        await page.goto("/assets", { waitUntil: "domcontentloaded" });
+        await page.locator('a[href^="/assets/families/"]').first().click();
+        await expect(page).toHaveURL(/\/assets\/families\//);
+
+        await expect(page.getByTestId("family-availability-stats")).toBeVisible();
+        await expect(page.getByTestId("family-stock-list")).toBeVisible();
+    });
+
+    test("family detail has action buttons", async ({ authedPage: page }) => {
+        await page.goto("/assets", { waitUntil: "domcontentloaded" });
+        await page.locator('a[href^="/assets/families/"]').first().click();
+        await expect(page).toHaveURL(/\/assets\/families\//);
+
+        await expect(page.getByTestId("family-add-stock-btn")).toBeVisible();
+        await expect(page.getByTestId("family-edit-btn")).toBeVisible();
+        await expect(page.getByTestId("family-delete-btn")).toBeVisible();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Collections
+// ---------------------------------------------------------------------------
+
+test.describe("Collections", () => {
+    test("collection detail shows items with family links", async ({ authedPage: page }) => {
+        const collectionId = requireEnv("WAREHOUSE_COLLECTION_SMOKE_ID");
+        await page.goto(`/collections/${collectionId}`, {
+            waitUntil: "domcontentloaded",
+        });
+        await expect(page.getByRole("heading", { name: /collection items/i })).toBeVisible();
+        await expect(page.locator('a[href^="/assets/families/"]').first()).toBeVisible();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Conditions
+// ---------------------------------------------------------------------------
+
+test.describe("Conditions", () => {
+    test("condition management page loads with family cards", async ({ authedPage: page }) => {
+        await page.goto("/conditions", { waitUntil: "domcontentloaded" });
+        await expect(page.getByRole("heading", { name: /condition management/i })).toBeVisible();
+        await expect(page.getByTestId("condition-family-list")).toBeVisible();
+        await expect(page.getByTestId("condition-family-card").first()).toBeVisible();
+    });
 });

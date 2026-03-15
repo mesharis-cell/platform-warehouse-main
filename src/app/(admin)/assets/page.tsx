@@ -6,8 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FolderPlus, Grid3x3, Layers3, List, Plus, Search, Upload } from "lucide-react";
 import { useAssetFamilies } from "@/hooks/use-asset-families";
-import { CreateAssetDialog } from "@/components/assets/create-asset-dialog";
-import { CreateAssetFamilyDialog } from "@/components/assets/create-asset-family-dialog";
+import { AssetWizard } from "@/components/assets/asset-wizard";
 import { AdminHeader } from "@/components/admin-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,18 +84,18 @@ function FamilyCard({ family, compact = false }: { family: AssetFamily; compact?
                         )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 text-xs font-mono">
-                        <div className="rounded border border-border p-2">
-                            <div className="text-muted-foreground">Stock</div>
-                            <div className="mt-1 font-semibold">{stockRecordCount}</div>
+                    <div className="flex items-center gap-4 text-xs font-mono pt-1">
+                        <div>
+                            <span className="text-muted-foreground">
+                                {family.stock_mode === "SERIALIZED" ? "Units " : "Total "}
+                            </span>
+                            <span className="font-semibold">{totalQuantity}</span>
                         </div>
-                        <div className="rounded border border-border p-2">
-                            <div className="text-muted-foreground">Units</div>
-                            <div className="mt-1 font-semibold">{totalQuantity}</div>
-                        </div>
-                        <div className="rounded border border-border p-2">
-                            <div className="text-muted-foreground">Available</div>
-                            <div className="mt-1 font-semibold">{availableQuantity}</div>
+                        <div>
+                            <span className="text-muted-foreground">Available </span>
+                            <span className="font-semibold text-emerald-600">
+                                {availableQuantity}
+                            </span>
                         </div>
                     </div>
                 </CardContent>
@@ -113,8 +112,9 @@ export default function AssetsPage() {
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
-    const [showCreateDialog, setShowCreateDialog] = useState(false);
-    const [showCreateFamilyDialog, setShowCreateFamilyDialog] = useState(false);
+    const [showWizard, setShowWizard] = useState(false);
+    const [page, setPage] = useState(1);
+    const ITEMS_PER_PAGE = 24;
     const [showMobileCreateActions, setShowMobileCreateActions] = useState(false);
     const [lastActiveBuilderId, setLastActiveBuilderId] = useState<string | null>(null);
     const [filters, setFilters] = useState({
@@ -149,15 +149,25 @@ export default function AssetsPage() {
     }, []);
 
     const queryParams = useMemo(() => {
-        const params: Record<string, string> = {};
+        const params: Record<string, string> = {
+            page: String(page),
+            limit: String(ITEMS_PER_PAGE),
+        };
         if (debouncedSearch) params.search_term = debouncedSearch;
         if (filters.category !== "all") params.category = filters.category;
         if (filters.stockMode !== "all") params.stock_mode = filters.stockMode;
         return params;
-    }, [filters, debouncedSearch]);
+    }, [filters, debouncedSearch, page]);
+
+    // Reset page when filters change
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch, filters]);
 
     const { data, isLoading } = useAssetFamilies(queryParams);
     const families = data?.data || [];
+    const totalFamilies = Number(data?.meta?.total || families.length);
+    const totalPages = Math.max(1, Math.ceil(totalFamilies / ITEMS_PER_PAGE));
 
     return (
         <div className="min-h-screen bg-background">
@@ -177,22 +187,14 @@ export default function AssetsPage() {
                                     onClick={() => router.push("/assets/bulk-upload")}
                                 >
                                     <Upload className="mr-2 h-4 w-4" />
-                                    Bulk Upload (Stub)
+                                    Bulk Upload
                                 </Button>
                             )}
                             {canCreateAsset && !isMobile && (
-                                <>
-                                    <CreateAssetFamilyDialog
-                                        open={showCreateFamilyDialog}
-                                        onOpenChange={setShowCreateFamilyDialog}
-                                        onSuccess={() => setShowCreateFamilyDialog(false)}
-                                    />
-                                    <CreateAssetDialog
-                                        open={showCreateDialog}
-                                        onOpenChange={setShowCreateDialog}
-                                        onSuccess={() => setShowCreateDialog(false)}
-                                    />
-                                </>
+                                <Button onClick={() => setShowWizard(true)}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Create Asset
+                                </Button>
                             )}
                         </div>
                     ) : undefined
@@ -303,26 +305,60 @@ export default function AssetsPage() {
                             asset workflows.
                         </p>
                         {canCreateAsset && !isMobile ? (
-                            <Button onClick={() => setShowCreateDialog(true)}>
+                            <Button onClick={() => setShowWizard(true)}>
                                 <Plus className="mr-2 h-4 w-4" />
                                 Create Asset
                             </Button>
                         ) : null}
                     </div>
                 ) : viewMode === "grid" ? (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div
+                        className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+                        data-testid="family-list"
+                    >
                         {families.map((family) => (
                             <FamilyCard key={family.id} family={family} />
                         ))}
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-4" data-testid="family-list">
                         {families.map((family) => (
                             <FamilyCard key={family.id} family={family} compact />
                         ))}
                     </div>
                 )}
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-6">
+                        <p className="text-sm text-muted-foreground font-mono">
+                            Showing {families.length} of {totalFamilies}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={page <= 1}
+                                onClick={() => setPage((p) => p - 1)}
+                            >
+                                Previous
+                            </Button>
+                            <span className="text-sm font-mono text-muted-foreground">
+                                Page {page} of {totalPages}
+                            </span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={page >= totalPages}
+                                onClick={() => setPage((p) => p + 1)}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
+
+            <AssetWizard open={showWizard} onOpenChange={setShowWizard} />
 
             {isMobile && (canCreateAsset || canCreateCollection) && (
                 <>
@@ -370,7 +406,7 @@ export default function AssetsPage() {
                                         return;
                                     }
                                     setShowMobileCreateActions(false);
-                                    router.push("/assets/create");
+                                    setShowWizard(true);
                                 }}
                                 className={`border border-primary/30 font-mono shadow-lg ${
                                     showMobileCreateActions
