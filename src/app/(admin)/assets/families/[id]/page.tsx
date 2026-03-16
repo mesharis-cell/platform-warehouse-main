@@ -529,7 +529,6 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
                 description="Are you sure? This only works if no inventory is linked to this family."
                 confirmText="Delete"
                 onConfirm={handleDelete}
-                loading={deleteMutation.isPending}
                 variant="destructive"
             />
 

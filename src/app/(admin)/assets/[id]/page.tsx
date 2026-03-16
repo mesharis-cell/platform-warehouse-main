@@ -252,15 +252,15 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                         <Button variant="ghost" asChild className="font-mono">
                             <Link
                                 href={
-                                    asset.family_id || asset.familyId
-                                        ? `/assets/families/${asset.family_id || asset.familyId}`
+                                    (asset as any).family_id || (asset as any).familyId
+                                        ? `/assets/families/${(asset as any).family_id || (asset as any).familyId}`
                                         : "/assets"
                                 }
                             >
                                 <ArrowLeft className="w-4 h-4 mr-2" />
-                                {asset.family
-                                    ? (asset.family as any)?.name || "Back to Family"
-                                    : asset.family_id || asset.familyId
+                                {(asset as any).family
+                                    ? ((asset as any).family as any)?.name || "Back to Family"
+                                    : (asset as any).family_id || (asset as any).familyId
                                       ? "Back to Family"
                                       : "All Families"}
                             </Link>
@@ -311,7 +311,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                 <span className="text-sm text-muted-foreground font-mono">
                                     {asset.category}
                                 </span>
-                                {asset.family && (
+                                {(asset as any).family && (
                                     <>
                                         <span className="text-sm text-muted-foreground font-mono">
                                             •
@@ -323,14 +323,15 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                             className="h-auto p-0 font-mono text-sm"
                                         >
                                             <Link
-                                                href={`/assets/families/${asset.family_id || asset.familyId}`}
+                                                href={`/assets/families/${(asset as any).family_id || (asset as any).familyId}`}
                                             >
-                                                {(asset.family as any)?.name || "View Family"}
+                                                {((asset as any).family as any)?.name ||
+                                                    "View Family"}
                                             </Link>
                                         </Button>
                                     </>
                                 )}
-                                {!asset.family && asset.family_id && (
+                                {!(asset as any).family && (asset as any).family_id && (
                                     <>
                                         <span className="text-sm text-muted-foreground font-mono">
                                             •
@@ -341,7 +342,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                             asChild
                                             className="h-auto p-0 font-mono text-sm"
                                         >
-                                            <Link href={`/assets/families/${asset.family_id}`}>
+                                            <Link
+                                                href={`/assets/families/${(asset as any).family_id}`}
+                                            >
                                                 View Family
                                             </Link>
                                         </Button>
@@ -671,10 +674,10 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                                 meta={
                                                     [
                                                         asset?.category,
-                                                        (asset?.family as any)?.stock_mode?.replace(
-                                                            /_/g,
-                                                            " "
-                                                        ) || asset?.tracking_method,
+                                                        (
+                                                            (asset as any)?.family as any
+                                                        )?.stock_mode?.replace(/_/g, " ") ||
+                                                            asset?.tracking_method,
                                                     ]
                                                         .filter(Boolean)
                                                         .join(" · ") || undefined

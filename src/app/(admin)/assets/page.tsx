@@ -166,7 +166,7 @@ export default function AssetsPage() {
 
     const { data, isLoading } = useAssetFamilies(queryParams);
     const families = data?.data || [];
-    const totalFamilies = Number(data?.meta?.total || families.length);
+    const totalFamilies = Number((data as any)?.meta?.total || families.length);
     const totalPages = Math.max(1, Math.ceil(totalFamilies / ITEMS_PER_PAGE));
 
     return (
