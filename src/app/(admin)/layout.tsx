@@ -71,6 +71,7 @@ type NavItem = {
     icon: React.ComponentType<{ className?: string }>;
     badge?: string;
     requiredAnyPermission?: readonly string[];
+    requiredFeature?: string;
 };
 
 type NavSection = {
@@ -99,18 +100,21 @@ const navigationSections: NavSection[] = [
                 href: "/service-requests",
                 icon: ClipboardList,
                 requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.serviceRequests,
+                requiredFeature: "enable_service_requests",
             },
             {
                 name: "Workflow Inbox",
                 href: "/workflow-inbox",
                 icon: Workflow,
                 requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.serviceRequests,
+                requiredFeature: "enable_workflows",
             },
             {
                 name: "New Stock Requests",
                 href: "/inbound-request",
                 icon: Package,
                 requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.inboundRequest,
+                requiredFeature: "enable_inbound_requests",
             },
             {
                 name: "Scanning",
@@ -123,6 +127,7 @@ const navigationSections: NavSection[] = [
                 href: "/event-calendar",
                 icon: Calendar,
                 requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.eventCalendar,
+                requiredFeature: "enable_event_calendar",
             },
             {
                 name: "Reports & Exports",
@@ -210,6 +215,7 @@ const mobileTabs: NavItem[] = [
         href: "/service-requests",
         icon: ClipboardList,
         requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.serviceRequests,
+        requiredFeature: "enable_service_requests",
     },
 ];
 
@@ -220,6 +226,8 @@ function AdminSidebarContent() {
     const { logout, user } = useToken();
     const { platform } = usePlatform();
     const { data: pricingReviewCount } = useOrderStatusCount("PRICING_REVIEW");
+    const isFeatureEnabled = (featureKey?: string) =>
+        !featureKey || platform?.features?.[featureKey as keyof typeof platform.features] === true;
 
     const handleSignOut = () => {
         logout();
@@ -234,8 +242,9 @@ function AdminSidebarContent() {
             items: section.items
                 .filter(
                     (item) =>
-                        !item.requiredAnyPermission ||
-                        hasAnyPermission(user, item.requiredAnyPermission)
+                        isFeatureEnabled(item.requiredFeature) &&
+                        (!item.requiredAnyPermission ||
+                            hasAnyPermission(user, item.requiredAnyPermission))
                 )
                 .map((item) => ({
                     ...item,
@@ -444,8 +453,13 @@ function AdminSidebarContent() {
 function MobileBottomTabs() {
     const pathname = usePathname();
     const { user } = useToken();
+    const { platform } = usePlatform();
+    const isFeatureEnabled = (featureKey?: string) =>
+        !featureKey || platform?.features?.[featureKey as keyof typeof platform.features] === true;
     const visibleTabs = mobileTabs.filter(
-        (item) => !item.requiredAnyPermission || hasAnyPermission(user, item.requiredAnyPermission)
+        (item) =>
+            isFeatureEnabled(item.requiredFeature) &&
+            (!item.requiredAnyPermission || hasAnyPermission(user, item.requiredAnyPermission))
     );
 
     if (visibleTabs.length === 0) return null;
