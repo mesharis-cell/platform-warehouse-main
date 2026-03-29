@@ -132,7 +132,8 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
             return;
         }
 
-        const sourceAsset = inventory.find((asset) => asset.id === quickAddSourceId) || inventory[0];
+        const sourceAsset =
+            inventory.find((asset) => asset.id === quickAddSourceId) || inventory[0];
         if (!sourceAsset) {
             toast.error("Select a source stock record first");
             return;
