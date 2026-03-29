@@ -67,6 +67,11 @@ interface CreateAssetDialogProps {
     onOpenChange: (open: boolean) => void;
     onSuccess?: () => void;
     defaultFamilyId?: string;
+    lockFamilyId?: string;
+    showTrigger?: boolean;
+    title?: string;
+    description?: string;
+    submitLabel?: string;
 }
 
 export function CreateAssetDialog({
@@ -74,6 +79,11 @@ export function CreateAssetDialog({
     onOpenChange,
     onSuccess,
     defaultFamilyId,
+    lockFamilyId,
+    showTrigger = true,
+    title = "Create New Asset",
+    description = "Add new inventory item with QR code generation",
+    submitLabel = "Create Asset",
 }: CreateAssetDialogProps) {
     const [currentStep, setCurrentStep] = useState(0);
     const [formData, setFormData] = useState<Partial<CreateAssetRequest>>({
@@ -83,7 +93,7 @@ export function CreateAssetDialog({
         images: [],
         handling_tags: [],
         condition: "GREEN",
-        family_id: defaultFamilyId || undefined,
+        family_id: lockFamilyId || defaultFamilyId || undefined,
         status: "AVAILABLE",
         dimensions: {},
     });
@@ -143,6 +153,15 @@ export function CreateAssetDialog({
 
     // Fetch selected family details for auto-prefill
     const { data: selectedFamilyData } = useAssetFamily(formData.family_id || "");
+
+    useEffect(() => {
+        if (!open) return;
+        if (!lockFamilyId) return;
+        setFormData((prev) => ({
+            ...prev,
+            family_id: lockFamilyId,
+        }));
+    }, [lockFamilyId, open]);
 
     // Auto-prefill fields when a family is selected
     useEffect(() => {
@@ -405,20 +424,22 @@ export function CreateAssetDialog({
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogTrigger asChild>
-                    <Button size="lg" className="font-mono">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Asset
-                    </Button>
-                </DialogTrigger>
+                {showTrigger && (
+                    <DialogTrigger asChild>
+                        <Button size="lg" className="font-mono">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Asset
+                        </Button>
+                    </DialogTrigger>
+                )}
                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="font-mono text-xl flex items-center gap-2">
                             <Package className="w-5 h-5 text-primary" />
-                            Create New Asset
+                            {title}
                         </DialogTitle>
                         <DialogDescription className="font-mono text-xs">
-                            Add new inventory item with QR code generation
+                            {description}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -485,9 +506,10 @@ export function CreateAssetDialog({
                                                     ...formData,
                                                     company_id: value,
                                                     brand_id: undefined,
-                                                    family_id: null,
+                                                    family_id: lockFamilyId || null,
                                                 })
                                             }
+                                            disabled={Boolean(lockFamilyId)}
                                         >
                                             <SelectTrigger className="font-mono">
                                                 <SelectValue placeholder="Select company" />
@@ -511,7 +533,7 @@ export function CreateAssetDialog({
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            disabled={!formData.company_id}
+                                            disabled={!formData.company_id || Boolean(lockFamilyId)}
                                             onClick={() =>
                                                 formData.company_id && setBrandOpen((o) => !o)
                                             }
@@ -561,7 +583,7 @@ export function CreateAssetDialog({
                                                                     setFormData({
                                                                         ...formData,
                                                                         brand_id: brand.id,
-                                                                        family_id: null,
+                                                                        family_id: lockFamilyId || null,
                                                                     });
                                                                     setBrandOpen(false);
                                                                     setBrandSearch("");
@@ -589,10 +611,15 @@ export function CreateAssetDialog({
                                         onValueChange={(value) =>
                                             setFormData({
                                                 ...formData,
-                                                family_id: value === "__none__" ? null : value,
+                                                family_id:
+                                                    lockFamilyId
+                                                        ? lockFamilyId
+                                                        : value === "__none__"
+                                                          ? null
+                                                          : value,
                                             })
                                         }
-                                        disabled={!formData.company_id}
+                                        disabled={!formData.company_id || Boolean(lockFamilyId)}
                                     >
                                         <SelectTrigger className="font-mono">
                                             <SelectValue
@@ -614,6 +641,12 @@ export function CreateAssetDialog({
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    {lockFamilyId && (
+                                        <p className="text-xs text-muted-foreground">
+                                            This stock record will stay linked to the current
+                                            family.
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="space-y-2">
@@ -1280,7 +1313,7 @@ export function CreateAssetDialog({
                                 ) : (
                                     <>
                                         <Check className="w-4 h-4 mr-2" />
-                                        Create Asset
+                                        {submitLabel}
                                     </>
                                 )}
                             </Button>
