@@ -583,7 +583,8 @@ export function CreateAssetDialog({
                                                                     setFormData({
                                                                         ...formData,
                                                                         brand_id: brand.id,
-                                                                        family_id: lockFamilyId || null,
+                                                                        family_id:
+                                                                            lockFamilyId || null,
                                                                     });
                                                                     setBrandOpen(false);
                                                                     setBrandSearch("");
@@ -611,12 +612,11 @@ export function CreateAssetDialog({
                                         onValueChange={(value) =>
                                             setFormData({
                                                 ...formData,
-                                                family_id:
-                                                    lockFamilyId
-                                                        ? lockFamilyId
-                                                        : value === "__none__"
-                                                          ? null
-                                                          : value,
+                                                family_id: lockFamilyId
+                                                    ? lockFamilyId
+                                                    : value === "__none__"
+                                                      ? null
+                                                      : value,
                                             })
                                         }
                                         disabled={!formData.company_id || Boolean(lockFamilyId)}
