@@ -10,6 +10,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCollection } from "@/hooks/use-collections";
 import Image from "next/image";
 
+const getAssetImageUrl = (images: unknown): string | null => {
+    if (!Array.isArray(images) || images.length === 0) return null;
+    const firstImage = images[0];
+    if (typeof firstImage === "string") return firstImage;
+    if (
+        firstImage &&
+        typeof firstImage === "object" &&
+        "url" in firstImage &&
+        typeof firstImage.url === "string"
+    ) {
+        return firstImage.url;
+    }
+    return null;
+};
+
 export default function CollectionBuilderPage() {
     const params = useParams();
     const collectionId = params?.id as string;
@@ -142,9 +157,9 @@ export default function CollectionBuilderPage() {
                                             className="h-full rounded-lg border border-border overflow-hidden bg-card hover:border-primary/40 transition-colors"
                                         >
                                             <div className="h-[130px] bg-muted relative">
-                                                {item?.asset?.images?.[0]?.url ? (
+                                                {getAssetImageUrl(item?.asset?.images) ? (
                                                     <Image
-                                                        src={item.asset.images[0].url}
+                                                        src={getAssetImageUrl(item?.asset?.images)!}
                                                         alt={item.asset?.name || "Asset"}
                                                         fill
                                                         className="object-cover"
@@ -161,6 +176,11 @@ export default function CollectionBuilderPage() {
                                                         item?.asset_name ||
                                                         "Asset"}
                                                 </p>
+                                                {item?.asset?.family?.name && (
+                                                    <p className="mt-1 text-[10px] text-muted-foreground line-clamp-1">
+                                                        Family: {item.asset.family.name}
+                                                    </p>
+                                                )}
                                                 <p className="text-[11px] text-muted-foreground mt-1">
                                                     Qty default: {item.default_quantity || 1}
                                                 </p>

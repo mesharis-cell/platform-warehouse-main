@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Asset, AssetsDetails, AssetWithDetails, CreateAssetRequest } from "@/types/asset";
+import { assetFamilyKeys } from "@/hooks/use-asset-families";
 import { apiClient } from "@/lib/api/api-client";
 import { throwApiError } from "@/lib/utils/throw-api-error";
 import { useCompanyFilter } from "@/contexts/company-filter-context";
@@ -128,7 +129,7 @@ async function generateQRCode(qrCode: string): Promise<{ qrCodeImage: string }> 
 }
 
 // Hooks
-export function useAssets(params?: Record<string, string>) {
+export function useAssets(params?: Record<string, string>, options?: { enabled?: boolean }) {
     const { selectedCompanyId } = useCompanyFilter();
     const effectiveParams = useMemo(() => {
         const nextParams = { ...(params || {}) };
@@ -142,6 +143,7 @@ export function useAssets(params?: Record<string, string>) {
     return useQuery({
         queryKey: assetKeys.list(effectiveParams),
         queryFn: () => fetchAssets(effectiveParams),
+        enabled: options?.enabled ?? true,
     });
 }
 
@@ -180,6 +182,7 @@ export function useCreateAsset() {
         mutationFn: createAsset,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: assetKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: assetFamilyKeys.all });
         },
     });
 }
@@ -205,6 +208,7 @@ export function useUpdateAsset() {
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: assetKeys.lists() });
             queryClient.invalidateQueries({ queryKey: assetKeys.detail(variables.id) });
+            queryClient.invalidateQueries({ queryKey: assetFamilyKeys.all });
         },
     });
 }
@@ -218,6 +222,7 @@ export function useAddAssetUnits() {
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: assetKeys.lists() });
             queryClient.invalidateQueries({ queryKey: assetKeys.detail(variables.id) });
+            queryClient.invalidateQueries({ queryKey: assetFamilyKeys.all });
         },
     });
 }
@@ -229,6 +234,7 @@ export function useDeleteAsset() {
         mutationFn: deleteAsset,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: assetKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: assetFamilyKeys.all });
         },
     });
 }

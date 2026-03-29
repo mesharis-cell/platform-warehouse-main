@@ -221,7 +221,7 @@ export interface InboundScanResponse {
         expectedQuantity: number;
         remainingQuantity: number;
         condition: "GREEN" | "ORANGE" | "RED";
-        status: "AVAILABLE" | "IN_MAINTENANCE"; // GREEN/ORANGE → AVAILABLE, RED → IN_MAINTENANCE
+        status: "AVAILABLE" | "MAINTENANCE"; // GREEN/ORANGE → AVAILABLE, RED → MAINTENANCE
     };
     progress: ScanProgress;
 }
@@ -309,7 +309,7 @@ export interface InventoryAvailabilityParams {
     company?: string; // Filter by company UUID
     warehouse?: string; // Filter by warehouse UUID
     zone?: string; // Filter by zone UUID
-    status?: "AVAILABLE" | "BOOKED" | "OUT" | "IN_MAINTENANCE";
+    status?: "AVAILABLE" | "BOOKED" | "OUT" | "MAINTENANCE";
 }
 
 export interface AssetAvailability {
@@ -333,7 +333,7 @@ export interface AssetAvailability {
     bookedQuantity: number;
     outQuantity: number;
     inMaintenanceQuantity: number;
-    status: "AVAILABLE" | "BOOKED" | "OUT" | "IN_MAINTENANCE";
+    status: "AVAILABLE" | "BOOKED" | "OUT" | "MAINTENANCE";
     lastScannedAt: Date | null;
     lastScannedBy: {
         userId: string;

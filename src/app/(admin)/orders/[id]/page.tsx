@@ -1140,6 +1140,18 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                 </CardContent>
                             </Card>
                         )}
+                        {order?.data?.po_number && (
+                            <Card className="border border-border/60 bg-card/60">
+                                <CardContent className="pt-6">
+                                    <Label className="font-mono text-xs text-muted-foreground">
+                                        CLIENT PO NUMBER
+                                    </Label>
+                                    <p className="mt-2 font-mono text-lg font-bold">
+                                        {order.data.po_number}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Delivery Schedule Card - Show for CONFIRMED+ states */}
                         {["CONFIRMED", "IN_PREPARATION", "READY_FOR_DELIVERY"].includes(
@@ -1543,8 +1555,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                             <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                                             <p className="text-xs text-amber-800">
                                                 Remember to add maintenance/repair line items to
-                                                this order to cover the cost of these service
-                                                requests.
+                                                this order for the attached service requests.
                                             </p>
                                         </div>
                                     )}

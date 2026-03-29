@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCreateAsset } from "@/hooks/use-assets";
+import { useAssetFamilies } from "@/hooks/use-asset-families";
 import { useAddCollectionItem, useCollection, useUpdateCollection } from "@/hooks/use-collections";
 import { useCompanies } from "@/hooks/use-companies";
 import { useWarehouses } from "@/hooks/use-warehouses";
@@ -146,6 +147,14 @@ export default function MobileCreateAssetPage() {
     const { data: teamsResponse } = useTeams(
         formData.company_id ? { company_id: formData.company_id } : undefined
     );
+    const { data: assetFamiliesResponse } = useAssetFamilies(
+        formData.company_id
+            ? {
+                  company_id: formData.company_id,
+                  brand_id: formData.brand_id || undefined,
+              }
+            : undefined
+    );
 
     const createAsset = useCreateAsset();
     const addCollectionItem = useAddCollectionItem(collectionId || "");
@@ -217,6 +226,14 @@ export default function MobileCreateAssetPage() {
     const zones = zonesResponse?.data || [];
     const brands = brandsResponse?.data || [];
     const teams = teamsResponse?.data || [];
+    const assetFamilies = useMemo(() => {
+        const families = assetFamiliesResponse?.data || [];
+        return families.filter(
+            (family) =>
+                family.brand_id === (formData.brand_id ?? null) &&
+                (family.team_id ?? null) === (formData.team_id ?? null)
+        );
+    }, [assetFamiliesResponse?.data, formData.brand_id, formData.team_id]);
     const collectionIdentityIncomplete =
         isCollectionFlow && Boolean(collection) && !collection.brand_id;
 
@@ -228,6 +245,7 @@ export default function MobileCreateAssetPage() {
             company_id: collection.company_id,
             brand_id: collection.brand_id ?? undefined,
             team_id: collection.team_id ?? null,
+            family_id: undefined,
         }));
         setTeamSelected(true);
     }, [
@@ -427,6 +445,7 @@ export default function MobileCreateAssetPage() {
                 warehouse_id: formData.warehouse_id,
                 zone_id: formData.zone_id,
                 brand_id: lockedBrandId,
+                family_id: formData.family_id ?? null,
                 team_id: lockedTeamId,
                 name: formData.name || "",
                 description: formData.description,
@@ -548,6 +567,7 @@ export default function MobileCreateAssetPage() {
                                     team_id: isCollectionFlow
                                         ? (collection?.team_id ?? null)
                                         : undefined,
+                                    family_id: undefined,
                                     tracking_method: "INDIVIDUAL",
                                     total_quantity: 1,
                                     available_quantity: 1,
@@ -603,6 +623,7 @@ export default function MobileCreateAssetPage() {
                                             ...prev,
                                             company_id: value,
                                             brand_id: undefined,
+                                            family_id: undefined,
                                             warehouse_id: undefined,
                                             zone_id: undefined,
                                         }))
@@ -729,6 +750,7 @@ export default function MobileCreateAssetPage() {
                                                                     setFormData((prev) => ({
                                                                         ...prev,
                                                                         brand_id: b.id,
+                                                                        family_id: undefined,
                                                                     }));
                                                                     setBrandOpen(false);
                                                                     setBrandSearch("");
@@ -921,6 +943,42 @@ export default function MobileCreateAssetPage() {
                             </div>
 
                             <div className="space-y-2">
+                                <Label>Asset Family</Label>
+                                <Select
+                                    value={formData.family_id || "_none_"}
+                                    disabled={!formData.brand_id}
+                                    onValueChange={(value) =>
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            family_id: value === "_none_" ? null : value,
+                                        }))
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue
+                                            placeholder={
+                                                !formData.brand_id
+                                                    ? "Select brand first"
+                                                    : "Select family"
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="_none_">No family</SelectItem>
+                                        {assetFamilies.map((family) => (
+                                            <SelectItem key={family.id} value={family.id}>
+                                                {family.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    Optional. Use this when the stock record belongs to an existing
+                                    asset family.
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
                                 <Label>Description</Label>
                                 <Textarea
                                     value={formData.description || ""}
@@ -961,6 +1019,7 @@ export default function MobileCreateAssetPage() {
                                                 setFormData((prev) => ({
                                                     ...prev,
                                                     team_id: value === "_none_" ? null : value,
+                                                    family_id: undefined,
                                                 }));
                                             }}
                                         >

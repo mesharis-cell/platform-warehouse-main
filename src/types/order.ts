@@ -166,7 +166,7 @@ export interface OrderItemWithAsset extends OrderItem {
         category: string;
         qrCode: string;
         trackingMethod: "INDIVIDUAL" | "BATCH";
-        status: "AVAILABLE" | "BOOKED" | "OUT" | "IN_MAINTENANCE";
+        status: "AVAILABLE" | "BOOKED" | "OUT" | "MAINTENANCE";
     };
 }
 
@@ -563,6 +563,7 @@ export interface APIOrder {
     brand: string | null;
     created_by: string;
     job_number: string | null;
+    po_number: string | null;
     contact_name: string;
     contact_email: string;
     contact_phone: string;

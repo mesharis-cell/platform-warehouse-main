@@ -42,7 +42,7 @@ export const LogisticsPricing = ({
                     <CardTitle className="">📋 Pricing Review</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                         Review the order details, add service line items if needed, and submit to
                         Admin for approval.
                     </p>
