@@ -11,6 +11,7 @@ import {
     Edit,
     Trash2,
     Plus,
+    CopyPlus,
     Ruler,
     Weight,
     Box,
@@ -25,7 +26,8 @@ import {
 import { useAssetFamilyAvailabilityStats } from "@/hooks/use-asset-family-availability-stats";
 import { useAssetFamily, useDeleteAssetFamily } from "@/hooks/use-asset-families";
 import { EditAssetFamilyDialog } from "@/components/assets/edit-asset-family-dialog";
-import { useAssets } from "@/hooks/use-assets";
+import { CreateAssetDialog } from "@/components/assets/create-asset-dialog";
+import { useAddAssetUnits, useAssets, useCreateAsset } from "@/hooks/use-assets";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,8 +36,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { AssetWizard } from "@/components/assets/asset-wizard";
 import type { Asset } from "@/types/asset";
 
 const formatCount = (value?: number) => (typeof value === "number" ? value : 0);
@@ -62,6 +71,9 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [showCreateAsset, setShowCreateAsset] = useState(false);
+    const [showQuickAdd, setShowQuickAdd] = useState(false);
+    const [quickAddSourceId, setQuickAddSourceId] = useState("");
+    const [quickAddQuantity, setQuickAddQuantity] = useState("1");
     const [inventorySearch, setInventorySearch] = useState("");
 
     const { data: familyResponse, isLoading: familyLoading } = useAssetFamily(id);
@@ -73,6 +85,8 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
     );
     const inventory: Asset[] = stockResponse?.data || [];
     const deleteMutation = useDeleteAssetFamily();
+    const addUnitsMutation = useAddAssetUnits();
+    const createAssetMutation = useCreateAsset();
 
     const images = family?.images || [];
     const hasImages = images.length > 0;
@@ -86,6 +100,8 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
         family?.packaging;
 
     const isSerialized = family?.stock_mode === "SERIALIZED";
+
+    const quickAddSource = inventory.find((asset) => asset.id === quickAddSourceId) || inventory[0];
 
     const filtered = inventory.filter((asset) => {
         if (!inventorySearch) return true;
@@ -106,6 +122,63 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
             router.push("/assets");
         } catch {
             toast.error("Failed to delete family");
+        }
+    }
+
+    async function handleQuickAdd() {
+        const quantity = Number(quickAddQuantity);
+        if (!Number.isInteger(quantity) || quantity < 1) {
+            toast.error("Quantity must be at least 1");
+            return;
+        }
+
+        const sourceAsset = inventory.find((asset) => asset.id === quickAddSourceId) || inventory[0];
+        if (!sourceAsset) {
+            toast.error("Select a source stock record first");
+            return;
+        }
+
+        try {
+            if (isSerialized) {
+                const response = await addUnitsMutation.mutateAsync({
+                    id: sourceAsset.id,
+                    quantity,
+                });
+                const createdCount = response?.data?.created_count ?? quantity;
+                toast.success(`${createdCount} unit${createdCount > 1 ? "s" : ""} added`);
+            } else {
+                await createAssetMutation.mutateAsync({
+                    family_id: family.id,
+                    company_id: sourceAsset.company.id,
+                    brand_id: sourceAsset.brand?.id,
+                    warehouse_id: sourceAsset.warehouse.id,
+                    zone_id: sourceAsset.zone.id,
+                    name: sourceAsset.name,
+                    description: sourceAsset.description,
+                    category: sourceAsset.category,
+                    images: sourceAsset.images || [],
+                    tracking_method: "BATCH",
+                    total_quantity: quantity,
+                    available_quantity: quantity,
+                    packaging: sourceAsset.packaging,
+                    weight_per_unit: Number(sourceAsset.weight_per_unit),
+                    dimensions: sourceAsset.dimensions || {},
+                    volume_per_unit: Number(sourceAsset.volume_per_unit),
+                    condition: sourceAsset.condition,
+                    condition_notes: (sourceAsset as any).condition_notes,
+                    refurb_days_estimate: sourceAsset.refurb_days_estimate || undefined,
+                    team_id: sourceAsset.team_id || null,
+                    handling_tags: sourceAsset.handling_tags || [],
+                    status: sourceAsset.status,
+                } as any);
+                toast.success("Inventory duplicated under this family");
+            }
+
+            setShowQuickAdd(false);
+            setQuickAddQuantity("1");
+            setQuickAddSourceId("");
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to add stock");
         }
     }
 
@@ -423,6 +496,21 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
                                 data-testid="family-add-stock-btn"
                             >
                                 <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                New Stock Record
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="font-mono"
+                                onClick={() => {
+                                    setQuickAddSourceId(inventory[0]?.id || "");
+                                    setQuickAddQuantity("1");
+                                    setShowQuickAdd(true);
+                                }}
+                                disabled={inventory.length === 0}
+                                data-testid="family-quick-add-btn"
+                            >
+                                <CopyPlus className="h-3.5 w-3.5 mr-1.5" />
                                 {isSerialized ? "Add Units" : "Add Inventory"}
                             </Button>
                         </div>
@@ -538,11 +626,95 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
                 onOpenChange={setShowEditDialog}
             />
 
-            <AssetWizard
+            <CreateAssetDialog
                 open={showCreateAsset}
                 onOpenChange={setShowCreateAsset}
-                preselectedFamilyId={family.id}
+                onSuccess={() => setShowCreateAsset(false)}
+                defaultFamilyId={family.id}
+                lockFamilyId={family.id}
+                showTrigger={false}
+                title="Create New Stock Record"
+                description="Create a new stock record under this family. The family stays fixed."
+                submitLabel="Create Stock Record"
             />
+
+            <Dialog open={showQuickAdd} onOpenChange={setShowQuickAdd}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="font-mono">
+                            {isSerialized ? "Add Units" : "Add Inventory"}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {isSerialized
+                                ? "This duplicates the selected stock record under the current family and creates new unit records with new QR codes."
+                                : "This duplicates the selected stock record under the current family using it as a template for a new pooled inventory record."}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-mono">Source Stock Record</label>
+                            <select
+                                value={quickAddSourceId}
+                                onChange={(event) => setQuickAddSourceId(event.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+                            >
+                                {inventory.map((asset) => (
+                                    <option key={asset.id} value={asset.id}>
+                                        {asset.name} · {asset.warehouse?.name || "—"} /{" "}
+                                        {asset.zone?.name || "—"}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-mono">
+                                {isSerialized ? "Units to Add" : "Inventory Quantity"}
+                            </label>
+                            <Input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={quickAddQuantity}
+                                onChange={(event) => setQuickAddQuantity(event.target.value)}
+                                className="font-mono"
+                            />
+                        </div>
+
+                        {quickAddSource && (
+                            <p className="text-xs text-muted-foreground">
+                                Template: <span className="font-mono">{quickAddSource.name}</span>
+                            </p>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowQuickAdd(false)}
+                            className="font-mono"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleQuickAdd}
+                            disabled={
+                                addUnitsMutation.isPending ||
+                                createAssetMutation.isPending ||
+                                inventory.length === 0
+                            }
+                            className="font-mono"
+                        >
+                            {addUnitsMutation.isPending || createAssetMutation.isPending
+                                ? "Saving..."
+                                : isSerialized
+                                  ? "Add Units"
+                                  : "Add Inventory"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

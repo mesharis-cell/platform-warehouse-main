@@ -5,7 +5,7 @@ import { useWarehouses } from "@/hooks/use-warehouses";
 import { useZones } from "@/hooks/use-zones";
 import { useBrands } from "@/hooks/use-brands";
 import { useAssetFamilies } from "@/hooks/use-asset-families";
-import { useAddAssetUnits, useUpdateAsset, useUploadImage } from "@/hooks/use-assets";
+import { useUpdateAsset, useUploadImage } from "@/hooks/use-assets";
 import { X, Loader2, Save, AlertCircle, Check } from "lucide-react";
 import { PhotoCaptureStrip, PhotoEntry } from "@/components/shared/photo-capture-strip";
 import { Button } from "@/components/ui/button";
@@ -83,7 +83,6 @@ export function EditAssetDialog({
 
     const [customCategory, setCustomCategory] = useState("");
     const [customHandlingTag, setCustomHandlingTag] = useState("");
-    const [addUnitsQuantity, setAddUnitsQuantity] = useState("1");
     const [stripPhotos, setStripPhotos] = useState<PhotoEntry[]>(
         asset.images.map((img) => ({ previewUrl: img.url, note: img.note ?? "" }))
     );
@@ -114,7 +113,6 @@ export function EditAssetDialog({
             setActiveTab(defaultTab);
             setCustomCategory("");
             setCustomHandlingTag("");
-            setAddUnitsQuantity("1");
             setStripPhotos(
                 asset.images.map((img) => ({ previewUrl: img.url, note: img.note ?? "" }))
             );
@@ -145,7 +143,6 @@ export function EditAssetDialog({
     const assetFamilies = assetFamiliesData?.data || [];
 
     const updateMutation = useUpdateAsset();
-    const addUnitsMutation = useAddAssetUnits();
     const imageUploadMutation = useUploadImage();
 
     function toggleHandlingTag(tag: string) {
@@ -300,29 +297,7 @@ export function EditAssetDialog({
         }
     }
 
-    async function handleAddUnits() {
-        const quantity = Number(addUnitsQuantity);
-        if (!Number.isInteger(quantity) || quantity < 1) {
-            toast.error("Add units quantity must be at least 1");
-            return;
-        }
-
-        try {
-            const response = await addUnitsMutation.mutateAsync({
-                id: asset.id,
-                quantity,
-            });
-            const createdCount = response?.data?.created_count ?? quantity;
-            toast.success(`${createdCount} new unit${createdCount > 1 ? "s" : ""} created`);
-            setAddUnitsQuantity("1");
-            onSuccess();
-        } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Failed to add units");
-        }
-    }
-
-    const isSaving =
-        updateMutation.isPending || imageUploadMutation.isPending || addUnitsMutation.isPending;
+    const isSaving = updateMutation.isPending || imageUploadMutation.isPending;
     const totalPhotos = stripPhotos.length;
 
     return (
@@ -495,42 +470,7 @@ export function EditAssetDialog({
                                             />
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <Label className="font-mono text-xs">
-                                            Add INDIVIDUAL Units
-                                        </Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                step={1}
-                                                value={addUnitsQuantity}
-                                                onChange={(event) =>
-                                                    setAddUnitsQuantity(event.target.value)
-                                                }
-                                                className="font-mono"
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={handleAddUnits}
-                                                disabled={addUnitsMutation.isPending || isSaving}
-                                                className="font-mono"
-                                            >
-                                                {addUnitsMutation.isPending ? (
-                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                ) : (
-                                                    "Add Units"
-                                                )}
-                                            </Button>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            Creates new INDIVIDUAL asset records with unique QR
-                                            codes and copied state.
-                                        </p>
-                                    </div>
-                                )}
+                                ) : null}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
