@@ -406,7 +406,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                                 src={asset.images[currentImageIndex].url}
                                                 alt={asset.name}
                                                 fill
-                                                className="object-cover"
+                                                className="object-contain"
                                             />
                                             <button
                                                 onClick={() =>
@@ -471,7 +471,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                                                             src={img.url}
                                                             alt={`Thumbnail ${index + 1}`}
                                                             fill
-                                                            className="object-cover"
+                                                            className="object-contain"
                                                         />
                                                     </button>
                                                 ))}
