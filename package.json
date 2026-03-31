@@ -6,7 +6,7 @@
     "scripts": {
         "dev": "next dev -p 4001 --turbopack",
         "build": "next build",
-        "start": "next start -p 4000",
+        "start": "next start -p 4001",
         "lint": "eslint \"**/*.{ts,tsx}\"",
         "e2e:smoke": "playwright test --config=playwright.config.ts --project=chromium",
         "e2e:smoke:headed": "playwright test --config=playwright.config.ts --project=chromium --headed",
