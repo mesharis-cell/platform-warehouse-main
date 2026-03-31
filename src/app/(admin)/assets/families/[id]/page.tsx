@@ -476,12 +476,12 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
             {/* Inventory */}
             <div className="mx-auto max-w-[1400px] px-6 py-6">
                 <Card data-testid="family-stock-list">
-                    <CardHeader className="flex flex-row items-center justify-between py-3 px-6">
+                    <CardHeader className="flex flex-col gap-3 py-3 px-6 sm:flex-row sm:items-center sm:justify-between">
                         <CardTitle className="font-mono text-sm">
                             Inventory ({filtered.length})
                         </CardTitle>
-                        <div className="flex items-center gap-2">
-                            <div className="relative w-56">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="relative w-full sm:w-56">
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                                 <Input
                                     placeholder="Filter by name, QR, condition..."
