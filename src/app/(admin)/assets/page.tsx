@@ -175,7 +175,7 @@ export default function AssetsPage() {
                 icon={Layers3}
                 title="ASSET FAMILIES"
                 description="Catalog Identity · Stock Overview · Physical Records"
-                stats={{ label: "TOTAL FAMILIES", value: families.length }}
+                stats={{ label: "TOTAL FAMILIES", value: totalFamilies }}
                 actions={
                     canCreateAsset || (canBulkUploadAsset && bulkUploadEnabled) ? (
                         <div className="flex gap-2">
