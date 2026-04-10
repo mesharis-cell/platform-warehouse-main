@@ -279,3 +279,102 @@ export function useAssetScanHistory(assetId: string) {
         enabled: !!assetId,
     });
 }
+
+// ============================================================
+// Self-Pickup Scanning Hooks
+// ============================================================
+
+export function useSelfPickupHandoverProgress(selfPickupId: string | null) {
+    return useQuery({
+        queryKey: ["selfPickupHandoverProgress", selfPickupId],
+        queryFn: async () => {
+            const { data } = await apiClient.get(
+                `/operations/v1/scanning/self-pickup-handover/${selfPickupId}/progress`
+            );
+            return data;
+        },
+        enabled: !!selfPickupId,
+        refetchInterval: 3000,
+    });
+}
+
+export function useScanSelfPickupHandoverItem() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ selfPickupId, ...body }: { selfPickupId: string; qr_code: string; quantity?: number; note?: string }) => {
+            const { data } = await apiClient.post(
+                `/operations/v1/scanning/self-pickup-handover/${selfPickupId}/scan`,
+                body
+            );
+            return data;
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ["selfPickupHandoverProgress"] }),
+        onError: throwApiError,
+    });
+}
+
+export function useCompleteSelfPickupHandover() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ selfPickupId }: { selfPickupId: string }) => {
+            const { data } = await apiClient.post(
+                `/operations/v1/scanning/self-pickup-handover/${selfPickupId}/complete`
+            );
+            return data;
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["selfPickupHandoverProgress"] });
+            qc.invalidateQueries({ queryKey: ["self-pickups"] });
+            qc.invalidateQueries({ queryKey: ["self-pickup"] });
+        },
+        onError: throwApiError,
+    });
+}
+
+export function useSelfPickupReturnProgress(selfPickupId: string | null) {
+    return useQuery({
+        queryKey: ["selfPickupReturnProgress", selfPickupId],
+        queryFn: async () => {
+            const { data } = await apiClient.get(
+                `/operations/v1/scanning/self-pickup-return/${selfPickupId}/progress`
+            );
+            return data;
+        },
+        enabled: !!selfPickupId,
+        refetchInterval: 3000,
+    });
+}
+
+export function useScanSelfPickupReturnItem() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ selfPickupId, ...body }: { selfPickupId: string; qr_code: string; condition: string; quantity?: number; notes?: string }) => {
+            const { data } = await apiClient.post(
+                `/operations/v1/scanning/self-pickup-return/${selfPickupId}/scan`,
+                body
+            );
+            return data;
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ["selfPickupReturnProgress"] }),
+        onError: throwApiError,
+    });
+}
+
+export function useCompleteSelfPickupReturn() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ selfPickupId, settlements }: { selfPickupId: string; settlements?: any[] }) => {
+            const { data } = await apiClient.post(
+                `/operations/v1/scanning/self-pickup-return/${selfPickupId}/complete`,
+                { settlements: settlements || [] }
+            );
+            return data;
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["selfPickupReturnProgress"] });
+            qc.invalidateQueries({ queryKey: ["self-pickups"] });
+            qc.invalidateQueries({ queryKey: ["self-pickup"] });
+        },
+        onError: throwApiError,
+    });
+}
