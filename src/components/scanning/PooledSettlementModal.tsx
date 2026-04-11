@@ -34,11 +34,7 @@ export interface UnsettledLine {
 export interface SettlementEntry {
     line_id: string;
     returned_quantity: number;
-    reason:
-        | "POOLED_SETTLEMENT_CONSUMED"
-        | "POOLED_SETTLEMENT_LOST"
-        | "POOLED_SETTLEMENT_DAMAGED"
-        | "POOLED_SETTLEMENT_OTHER";
+    write_off_reason: "CONSUMED" | "LOST" | "DAMAGED" | "OTHER";
     note?: string;
 }
 
@@ -51,10 +47,10 @@ interface PooledSettlementModalProps {
 }
 
 const SETTLEMENT_REASONS = [
-    { value: "POOLED_SETTLEMENT_CONSUMED", label: "Consumed on event" },
-    { value: "POOLED_SETTLEMENT_LOST", label: "Lost / unaccounted" },
-    { value: "POOLED_SETTLEMENT_DAMAGED", label: "Damaged / write-off" },
-    { value: "POOLED_SETTLEMENT_OTHER", label: "Other" },
+    { value: "CONSUMED", label: "Consumed on event" },
+    { value: "LOST", label: "Lost / unaccounted" },
+    { value: "DAMAGED", label: "Damaged / write-off" },
+    { value: "OTHER", label: "Other" },
 ] as const;
 
 export function PooledSettlementModal({
@@ -67,13 +63,13 @@ export function PooledSettlementModal({
     const [settlements, setSettlements] = useState<
         Record<
             string,
-            { reason: SettlementEntry["reason"]; note: string }
+            { reason: SettlementEntry["write_off_reason"]; note: string }
         >
     >(() => {
-        const initial: Record<string, { reason: SettlementEntry["reason"]; note: string }> = {};
+        const initial: Record<string, { reason: SettlementEntry["write_off_reason"]; note: string }> = {};
         unsettledLines.forEach((line) => {
             initial[line.line_id] = {
-                reason: "POOLED_SETTLEMENT_CONSUMED",
+                reason: "CONSUMED",
                 note: "",
             };
         });
@@ -84,7 +80,7 @@ export function PooledSettlementModal({
         const entries: SettlementEntry[] = unsettledLines.map((line) => ({
             line_id: line.line_id,
             returned_quantity: line.scanned_qty,
-            reason: settlements[line.line_id]?.reason || "POOLED_SETTLEMENT_CONSUMED",
+            write_off_reason: settlements[line.line_id]?.write_off_reason || "CONSUMED",
             note: settlements[line.line_id]?.note || undefined,
         }));
         onConfirm(entries);
@@ -92,7 +88,7 @@ export function PooledSettlementModal({
 
     const hasOtherWithoutNote = unsettledLines.some(
         (line) =>
-            settlements[line.line_id]?.reason === "POOLED_SETTLEMENT_OTHER" &&
+            settlements[line.line_id]?.write_off_reason === "OTHER" &&
             !settlements[line.line_id]?.note?.trim()
     );
 
@@ -130,13 +126,13 @@ export function PooledSettlementModal({
                             <div className="space-y-2">
                                 <Label>Reason</Label>
                                 <Select
-                                    value={settlements[line.line_id]?.reason}
+                                    value={settlements[line.line_id]?.write_off_reason}
                                     onValueChange={(value) =>
                                         setSettlements((prev) => ({
                                             ...prev,
                                             [line.line_id]: {
                                                 ...prev[line.line_id],
-                                                reason: value as SettlementEntry["reason"],
+                                                reason: value as SettlementEntry["write_off_reason"],
                                             },
                                         }))
                                     }
@@ -157,8 +153,8 @@ export function PooledSettlementModal({
                             <div className="space-y-2">
                                 <Label>
                                     Note
-                                    {settlements[line.line_id]?.reason ===
-                                    "POOLED_SETTLEMENT_OTHER"
+                                    {settlements[line.line_id]?.write_off_reason ===
+                                    "OTHER"
                                         ? " (required)"
                                         : " (optional)"}
                                 </Label>
