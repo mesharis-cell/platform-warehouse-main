@@ -16,14 +16,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { inboundRequestKeys } from "@/hooks/use-inbound-requests";
 
 export const lineItemsKeys = {
-    list: (targetId: string, purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST") =>
+    list: (targetId: string, purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" | "SELF_PICKUP") =>
         ["line-items", purposeType, targetId] as const,
 };
 
 const invalidateLineItemRelatedQueries = (
     queryClient: ReturnType<typeof useQueryClient>,
     targetId: string,
-    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST"
+    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" | "SELF_PICKUP"
 ) => {
     queryClient.invalidateQueries({ queryKey: lineItemsKeys.list(targetId, purposeType) });
 
@@ -40,7 +40,7 @@ const invalidateLineItemRelatedQueries = (
 // List line items (works for both orders and inbound requests)
 export function useListLineItems(
     targetId: string | null,
-    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" = "ORDER"
+    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" | "SELF_PICKUP" = "ORDER"
 ) {
     return useQuery({
         queryKey: targetId ? lineItemsKeys.list(targetId, purposeType) : ["line-items", "none"],
@@ -67,7 +67,7 @@ export function useListLineItems(
 // Create catalog line item
 export function useCreateCatalogLineItem(
     targetId: string,
-    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" = "ORDER"
+    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" | "SELF_PICKUP" = "ORDER"
 ) {
     const queryClient = useQueryClient();
 
@@ -103,7 +103,7 @@ export function useCreateCatalogLineItem(
 // Update line item
 export function useUpdateLineItem(
     targetId: string,
-    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" = "ORDER"
+    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" | "SELF_PICKUP" = "ORDER"
 ) {
     const queryClient = useQueryClient();
 
@@ -127,7 +127,7 @@ export function useUpdateLineItem(
 // Patch line item metadata and notes (post-lock safe)
 export function usePatchLineItemMetadata(
     targetId: string,
-    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" = "ORDER"
+    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" | "SELF_PICKUP" = "ORDER"
 ) {
     const queryClient = useQueryClient();
 
@@ -159,7 +159,7 @@ export function usePatchLineItemMetadata(
 // Toggle one line item visibility for client price display
 export function usePatchLineItemClientVisibility(
     targetId: string,
-    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" = "ORDER"
+    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" | "SELF_PICKUP" = "ORDER"
 ) {
     const queryClient = useQueryClient();
 
@@ -191,7 +191,7 @@ export function usePatchLineItemClientVisibility(
 // Bulk set client visibility at entity scope
 export function usePatchEntityLineItemsClientVisibility(
     targetId: string,
-    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" = "ORDER"
+    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" | "SELF_PICKUP" = "ORDER"
 ) {
     const queryClient = useQueryClient();
 
@@ -228,7 +228,7 @@ export function usePatchEntityLineItemsClientVisibility(
 // Void line item
 export function useVoidLineItem(
     targetId: string,
-    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" = "ORDER"
+    purposeType: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" | "SELF_PICKUP" = "ORDER"
 ) {
     const queryClient = useQueryClient();
 
