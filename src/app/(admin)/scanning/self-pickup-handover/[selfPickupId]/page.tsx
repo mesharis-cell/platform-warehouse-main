@@ -12,6 +12,7 @@ import {
     useScanSelfPickupHandoverItem,
     useCompleteSelfPickupHandover,
 } from "@/hooks/use-scanning";
+import { usePlatform } from "@/contexts/platform-context";
 import { Camera, CheckCircle2, ScanLine, Package, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Html5Qrcode } from "html5-qrcode";
@@ -23,6 +24,15 @@ export default function SelfPickupHandoverPage() {
     const params = useParams();
     const router = useRouter();
     const selfPickupId = params.selfPickupId as string;
+
+    const { platform, isLoading: platformLoading } = usePlatform();
+    const selfPickupEnabled = (platform?.features as any)?.enable_self_pickup === true;
+
+    useEffect(() => {
+        if (!platformLoading && !selfPickupEnabled) {
+            router.replace("/orders");
+        }
+    }, [platformLoading, selfPickupEnabled, router]);
 
     const progress = useSelfPickupHandoverProgress(selfPickupId);
     const scanItem = useScanSelfPickupHandoverItem();

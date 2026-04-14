@@ -18,6 +18,7 @@ export const WAREHOUSE_NAV_PERMISSIONS = {
     inboundRequest: ["orders:read"],
     reports: ["orders:read", "orders:export", "assets:read"],
     resetPassword: ["auth:reset_password"],
+    selfPickups: ["self_pickups:read", "self_pickups:*"],
 } as const;
 
 export const WAREHOUSE_ACTION_PERMISSIONS = {

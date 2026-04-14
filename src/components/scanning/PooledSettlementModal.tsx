@@ -63,13 +63,16 @@ export function PooledSettlementModal({
     const [settlements, setSettlements] = useState<
         Record<
             string,
-            { reason: SettlementEntry["write_off_reason"]; note: string }
+            { write_off_reason: SettlementEntry["write_off_reason"]; note: string }
         >
     >(() => {
-        const initial: Record<string, { reason: SettlementEntry["write_off_reason"]; note: string }> = {};
+        const initial: Record<
+            string,
+            { write_off_reason: SettlementEntry["write_off_reason"]; note: string }
+        > = {};
         unsettledLines.forEach((line) => {
             initial[line.line_id] = {
-                reason: "CONSUMED",
+                write_off_reason: "CONSUMED",
                 note: "",
             };
         });
@@ -132,7 +135,7 @@ export function PooledSettlementModal({
                                             ...prev,
                                             [line.line_id]: {
                                                 ...prev[line.line_id],
-                                                reason: value as SettlementEntry["write_off_reason"],
+                                                write_off_reason: value as SettlementEntry["write_off_reason"],
                                             },
                                         }))
                                     }

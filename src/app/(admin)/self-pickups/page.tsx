@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSelfPickups } from "@/hooks/use-self-pickups";
+import { usePlatform } from "@/contexts/platform-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +38,16 @@ const PICKUP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 export default function WarehouseSelfPickupsPage() {
+    const router = useRouter();
+    const { platform, isLoading: platformLoading } = usePlatform();
+    const selfPickupEnabled = (platform?.features as any)?.enable_self_pickup === true;
+
+    useEffect(() => {
+        if (!platformLoading && !selfPickupEnabled) {
+            router.replace("/orders");
+        }
+    }, [platformLoading, selfPickupEnabled, router]);
+
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("");
@@ -49,6 +61,10 @@ export default function WarehouseSelfPickupsPage() {
 
     const pickups = data?.data?.self_pickups || [];
     const totalPages = data?.data?.total_pages || 1;
+
+    if (platformLoading || !selfPickupEnabled) {
+        return null;
+    }
 
     return (
         <div className="space-y-6">

@@ -90,6 +90,7 @@ const entityBasePath: Record<WorkflowEntityType, string> = {
     ORDER: "order",
     INBOUND_REQUEST: "inbound-request",
     SERVICE_REQUEST: "service-request",
+    SELF_PICKUP: "self-pickup",
 };
 
 export function useEntityWorkflowRequests(

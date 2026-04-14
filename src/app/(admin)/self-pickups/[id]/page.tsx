@@ -1,13 +1,15 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
     useSelfPickupDetails,
     useSelfPickupStatusHistory,
     useMarkReadyForPickup,
     useSubmitForApproval,
 } from "@/hooks/use-self-pickups";
+import { usePlatform } from "@/contexts/platform-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,10 +36,24 @@ const PICKUP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 
 export default function WarehouseSelfPickupDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const router = useRouter();
+    const { platform, isLoading: platformLoading } = usePlatform();
+    const selfPickupEnabled = (platform?.features as any)?.enable_self_pickup === true;
+
+    useEffect(() => {
+        if (!platformLoading && !selfPickupEnabled) {
+            router.replace("/orders");
+        }
+    }, [platformLoading, selfPickupEnabled, router]);
+
     const { data: pickupData, isLoading } = useSelfPickupDetails(id);
     const { data: historyData } = useSelfPickupStatusHistory(id);
     const markReady = useMarkReadyForPickup();
     const submitForApproval = useSubmitForApproval();
+
+    if (platformLoading || !selfPickupEnabled) {
+        return null;
+    }
 
     const pickup = pickupData?.data;
     const history = historyData?.data || [];
@@ -62,12 +78,12 @@ export default function WarehouseSelfPickupDetailPage({ params }: { params: Prom
                 </div>
                 <div className="flex gap-2">
                     {pickup.self_pickup_status === "PRICING_REVIEW" && (
-                        <Button onClick={() => submitForApproval.mutate(id, { onSuccess: () => toast.success("Submitted for approval"), onError: (e) => toast.error(e.message) })} disabled={submitForApproval.isPending}>
+                        <Button onClick={() => submitForApproval.mutate(id, { onSuccess: () => toast.success("Submitted for approval"), onError: (e: unknown) => toast.error((e as Error).message) })} disabled={submitForApproval.isPending}>
                             Submit for Approval
                         </Button>
                     )}
                     {pickup.self_pickup_status === "CONFIRMED" && (
-                        <Button onClick={() => markReady.mutate(id, { onSuccess: () => toast.success("Ready for pickup"), onError: (e) => toast.error(e.message) })} disabled={markReady.isPending}>
+                        <Button onClick={() => markReady.mutate(id, { onSuccess: () => toast.success("Ready for pickup"), onError: (e: unknown) => toast.error((e as Error).message) })} disabled={markReady.isPending}>
                             Ready for Pickup
                         </Button>
                     )}

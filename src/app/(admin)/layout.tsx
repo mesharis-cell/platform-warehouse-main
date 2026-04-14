@@ -21,6 +21,7 @@ import {
     Grid3x3,
     Tag,
     Package,
+    PackageCheck,
     Layers,
     DollarSign,
     ShoppingCart,
@@ -101,6 +102,13 @@ const navigationSections: NavSection[] = [
                 icon: ClipboardList,
                 requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.serviceRequests,
                 requiredFeature: "enable_service_requests",
+            },
+            {
+                name: "Self Pickups",
+                href: "/self-pickups",
+                icon: PackageCheck,
+                requiredAnyPermission: WAREHOUSE_NAV_PERMISSIONS.selfPickups,
+                requiredFeature: "enable_self_pickup",
             },
             {
                 name: "Workflow Inbox",
