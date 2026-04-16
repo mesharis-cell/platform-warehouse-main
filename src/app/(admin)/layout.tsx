@@ -234,8 +234,14 @@ function AdminSidebarContent() {
     const { logout, user } = useToken();
     const { platform } = usePlatform();
     const { data: pricingReviewCount } = useOrderStatusCount("PRICING_REVIEW");
-    const isFeatureEnabled = (featureKey?: string) =>
-        !featureKey || platform?.features?.[featureKey as keyof typeof platform.features] === true;
+    const isFeatureEnabled = (featureKey?: string) => {
+        if (!featureKey) return true;
+        const key = featureKey as keyof NonNullable<typeof platform>["features"];
+        return (
+            platform?.features?.[key] === true ||
+            platform?.effective_admin_features?.[key] === true
+        );
+    };
 
     const handleSignOut = () => {
         logout();
@@ -462,8 +468,14 @@ function MobileBottomTabs() {
     const pathname = usePathname();
     const { user } = useToken();
     const { platform } = usePlatform();
-    const isFeatureEnabled = (featureKey?: string) =>
-        !featureKey || platform?.features?.[featureKey as keyof typeof platform.features] === true;
+    const isFeatureEnabled = (featureKey?: string) => {
+        if (!featureKey) return true;
+        const key = featureKey as keyof NonNullable<typeof platform>["features"];
+        return (
+            platform?.features?.[key] === true ||
+            platform?.effective_admin_features?.[key] === true
+        );
+    };
     const visibleTabs = mobileTabs.filter(
         (item) =>
             isFeatureEnabled(item.requiredFeature) &&
