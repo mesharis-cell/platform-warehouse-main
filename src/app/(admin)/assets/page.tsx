@@ -4,14 +4,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FolderPlus, Grid3x3, Layers3, List, Plus, Search, Upload } from "lucide-react";
+import { FolderPlus, Grid3x3, Layers3, List, Package, Plus, Search, Upload } from "lucide-react";
 import { useAssetFamilies } from "@/hooks/use-asset-families";
 import { useAssetCategories } from "@/hooks/use-asset-categories";
 import { AssetWizard } from "@/components/assets/asset-wizard";
+import { AssetTable } from "@/components/assets/asset-table";
 import { AdminHeader } from "@/components/admin-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Select,
     SelectContent,
@@ -108,6 +110,7 @@ export default function AssetsPage() {
     const { platform } = usePlatform();
     const router = useRouter();
     const isMobile = useIsMobile();
+    const [activeTab, setActiveTab] = useState<"assets" | "families">("assets");
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -173,10 +176,10 @@ export default function AssetsPage() {
     return (
         <div className="min-h-screen bg-background">
             <AdminHeader
-                icon={Layers3}
-                title="ASSET FAMILIES"
-                description="Catalog Identity · Stock Overview · Physical Records"
-                stats={{ label: "TOTAL FAMILIES", value: totalFamilies }}
+                icon={activeTab === "assets" ? Package : Layers3}
+                title={activeTab === "assets" ? "ASSETS" : "ASSET FAMILIES"}
+                description={activeTab === "assets" ? "Individual Stock Records · All Assets" : "Catalog Identity · Stock Overview · Physical Records"}
+                stats={activeTab === "assets" ? undefined : { label: "TOTAL FAMILIES", value: totalFamilies }}
                 actions={
                     canCreateAsset || (canBulkUploadAsset && bulkUploadEnabled) ? (
                         <div className="flex gap-2">
@@ -203,6 +206,23 @@ export default function AssetsPage() {
             />
 
             <div className="mx-auto max-w-[1600px] px-6 py-8">
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "assets" | "families")}>
+                    <TabsList className="mb-6">
+                        <TabsTrigger value="assets" className="font-mono">
+                            <Package className="mr-2 h-4 w-4" />
+                            Assets
+                        </TabsTrigger>
+                        <TabsTrigger value="families" className="font-mono">
+                            <Layers3 className="mr-2 h-4 w-4" />
+                            Families
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="assets">
+                        <AssetTable />
+                    </TabsContent>
+
+                    <TabsContent value="families">
                 <div className="mb-6 space-y-4">
                     <div className="flex flex-col gap-4 lg:flex-row">
                         <div className="relative flex-1">
@@ -363,6 +383,8 @@ export default function AssetsPage() {
                         </div>
                     </div>
                 )}
+                    </TabsContent>
+                </Tabs>
             </div>
 
             <AssetWizard open={showWizard} onOpenChange={setShowWizard} />
