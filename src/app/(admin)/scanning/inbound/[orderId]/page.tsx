@@ -38,6 +38,11 @@ import { Camera, CheckCircle2, ScanLine, Package } from "lucide-react";
 import { toast } from "sonner";
 import { Html5Qrcode } from "html5-qrcode";
 import { TransformedAssetWarning } from "@/components/scanning/TransformedAssetWarning";
+import {
+    PooledSettlementModal,
+    type UnsettledLine,
+    type SettlementEntry,
+} from "@/components/scanning/PooledSettlementModal";
 import { PhotoCaptureStrip, PhotoEntry } from "@/components/shared/photo-capture-strip";
 import {
     ConditionReportPanel,
@@ -511,11 +516,16 @@ export default function InboundScanningPage() {
         );
     };
 
-    const handleCompleteScan = () => {
+    // Settlement modal state for pooled items
+    const [showSettlementModal, setShowSettlementModal] = useState(false);
+    const [unsettledLines, setUnsettledLines] = useState<UnsettledLine[]>([]);
+
+    const doCompleteScan = (settlements?: SettlementEntry[]) => {
         completeScan.mutate(
-            { orderId },
+            { orderId, settlements } as any,
             {
                 onSuccess: (data: any) => {
+                    setShowSettlementModal(false);
                     setStep("complete");
                     const newStatus =
                         data.data?.new_status ||
@@ -530,13 +540,30 @@ export default function InboundScanningPage() {
                         router.push(`/orders/${orderId}`);
                     }, 2000);
                 },
-                onError: (error) => {
-                    toast.error("Failed to complete scan", {
-                        description: error.message,
-                    });
+                onError: (error: any) => {
+                    // If the API returns requires_settlement, show the settlement modal
+                    const requiresSettlement =
+                        error?.response?.data?.errorSources?.[0]?.requires_settlement ||
+                        error?.response?.data?.requires_settlement;
+
+                    if (requiresSettlement && Array.isArray(requiresSettlement)) {
+                        setUnsettledLines(requiresSettlement);
+                        setShowSettlementModal(true);
+                    } else {
+                        toast.error("Failed to complete scan", {
+                            description: error.message || "Unknown error",
+                        });
+                    }
                 },
             }
         );
+    };
+
+    const handleCompleteScan = () => {
+        // First attempt without settlements — if pooled deltas exist,
+        // the API returns 400 with requires_settlement list which triggers
+        // the settlement modal.
+        doCompleteScan();
     };
 
     // Render loading state
@@ -734,6 +761,15 @@ export default function InboundScanningPage() {
                     )}
                 </div>
             )}
+
+            {/* Pooled Settlement Modal */}
+            <PooledSettlementModal
+                open={showSettlementModal}
+                onOpenChange={setShowSettlementModal}
+                unsettledLines={unsettledLines}
+                onConfirm={(settlements) => doCompleteScan(settlements)}
+                isPending={completeScan.isPending}
+            />
 
             {/* Condition Inspection Dialog */}
             <Dialog open={inspectionDialogOpen} onOpenChange={setInspectionDialogOpen}>

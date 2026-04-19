@@ -4,13 +4,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FolderPlus, Grid3x3, Layers3, List, Plus, Search, Upload } from "lucide-react";
+import { FolderPlus, Grid3x3, Layers3, List, Package, Plus, Search, Upload } from "lucide-react";
 import { useAssetFamilies } from "@/hooks/use-asset-families";
+import { useAssetCategories } from "@/hooks/use-asset-categories";
 import { AssetWizard } from "@/components/assets/asset-wizard";
+import { AssetTable } from "@/components/assets/asset-table";
 import { AdminHeader } from "@/components/admin-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Select,
     SelectContent,
@@ -26,8 +29,6 @@ import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
 import { usePlatform } from "@/contexts/platform-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { AssetFamily } from "@/types/asset-family";
-
-const DEFAULT_CATEGORIES = ["Furniture", "Glassware", "Installation", "Decor"];
 
 const formatStockMode = (stockMode?: string | null) =>
     stockMode ? stockMode.replace(/_/g, " ") : "Unknown";
@@ -75,7 +76,7 @@ function FamilyCard({ family, compact = false }: { family: AssetFamily; compact?
                             {family.name}
                         </h3>
                         <p className="mt-1 text-xs font-mono text-muted-foreground">
-                            {family.company?.name || "Unknown company"} • {family.category}
+                            {family.company?.name || "Unknown company"} • {family.category?.name || "Uncategorized"}
                         </p>
                         {family.brand?.name && (
                             <p className="mt-1 text-xs font-mono text-muted-foreground">
@@ -109,6 +110,7 @@ export default function AssetsPage() {
     const { platform } = usePlatform();
     const router = useRouter();
     const isMobile = useIsMobile();
+    const [activeTab, setActiveTab] = useState<"assets" | "families">("assets");
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -118,7 +120,7 @@ export default function AssetsPage() {
     const [showMobileCreateActions, setShowMobileCreateActions] = useState(false);
     const [lastActiveBuilderId, setLastActiveBuilderId] = useState<string | null>(null);
     const [filters, setFilters] = useState({
-        category: "all",
+        category_id: "all",
         stockMode: "all",
     });
 
@@ -154,7 +156,7 @@ export default function AssetsPage() {
             limit: String(ITEMS_PER_PAGE),
         };
         if (debouncedSearch) params.search_term = debouncedSearch;
-        if (filters.category !== "all") params.category = filters.category;
+        if (filters.category_id !== "all") params.category_id = filters.category_id;
         if (filters.stockMode !== "all") params.stock_mode = filters.stockMode;
         return params;
     }, [filters, debouncedSearch, page]);
@@ -168,14 +170,16 @@ export default function AssetsPage() {
     const families = data?.data || [];
     const totalFamilies = Number((data as any)?.meta?.total || families.length);
     const totalPages = Math.max(1, Math.ceil(totalFamilies / ITEMS_PER_PAGE));
+    const { data: categoriesData } = useAssetCategories();
+    const categories = (categoriesData?.data || []).filter((c) => c.is_active);
 
     return (
         <div className="min-h-screen bg-background">
             <AdminHeader
-                icon={Layers3}
-                title="ASSET FAMILIES"
-                description="Catalog Identity · Stock Overview · Physical Records"
-                stats={{ label: "TOTAL FAMILIES", value: totalFamilies }}
+                icon={activeTab === "assets" ? Package : Layers3}
+                title={activeTab === "assets" ? "ASSETS" : "ASSET FAMILIES"}
+                description={activeTab === "assets" ? "Individual Stock Records · All Assets" : "Catalog Identity · Stock Overview · Physical Records"}
+                stats={activeTab === "assets" ? undefined : { label: "TOTAL FAMILIES", value: totalFamilies }}
                 actions={
                     canCreateAsset || (canBulkUploadAsset && bulkUploadEnabled) ? (
                         <div className="flex gap-2">
@@ -202,6 +206,23 @@ export default function AssetsPage() {
             />
 
             <div className="mx-auto max-w-[1600px] px-6 py-8">
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "assets" | "families")}>
+                    <TabsList className="mb-6">
+                        <TabsTrigger value="assets" className="font-mono">
+                            <Package className="mr-2 h-4 w-4" />
+                            Assets
+                        </TabsTrigger>
+                        <TabsTrigger value="families" className="font-mono">
+                            <Layers3 className="mr-2 h-4 w-4" />
+                            Families
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="assets">
+                        <AssetTable />
+                    </TabsContent>
+
+                    <TabsContent value="families">
                 <div className="mb-6 space-y-4">
                     <div className="flex flex-col gap-4 lg:flex-row">
                         <div className="relative flex-1">
@@ -216,9 +237,9 @@ export default function AssetsPage() {
 
                         <div className="flex flex-wrap gap-2">
                             <Select
-                                value={filters.category}
+                                value={filters.category_id}
                                 onValueChange={(value) =>
-                                    setFilters((current) => ({ ...current, category: value }))
+                                    setFilters((current) => ({ ...current, category_id: value }))
                                 }
                             >
                                 <SelectTrigger className="w-[160px] font-mono">
@@ -226,9 +247,15 @@ export default function AssetsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Categories</SelectItem>
-                                    {DEFAULT_CATEGORIES.map((category) => (
-                                        <SelectItem key={category} value={category}>
-                                            {category}
+                                    {categories.map((category) => (
+                                        <SelectItem key={category.id} value={category.id}>
+                                            <span className="flex items-center gap-2">
+                                                <span
+                                                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-border"
+                                                    style={{ backgroundColor: category.color }}
+                                                />
+                                                {category.name}
+                                            </span>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -356,6 +383,8 @@ export default function AssetsPage() {
                         </div>
                     </div>
                 )}
+                    </TabsContent>
+                </Tabs>
             </div>
 
             <AssetWizard open={showWizard} onOpenChange={setShowWizard} />

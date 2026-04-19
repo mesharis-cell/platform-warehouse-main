@@ -27,6 +27,13 @@ export interface Asset {
     id: string;
     family_id?: string | null;
     familyId?: string | null;
+    family?: {
+        id: string;
+        name: string;
+        stock_mode: string;
+        category_id: string | null;
+        category?: { id: string; name: string; slug: string; color: string } | null;
+    } | null;
     company: {
         id: string;
         name: string;

@@ -12,7 +12,7 @@ export interface PhotoEntry {
 export interface FamilySummary {
     id: string;
     name: string;
-    category: string;
+    category: { id: string; name: string; slug: string; color: string } | null;
     stockMode: string;
     images: Array<{ url: string }>;
     brand?: { id: string; name: string } | null;
@@ -166,7 +166,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
                 stockMode: f.stockMode === "POOLED" ? "POOLED" : "SERIALIZED",
                 companyId: f.company?.id || state.companyId,
                 brandId: f.brand?.id || state.brandId,
-                category: f.category || state.category,
+                category: f.category?.name || state.category,
                 itemName: f.name || state.itemName,
                 dimLength: Number(f.dimensions?.length) || state.dimLength,
                 dimWidth: Number(f.dimensions?.width) || state.dimWidth,

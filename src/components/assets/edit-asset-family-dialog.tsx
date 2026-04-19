@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useBrands } from "@/hooks/use-brands";
 import { useTeams } from "@/hooks/use-teams";
 import { useUpdateAssetFamily } from "@/hooks/use-asset-families";
+import { CategoryCombobox } from "@/components/assets/category-combobox";
 import { Layers3, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +27,6 @@ import {
 import { toast } from "sonner";
 import type { AssetFamily } from "@/types/asset-family";
 
-const DEFAULT_CATEGORIES = ["Furniture", "Glassware", "Installation", "Decor"];
 const HANDLING_TAGS = ["Fragile", "HighValue", "HeavyLift", "AssemblyRequired"];
 
 interface EditAssetFamilyDialogProps {
@@ -47,7 +47,8 @@ export function EditAssetFamilyDialog({
         team_id: "" as string | null,
         name: "",
         description: "" as string | null,
-        category: "",
+        category_id: null as string | null,
+        new_category: null as { name: string; color?: string } | null,
         stock_mode: "SERIALIZED" as "SERIALIZED" | "POOLED",
         packaging: "" as string | null,
         handling_tags: [] as string[],
@@ -61,7 +62,8 @@ export function EditAssetFamilyDialog({
                 team_id: family.team_id || null,
                 name: family.name || "",
                 description: family.description || null,
-                category: family.category || "",
+                category_id: family.category?.id || null,
+                new_category: null,
                 stock_mode: (family.stock_mode as "SERIALIZED" | "POOLED") || "SERIALIZED",
                 packaging: family.packaging || null,
                 handling_tags: family.handling_tags || [],
@@ -90,22 +92,26 @@ export function EditAssetFamilyDialog({
     }
 
     async function handleSubmit() {
-        if (!family || !formData.name?.trim() || !formData.category?.trim()) {
+        if (!family || !formData.name?.trim() || (!formData.category_id && !formData.new_category)) {
             toast.error("Name and category are required");
             return;
         }
         try {
-            const payload = {
+            const payload: Record<string, unknown> = {
                 brand_id: formData.brand_id || null,
                 team_id: formData.team_id || null,
                 name: formData.name.trim(),
                 description: formData.description?.trim() || null,
-                category: formData.category.trim(),
                 stock_mode: formData.stock_mode,
                 packaging: formData.packaging?.trim() || null,
                 handling_tags: formData.handling_tags,
                 is_active: formData.is_active,
             };
+            if (formData.new_category) {
+                payload.new_category = formData.new_category;
+            } else {
+                payload.category_id = formData.category_id;
+            }
             await updateMutation.mutateAsync({ id: family.id, data: payload });
             toast.success("Asset family updated");
             onOpenChange(false);
@@ -141,21 +147,14 @@ export function EditAssetFamilyDialog({
                     </div>
                     <div className="space-y-2">
                         <Label className="font-mono text-xs">Category *</Label>
-                        <Select
-                            value={formData.category}
-                            onValueChange={(v) => setFormData({ ...formData, category: v })}
-                        >
-                            <SelectTrigger className="font-mono">
-                                <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {DEFAULT_CATEGORIES.map((c) => (
-                                    <SelectItem key={c} value={c}>
-                                        {c}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <CategoryCombobox
+                            companyId={family?.company_id || null}
+                            value={formData.category_id}
+                            newCategory={formData.new_category}
+                            onChange={(categoryId, newCategory) =>
+                                setFormData({ ...formData, category_id: categoryId, new_category: newCategory })
+                            }
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label className="font-mono text-xs">Stock Mode *</Label>

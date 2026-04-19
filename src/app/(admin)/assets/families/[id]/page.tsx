@@ -22,6 +22,9 @@ import {
     Search,
     MapPin,
     CircleDot,
+    MoreVertical,
+    Eye,
+    ArrowRightLeft,
 } from "lucide-react";
 import { useAssetFamilyAvailabilityStats } from "@/hooks/use-asset-family-availability-stats";
 import { useAssetFamily, useDeleteAssetFamily } from "@/hooks/use-asset-families";
@@ -44,6 +47,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoveToFamilyModal } from "@/components/assets/move-to-family-modal";
 import { toast } from "sonner";
 import type { Asset } from "@/types/asset";
 
@@ -75,6 +85,7 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
     const [quickAddSourceId, setQuickAddSourceId] = useState("");
     const [quickAddQuantity, setQuickAddQuantity] = useState("1");
     const [inventorySearch, setInventorySearch] = useState("");
+    const [moveAsset, setMoveAsset] = useState<Asset | null>(null);
 
     const { data: familyResponse, isLoading: familyLoading } = useAssetFamily(id);
     const { data: availabilityStats, isLoading: availLoading } =
@@ -155,18 +166,18 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
                     warehouse_id: sourceAsset.warehouse.id,
                     zone_id: sourceAsset.zone.id,
                     name: sourceAsset.name,
-                    description: sourceAsset.description,
-                    category: sourceAsset.category,
+                    description: sourceAsset.description ?? undefined,
+                    category: sourceAsset.category ?? undefined,
                     images: sourceAsset.images || [],
                     tracking_method: "BATCH",
                     total_quantity: quantity,
                     available_quantity: quantity,
-                    packaging: sourceAsset.packaging,
+                    packaging: sourceAsset.packaging ?? undefined,
                     weight_per_unit: Number(sourceAsset.weight_per_unit),
                     dimensions: sourceAsset.dimensions || {},
                     volume_per_unit: Number(sourceAsset.volume_per_unit),
                     condition: sourceAsset.condition,
-                    condition_notes: (sourceAsset as any).condition_notes,
+                    condition_notes: (sourceAsset as any).condition_notes ?? undefined,
                     refurb_days_estimate: sourceAsset.refurb_days_estimate || undefined,
                     team_id: sourceAsset.team_id || null,
                     handling_tags: sourceAsset.handling_tags || [],
@@ -326,9 +337,15 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
                                     <Badge variant="secondary" className="font-mono text-xs">
                                         {isSerialized ? "Serialized" : "Pooled"}
                                     </Badge>
-                                    <Badge variant="outline" className="font-mono text-xs">
-                                        {family.category}
-                                    </Badge>
+                                    {family.category && (
+                                        <Badge variant="outline" className="font-mono text-xs">
+                                            <span
+                                                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-border mr-1.5"
+                                                style={{ backgroundColor: family.category.color }}
+                                            />
+                                            {family.category.name}
+                                        </Badge>
+                                    )}
                                     {family.brand?.name && (
                                         <Badge variant="outline" className="font-mono text-xs">
                                             {family.brand.name}
@@ -532,78 +549,96 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
                         ) : (
                             <div className="divide-y divide-border">
                                 {filtered.map((asset) => (
-                                    <Link key={asset.id} href={`/assets/${asset.id}`}>
-                                        <div className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-md transition-colors hover:bg-muted/50">
-                                            {/* Thumbnail */}
-                                            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted border border-border">
-                                                {asset.images?.[0]?.url ? (
-                                                    <Image
-                                                        src={asset.images[0].url}
-                                                        alt={asset.name}
-                                                        fill
-                                                        className="object-contain"
-                                                    />
-                                                ) : (
-                                                    <div className="flex h-full w-full items-center justify-center">
-                                                        <Package className="h-4 w-4 text-muted-foreground/40" />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Name + badges */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className="font-mono text-sm font-medium truncate">
-                                                        {asset.name}
-                                                    </span>
-                                                </div>
-                                                <div className="flex flex-wrap items-center gap-1.5">
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={`font-mono text-[10px] py-0 ${CONDITION_STYLES[asset.condition || ""] || ""}`}
-                                                    >
-                                                        {asset.condition}
-                                                    </Badge>
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={`font-mono text-[10px] py-0 ${STATUS_STYLES[asset.status || ""] || ""}`}
-                                                    >
-                                                        {asset.status?.replace(/_/g, " ")}
-                                                    </Badge>
-                                                </div>
-                                            </div>
-
-                                            {/* Location */}
-                                            <div className="hidden md:flex items-center gap-1 text-xs font-mono text-muted-foreground shrink-0">
-                                                <MapPin className="h-3 w-3" />
-                                                {asset.warehouse?.name || "—"} /{" "}
-                                                {asset.zone?.name || "—"}
-                                            </div>
-
-                                            {/* Quantity */}
-                                            {!isSerialized && (
-                                                <div className="text-right shrink-0">
-                                                    <div className="text-sm font-mono font-semibold">
-                                                        {asset.available_quantity}
-                                                        <span className="text-muted-foreground font-normal">
-                                                            /{asset.total_quantity}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-[10px] font-mono text-muted-foreground">
-                                                        avail / total
-                                                    </div>
+                                    <div key={asset.id} className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-md transition-colors hover:bg-muted/50">
+                                        {/* Thumbnail */}
+                                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted border border-border">
+                                            {asset.images?.[0]?.url ? (
+                                                <Image
+                                                    src={asset.images[0].url}
+                                                    alt={asset.name}
+                                                    fill
+                                                    className="object-contain"
+                                                />
+                                            ) : (
+                                                <div className="flex h-full w-full items-center justify-center">
+                                                    <Package className="h-4 w-4 text-muted-foreground/40" />
                                                 </div>
                                             )}
+                                        </div>
 
-                                            {/* QR */}
-                                            <div className="hidden lg:flex items-center gap-1 text-xs font-mono text-muted-foreground shrink-0">
-                                                <QrCode className="h-3 w-3" />
-                                                <span className="max-w-[120px] truncate">
-                                                    {asset.qr_code}
-                                                </span>
+                                        {/* Name + badges */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <Link href={`/assets/${asset.id}`} className="font-mono text-sm font-medium truncate hover:text-primary hover:underline">
+                                                    {asset.name}
+                                                </Link>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`font-mono text-[10px] py-0 ${CONDITION_STYLES[asset.condition || ""] || ""}`}
+                                                >
+                                                    {asset.condition}
+                                                </Badge>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`font-mono text-[10px] py-0 ${STATUS_STYLES[asset.status || ""] || ""}`}
+                                                >
+                                                    {asset.status?.replace(/_/g, " ")}
+                                                </Badge>
                                             </div>
                                         </div>
-                                    </Link>
+
+                                        {/* Location */}
+                                        <div className="hidden md:flex items-center gap-1 text-xs font-mono text-muted-foreground shrink-0">
+                                            <MapPin className="h-3 w-3" />
+                                            {asset.warehouse?.name || "—"} /{" "}
+                                            {asset.zone?.name || "—"}
+                                        </div>
+
+                                        {/* Quantity */}
+                                        {!isSerialized && (
+                                            <div className="text-right shrink-0">
+                                                <div className="text-sm font-mono font-semibold">
+                                                    {asset.available_quantity}
+                                                    <span className="text-muted-foreground font-normal">
+                                                        /{asset.total_quantity}
+                                                    </span>
+                                                </div>
+                                                <div className="text-[10px] font-mono text-muted-foreground">
+                                                    avail / total
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* QR */}
+                                        <div className="hidden lg:flex items-center gap-1 text-xs font-mono text-muted-foreground shrink-0">
+                                            <QrCode className="h-3 w-3" />
+                                            <span className="max-w-[120px] truncate">
+                                                {asset.qr_code}
+                                            </span>
+                                        </div>
+
+                                        {/* Actions menu */}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                    <span className="sr-only">Actions</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => router.push(`/assets/${asset.id}`)}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    View Details
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setMoveAsset(asset)}>
+                                                    <ArrowRightLeft className="mr-2 h-4 w-4" />
+                                                    Move to Another Family
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 ))}
                             </div>
                         )}
@@ -638,6 +673,15 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
                 description="Create a new stock record under this family. The family stays fixed."
                 submitLabel="Create Stock Record"
             />
+
+            {moveAsset && (
+                <MoveToFamilyModal
+                    open={!!moveAsset}
+                    onOpenChange={(open) => { if (!open) setMoveAsset(null); }}
+                    asset={moveAsset}
+                    currentFamilyName={family.name}
+                />
+            )}
 
             <Dialog open={showQuickAdd} onOpenChange={setShowQuickAdd}>
                 <DialogContent className="max-w-lg">

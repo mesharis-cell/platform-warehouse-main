@@ -159,7 +159,7 @@ export function AssetWizard({
                 zone_id: state.zoneId,
                 brand_id: state.brandId || state.selectedFamily?.brand?.id || undefined,
                 name: itemName,
-                category: state.category || state.selectedFamily?.category,
+                category: state.category || state.selectedFamily?.category?.name,
                 description:
                     state.itemDescription.trim() || state.selectedFamily?.description || undefined,
                 tracking_method: state.stockMode === "POOLED" ? "BATCH" : "INDIVIDUAL",
