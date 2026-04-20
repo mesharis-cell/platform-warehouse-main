@@ -98,7 +98,10 @@ export function WizardFamilyForm({ state, update }: Props) {
                             style={{
                                 maxHeight:
                                     "min(var(--radix-popover-content-available-height), 360px)",
+                                isolation: "isolate",
                             }}
+                            onWheel={(e) => e.stopPropagation()}
+                            onTouchMove={(e) => e.stopPropagation()}
                         >
                             <Command className="max-h-[inherit]">
                                 <CommandInput placeholder="Search brand…" />
@@ -108,6 +111,9 @@ export function WizardFamilyForm({ state, update }: Props) {
                                         maxHeight:
                                             "calc(min(var(--radix-popover-content-available-height), 360px) - 45px)",
                                         overflowY: "auto",
+                                        overscrollBehavior: "contain",
+                                        touchAction: "pan-y",
+                                        WebkitOverflowScrolling: "touch",
                                     }}
                                 >
                                     <CommandEmpty>No brand matches.</CommandEmpty>
