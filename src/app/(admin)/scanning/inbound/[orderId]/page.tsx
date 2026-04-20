@@ -521,42 +521,39 @@ export default function InboundScanningPage() {
     const [unsettledLines, setUnsettledLines] = useState<UnsettledLine[]>([]);
 
     const doCompleteScan = (settlements?: SettlementEntry[]) => {
-        completeScan.mutate(
-            { orderId, settlements } as any,
-            {
-                onSuccess: (data: any) => {
-                    setShowSettlementModal(false);
-                    setStep("complete");
-                    const newStatus =
-                        data.data?.new_status ||
-                        data.new_status ||
-                        data.data?.order_status ||
-                        data.order_status ||
-                        "CLOSED";
-                    toast.success("Return scan complete", {
-                        description: `Order ${newStatus}`,
-                    });
-                    setTimeout(() => {
-                        router.push(`/orders/${orderId}`);
-                    }, 2000);
-                },
-                onError: (error: any) => {
-                    // If the API returns requires_settlement, show the settlement modal
-                    const requiresSettlement =
-                        error?.response?.data?.errorSources?.[0]?.requires_settlement ||
-                        error?.response?.data?.requires_settlement;
+        completeScan.mutate({ orderId, settlements } as any, {
+            onSuccess: (data: any) => {
+                setShowSettlementModal(false);
+                setStep("complete");
+                const newStatus =
+                    data.data?.new_status ||
+                    data.new_status ||
+                    data.data?.order_status ||
+                    data.order_status ||
+                    "CLOSED";
+                toast.success("Return scan complete", {
+                    description: `Order ${newStatus}`,
+                });
+                setTimeout(() => {
+                    router.push(`/orders/${orderId}`);
+                }, 2000);
+            },
+            onError: (error: any) => {
+                // If the API returns requires_settlement, show the settlement modal
+                const requiresSettlement =
+                    error?.response?.data?.errorSources?.[0]?.requires_settlement ||
+                    error?.response?.data?.requires_settlement;
 
-                    if (requiresSettlement && Array.isArray(requiresSettlement)) {
-                        setUnsettledLines(requiresSettlement);
-                        setShowSettlementModal(true);
-                    } else {
-                        toast.error("Failed to complete scan", {
-                            description: error.message || "Unknown error",
-                        });
-                    }
-                },
-            }
-        );
+                if (requiresSettlement && Array.isArray(requiresSettlement)) {
+                    setUnsettledLines(requiresSettlement);
+                    setShowSettlementModal(true);
+                } else {
+                    toast.error("Failed to complete scan", {
+                        description: error.message || "Unknown error",
+                    });
+                }
+            },
+        });
     };
 
     const handleCompleteScan = () => {

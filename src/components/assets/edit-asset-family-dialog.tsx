@@ -92,7 +92,11 @@ export function EditAssetFamilyDialog({
     }
 
     async function handleSubmit() {
-        if (!family || !formData.name?.trim() || (!formData.category_id && !formData.new_category)) {
+        if (
+            !family ||
+            !formData.name?.trim() ||
+            (!formData.category_id && !formData.new_category)
+        ) {
             toast.error("Name and category are required");
             return;
         }
@@ -152,7 +156,11 @@ export function EditAssetFamilyDialog({
                             value={formData.category_id}
                             newCategory={formData.new_category}
                             onChange={(categoryId, newCategory) =>
-                                setFormData({ ...formData, category_id: categoryId, new_category: newCategory })
+                                setFormData({
+                                    ...formData,
+                                    category_id: categoryId,
+                                    new_category: newCategory,
+                                })
                             }
                         />
                     </div>

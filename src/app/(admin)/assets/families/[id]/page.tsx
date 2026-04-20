@@ -549,7 +549,10 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
                         ) : (
                             <div className="divide-y divide-border">
                                 {filtered.map((asset) => (
-                                    <div key={asset.id} className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-md transition-colors hover:bg-muted/50">
+                                    <div
+                                        key={asset.id}
+                                        className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-md transition-colors hover:bg-muted/50"
+                                    >
                                         {/* Thumbnail */}
                                         <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted border border-border">
                                             {asset.images?.[0]?.url ? (
@@ -569,7 +572,10 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
                                         {/* Name + badges */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-0.5">
-                                                <Link href={`/assets/${asset.id}`} className="font-mono text-sm font-medium truncate hover:text-primary hover:underline">
+                                                <Link
+                                                    href={`/assets/${asset.id}`}
+                                                    className="font-mono text-sm font-medium truncate hover:text-primary hover:underline"
+                                                >
                                                     {asset.name}
                                                 </Link>
                                             </div>
@@ -622,17 +628,27 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
                                         {/* Actions menu */}
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 shrink-0"
+                                                >
                                                     <MoreVertical className="h-4 w-4" />
                                                     <span className="sr-only">Actions</span>
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => router.push(`/assets/${asset.id}`)}>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        router.push(`/assets/${asset.id}`)
+                                                    }
+                                                >
                                                     <Eye className="mr-2 h-4 w-4" />
                                                     View Details
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setMoveAsset(asset)}>
+                                                <DropdownMenuItem
+                                                    onClick={() => setMoveAsset(asset)}
+                                                >
                                                     <ArrowRightLeft className="mr-2 h-4 w-4" />
                                                     Move to Another Family
                                                 </DropdownMenuItem>
@@ -677,7 +693,9 @@ export default function AssetFamilyDetailPage({ params }: { params: Promise<{ id
             {moveAsset && (
                 <MoveToFamilyModal
                     open={!!moveAsset}
-                    onOpenChange={(open) => { if (!open) setMoveAsset(null); }}
+                    onOpenChange={(open) => {
+                        if (!open) setMoveAsset(null);
+                    }}
                     asset={moveAsset}
                     currentFamilyName={family.name}
                 />

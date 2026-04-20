@@ -61,10 +61,7 @@ export function PooledSettlementModal({
     isPending,
 }: PooledSettlementModalProps) {
     const [settlements, setSettlements] = useState<
-        Record<
-            string,
-            { write_off_reason: SettlementEntry["write_off_reason"]; note: string }
-        >
+        Record<string, { write_off_reason: SettlementEntry["write_off_reason"]; note: string }>
     >(() => {
         const initial: Record<
             string,
@@ -111,10 +108,7 @@ export function PooledSettlementModal({
 
                 <div className="space-y-6 py-4">
                     {unsettledLines.map((line) => (
-                        <div
-                            key={line.line_id}
-                            className="border rounded-lg p-4 space-y-3"
-                        >
+                        <div key={line.line_id} className="border rounded-lg p-4 space-y-3">
                             <div className="flex items-center justify-between">
                                 <p className="font-medium">{line.asset_name}</p>
                                 <Badge variant="outline" className="text-amber-700">
@@ -122,8 +116,8 @@ export function PooledSettlementModal({
                                 </Badge>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                                Out: {line.outbound_qty} | Back: {line.scanned_qty} |
-                                Delta: {line.delta}
+                                Out: {line.outbound_qty} | Back: {line.scanned_qty} | Delta:{" "}
+                                {line.delta}
                             </div>
 
                             <div className="space-y-2">
@@ -135,7 +129,8 @@ export function PooledSettlementModal({
                                             ...prev,
                                             [line.line_id]: {
                                                 ...prev[line.line_id],
-                                                write_off_reason: value as SettlementEntry["write_off_reason"],
+                                                write_off_reason:
+                                                    value as SettlementEntry["write_off_reason"],
                                             },
                                         }))
                                     }
@@ -156,8 +151,7 @@ export function PooledSettlementModal({
                             <div className="space-y-2">
                                 <Label>
                                     Note
-                                    {settlements[line.line_id]?.write_off_reason ===
-                                    "OTHER"
+                                    {settlements[line.line_id]?.write_off_reason === "OTHER"
                                         ? " (required)"
                                         : " (optional)"}
                                 </Label>
@@ -188,10 +182,7 @@ export function PooledSettlementModal({
                     >
                         Cancel
                     </Button>
-                    <Button
-                        onClick={handleConfirm}
-                        disabled={isPending || hasOtherWithoutNote}
-                    >
+                    <Button onClick={handleConfirm} disabled={isPending || hasOtherWithoutNote}>
                         {isPending ? "Settling..." : "Confirm & Close"}
                     </Button>
                 </DialogFooter>

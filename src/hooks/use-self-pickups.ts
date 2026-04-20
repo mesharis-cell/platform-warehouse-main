@@ -10,13 +10,15 @@ export const selfPickupKeys = {
     statusHistory: (id: string | null) => ["self-pickup-status-history", id] as const,
 };
 
-export function useSelfPickups(params: {
-    page?: number;
-    limit?: number;
-    company?: string;
-    self_pickup_status?: string;
-    search?: string;
-} = {}) {
+export function useSelfPickups(
+    params: {
+        page?: number;
+        limit?: number;
+        company?: string;
+        self_pickup_status?: string;
+        search?: string;
+    } = {}
+) {
     return useQuery({
         queryKey: selfPickupKeys.list(params),
         queryFn: async () => {
@@ -24,9 +26,7 @@ export function useSelfPickups(params: {
             Object.entries(params).forEach(([key, value]) => {
                 if (value !== undefined && value !== "") query.set(key, String(value));
             });
-            const { data } = await apiClient.get(
-                `/operations/v1/self-pickup?${query.toString()}`
-            );
+            const { data } = await apiClient.get(`/operations/v1/self-pickup?${query.toString()}`);
             return data;
         },
     });
@@ -47,9 +47,7 @@ export function useSelfPickupStatusHistory(id: string | null) {
     return useQuery({
         queryKey: selfPickupKeys.statusHistory(id),
         queryFn: async () => {
-            const { data } = await apiClient.get(
-                `/operations/v1/self-pickup/${id}/status-history`
-            );
+            const { data } = await apiClient.get(`/operations/v1/self-pickup/${id}/status-history`);
             return data;
         },
         enabled: !!id,
@@ -94,10 +92,9 @@ export function useCancelSelfPickup() {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
-            const { data } = await apiClient.post(
-                `/operations/v1/self-pickup/${id}/cancel`,
-                { reason }
-            );
+            const { data } = await apiClient.post(`/operations/v1/self-pickup/${id}/cancel`, {
+                reason,
+            });
             return data;
         },
         onSuccess: () => {

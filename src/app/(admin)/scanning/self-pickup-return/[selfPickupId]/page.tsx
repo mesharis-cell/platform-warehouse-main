@@ -86,7 +86,9 @@ export default function SelfPickupReturnPage() {
                     toast.success(`Returned: ${asset?.asset_name || qrCode}`);
                 },
                 onError: (error: any) => {
-                    toast.error("Scan failed", { description: error?.response?.data?.message || error.message });
+                    toast.error("Scan failed", {
+                        description: error?.response?.data?.message || error.message,
+                    });
                 },
             }
         );
@@ -170,7 +172,9 @@ export default function SelfPickupReturnPage() {
         <div className="min-h-screen bg-background p-4 space-y-4">
             <div className="flex items-center gap-4">
                 <Link href={`/self-pickups/${selfPickupId}`}>
-                    <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon">
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
                 </Link>
                 <div>
                     <h1 className="text-xl font-bold font-mono">PICKUP RETURN</h1>
@@ -180,7 +184,8 @@ export default function SelfPickupReturnPage() {
 
             <Progress value={progressData.percent_complete} className="h-3" />
             <p className="text-center text-sm font-mono">
-                {progressData.items_scanned} / {progressData.total_items} items ({progressData.percent_complete}%)
+                {progressData.items_scanned} / {progressData.total_items} items (
+                {progressData.percent_complete}%)
             </p>
 
             {/* Camera */}
@@ -195,38 +200,68 @@ export default function SelfPickupReturnPage() {
             <Card className="p-4 space-y-3">
                 <p className="text-xs font-mono text-muted-foreground">MANUAL ENTRY</p>
                 <div className="flex gap-2">
-                    <Input placeholder="QR code" value={manualQr} onChange={(e) => setManualQr(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleManualScan()} className="flex-1" />
-                    <Input type="number" min={1} value={batchQuantity} onChange={(e) => setBatchQuantity(Number(e.target.value))} className="w-20" />
+                    <Input
+                        placeholder="QR code"
+                        value={manualQr}
+                        onChange={(e) => setManualQr(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleManualScan()}
+                        className="flex-1"
+                    />
+                    <Input
+                        type="number"
+                        min={1}
+                        value={batchQuantity}
+                        onChange={(e) => setBatchQuantity(Number(e.target.value))}
+                        className="w-20"
+                    />
                     <Select value={scanCondition} onValueChange={(v) => setScanCondition(v as any)}>
-                        <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="w-28">
+                            <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="GREEN">Green</SelectItem>
                             <SelectItem value="ORANGE">Orange</SelectItem>
                             <SelectItem value="RED">Red</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button onClick={handleManualScan} disabled={!manualQr.trim()}>Scan</Button>
+                    <Button onClick={handleManualScan} disabled={!manualQr.trim()}>
+                        Scan
+                    </Button>
                 </div>
             </Card>
 
             {/* Item list */}
             <div className="space-y-2">
                 {assets.map((asset: any) => (
-                    <div key={asset.asset_id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                        key={asset.asset_id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                         <div>
                             <p className="font-medium text-sm">{asset.asset_name}</p>
                             <p className="text-xs text-muted-foreground">{asset.tracking_method}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-mono">{asset.scanned_quantity}/{asset.required_quantity}</span>
-                            {asset.is_complete ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Package className="w-4 h-4 text-muted-foreground" />}
+                            <span className="text-sm font-mono">
+                                {asset.scanned_quantity}/{asset.required_quantity}
+                            </span>
+                            {asset.is_complete ? (
+                                <CheckCircle2 className="w-4 h-4 text-primary" />
+                            ) : (
+                                <Package className="w-4 h-4 text-muted-foreground" />
+                            )}
                         </div>
                     </div>
                 ))}
             </div>
 
             {/* Complete button — always visible on return, since pooled items may be partial */}
-            <Button onClick={handleComplete} disabled={completeScan.isPending} className="w-full" size="lg">
+            <Button
+                onClick={handleComplete}
+                disabled={completeScan.isPending}
+                className="w-full"
+                size="lg"
+            >
                 {completeScan.isPending ? "COMPLETING..." : "COMPLETE RETURN SCAN"}
             </Button>
 

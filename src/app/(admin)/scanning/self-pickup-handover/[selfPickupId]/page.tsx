@@ -147,7 +147,9 @@ export default function SelfPickupHandoverPage() {
         <div className="min-h-screen bg-background p-4 space-y-4">
             <div className="flex items-center gap-4">
                 <Link href={`/self-pickups/${selfPickupId}`}>
-                    <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon">
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
                 </Link>
                 <div>
                     <h1 className="text-xl font-bold font-mono">PICKUP HANDOVER</h1>
@@ -157,7 +159,8 @@ export default function SelfPickupHandoverPage() {
 
             <Progress value={progressData.percent_complete} className="h-3" />
             <p className="text-center text-sm font-mono">
-                {progressData.items_scanned} / {progressData.total_items} items ({progressData.percent_complete}%)
+                {progressData.items_scanned} / {progressData.total_items} items (
+                {progressData.percent_complete}%)
             </p>
 
             {/* Camera */}
@@ -172,30 +175,58 @@ export default function SelfPickupHandoverPage() {
             <Card className="p-4 space-y-3">
                 <p className="text-xs font-mono text-muted-foreground">MANUAL ENTRY</p>
                 <div className="flex gap-2">
-                    <Input placeholder="QR code" value={manualQr} onChange={(e) => setManualQr(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleManualScan()} />
-                    <Input type="number" min={1} value={batchQuantity} onChange={(e) => setBatchQuantity(Number(e.target.value))} className="w-20" placeholder="Qty" />
-                    <Button onClick={handleManualScan} disabled={!manualQr.trim()}>Scan</Button>
+                    <Input
+                        placeholder="QR code"
+                        value={manualQr}
+                        onChange={(e) => setManualQr(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleManualScan()}
+                    />
+                    <Input
+                        type="number"
+                        min={1}
+                        value={batchQuantity}
+                        onChange={(e) => setBatchQuantity(Number(e.target.value))}
+                        className="w-20"
+                        placeholder="Qty"
+                    />
+                    <Button onClick={handleManualScan} disabled={!manualQr.trim()}>
+                        Scan
+                    </Button>
                 </div>
             </Card>
 
             {/* Item list */}
             <div className="space-y-2">
                 {assets.map((asset: any) => (
-                    <div key={asset.asset_id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                        key={asset.asset_id}
+                        className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                         <div>
                             <p className="font-medium text-sm">{asset.asset_name}</p>
                             <p className="text-xs text-muted-foreground">{asset.tracking_method}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-mono">{asset.scanned_quantity}/{asset.required_quantity}</span>
-                            {asset.is_complete ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Package className="w-4 h-4 text-muted-foreground" />}
+                            <span className="text-sm font-mono">
+                                {asset.scanned_quantity}/{asset.required_quantity}
+                            </span>
+                            {asset.is_complete ? (
+                                <CheckCircle2 className="w-4 h-4 text-primary" />
+                            ) : (
+                                <Package className="w-4 h-4 text-muted-foreground" />
+                            )}
                         </div>
                     </div>
                 ))}
             </div>
 
             {progressData.percent_complete === 100 && (
-                <Button onClick={handleComplete} disabled={completeScan.isPending} className="w-full" size="lg">
+                <Button
+                    onClick={handleComplete}
+                    disabled={completeScan.isPending}
+                    className="w-full"
+                    size="lg"
+                >
                     {completeScan.isPending ? "COMPLETING..." : "CONFIRM HANDOVER"}
                 </Button>
             )}

@@ -61,7 +61,12 @@ type AttachmentTypeQueryParams = {
     entityType?: AttachmentEntityType;
     mode?: "view" | "upload";
     entityId?: string | null;
-    contextEntityType?: "ORDER" | "INBOUND_REQUEST" | "SERVICE_REQUEST" | "SELF_PICKUP" | "WORKFLOW_REQUEST";
+    contextEntityType?:
+        | "ORDER"
+        | "INBOUND_REQUEST"
+        | "SERVICE_REQUEST"
+        | "SELF_PICKUP"
+        | "WORKFLOW_REQUEST";
     contextEntityId?: string | null;
     enabled?: boolean;
 };

@@ -238,8 +238,7 @@ function AdminSidebarContent() {
         if (!featureKey) return true;
         const key = featureKey as keyof NonNullable<typeof platform>["features"];
         return (
-            platform?.features?.[key] === true ||
-            platform?.effective_admin_features?.[key] === true
+            platform?.features?.[key] === true || platform?.effective_admin_features?.[key] === true
         );
     };
 
@@ -472,8 +471,7 @@ function MobileBottomTabs() {
         if (!featureKey) return true;
         const key = featureKey as keyof NonNullable<typeof platform>["features"];
         return (
-            platform?.features?.[key] === true ||
-            platform?.effective_admin_features?.[key] === true
+            platform?.features?.[key] === true || platform?.effective_admin_features?.[key] === true
         );
     };
     const visibleTabs = mobileTabs.filter(
