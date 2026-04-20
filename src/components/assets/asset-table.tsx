@@ -219,8 +219,8 @@ export function AssetTable() {
                     </p>
                 </div>
             ) : (
-                <div className="rounded-lg border border-border">
-                    {/* Header row */}
+                <div className="rounded-lg border border-border overflow-hidden">
+                    {/* Header row — lg+ only */}
                     <div className="hidden lg:grid grid-cols-[1fr_1fr_auto_auto_auto_auto_auto_auto_40px] items-center gap-4 border-b border-border bg-muted/50 px-4 py-2 text-xs font-mono font-semibold text-muted-foreground">
                         <div>Name</div>
                         <div>Family</div>
@@ -237,11 +237,14 @@ export function AssetTable() {
                         {assets.map((asset) => (
                             <div
                                 key={asset.id}
-                                className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/30"
+                                className="px-3 py-2.5 transition-colors hover:bg-muted/30 lg:flex lg:items-center lg:gap-4 lg:px-4 lg:py-3"
                             >
-                                {/* Thumbnail + Name */}
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted border border-border">
+                                {/* Mobile: stacked layout. Desktop: row items */}
+
+                                {/* Top row on mobile — flex layout for name/thumb + right-side qty/menu */}
+                                <div className="flex items-center gap-2.5 lg:contents">
+                                    {/* Thumbnail */}
+                                    <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md bg-muted border border-border lg:h-10 lg:w-10">
                                         {asset.images?.[0]?.url ? (
                                             <Image
                                                 src={asset.images[0].url}
@@ -255,20 +258,106 @@ export function AssetTable() {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="min-w-0">
-                                        <Link
-                                            href={`/assets/${asset.id}`}
-                                            className="font-mono text-sm font-medium truncate block hover:text-primary hover:underline"
-                                        >
-                                            {asset.name}
-                                        </Link>
-                                        <p className="text-xs font-mono text-muted-foreground truncate">
-                                            {asset.company?.name || "—"}
-                                        </p>
+
+                                    {/* Name + secondary meta */}
+                                    <div className="flex-1 min-w-0 lg:flex lg:items-center lg:gap-3 lg:flex-1">
+                                        <div className="min-w-0 lg:flex-1">
+                                            <Link
+                                                href={`/assets/${asset.id}`}
+                                                className="font-mono text-sm font-medium truncate block hover:text-primary hover:underline"
+                                            >
+                                                {asset.name}
+                                            </Link>
+                                            <p className="text-[11px] font-mono text-muted-foreground truncate lg:text-xs">
+                                                {asset.family?.name
+                                                    ? `${asset.family.name}`
+                                                    : "No family"}
+                                                {asset.company?.name
+                                                    ? ` · ${asset.company.name}`
+                                                    : ""}
+                                            </p>
+                                        </div>
                                     </div>
+
+                                    {/* Quantity — always visible, right-aligned */}
+                                    <div className="text-right shrink-0 lg:hidden">
+                                        <div className="text-xs font-mono font-semibold whitespace-nowrap">
+                                            {asset.available_quantity}
+                                            <span className="text-muted-foreground font-normal">
+                                                /{asset.total_quantity}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Actions menu — always visible */}
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 shrink-0 lg:order-last"
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                                <span className="sr-only">Actions</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                                onClick={() => router.push(`/assets/${asset.id}`)}
+                                            >
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                View Details
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setMoveAsset(asset)}>
+                                                <ArrowRightLeft className="mr-2 h-4 w-4" />
+                                                Move to Another Family
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
 
-                                {/* Family */}
+                                {/* Badges row — mobile only, wraps as needed */}
+                                <div className="flex flex-wrap items-center gap-1 mt-2 pl-11 lg:hidden">
+                                    {asset.family?.category && (
+                                        <Badge
+                                            variant="outline"
+                                            className="font-mono text-[9px] py-0 px-1.5 h-4"
+                                        >
+                                            <span
+                                                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full mr-1"
+                                                style={{
+                                                    backgroundColor: asset.family.category.color,
+                                                }}
+                                            />
+                                            {asset.family.category.name}
+                                        </Badge>
+                                    )}
+                                    {asset.condition && (
+                                        <Badge
+                                            variant="outline"
+                                            className={`font-mono text-[9px] py-0 px-1.5 h-4 ${CONDITION_STYLES[asset.condition] || ""}`}
+                                        >
+                                            {asset.condition}
+                                        </Badge>
+                                    )}
+                                    <Badge
+                                        variant="outline"
+                                        className={`font-mono text-[9px] py-0 px-1.5 h-4 ${STATUS_STYLES[asset.status || ""] || ""}`}
+                                    >
+                                        {asset.status?.replace(/_/g, " ")}
+                                    </Badge>
+                                    {asset.warehouse?.name && (
+                                        <span className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground">
+                                            <MapPin className="h-2.5 w-2.5" />
+                                            <span className="truncate max-w-[140px]">
+                                                {asset.warehouse.name}
+                                                {asset.zone?.name ? ` / ${asset.zone.name}` : ""}
+                                            </span>
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Desktop-only columns */}
                                 <div className="hidden lg:block flex-1 min-w-0">
                                     {asset.family ? (
                                         <Link
@@ -283,8 +372,6 @@ export function AssetTable() {
                                         </span>
                                     )}
                                 </div>
-
-                                {/* Category pill */}
                                 <div className="hidden lg:block shrink-0">
                                     {asset.family?.category ? (
                                         <Badge
@@ -305,16 +392,12 @@ export function AssetTable() {
                                         </span>
                                     )}
                                 </div>
-
-                                {/* Location */}
-                                <div className="hidden md:flex items-center gap-1 text-xs font-mono text-muted-foreground shrink-0">
+                                <div className="hidden lg:flex items-center gap-1 text-xs font-mono text-muted-foreground shrink-0">
                                     <MapPin className="h-3 w-3" />
                                     <span className="max-w-[120px] truncate">
                                         {asset.warehouse?.name || "—"} / {asset.zone?.name || "—"}
                                     </span>
                                 </div>
-
-                                {/* Condition */}
                                 <div className="hidden lg:block shrink-0">
                                     <Badge
                                         variant="outline"
@@ -323,9 +406,7 @@ export function AssetTable() {
                                         {asset.condition}
                                     </Badge>
                                 </div>
-
-                                {/* Status */}
-                                <div className="shrink-0">
+                                <div className="hidden lg:block shrink-0">
                                     <Badge
                                         variant="outline"
                                         className={`font-mono text-[10px] py-0 ${STATUS_STYLES[asset.status || ""] || ""}`}
@@ -333,8 +414,6 @@ export function AssetTable() {
                                         {asset.status?.replace(/_/g, " ")}
                                     </Badge>
                                 </div>
-
-                                {/* Tracking type */}
                                 <div className="hidden lg:block shrink-0">
                                     <span className="font-mono text-xs text-muted-foreground">
                                         {asset.tracking_method === "INDIVIDUAL"
@@ -342,9 +421,7 @@ export function AssetTable() {
                                             : "Batch"}
                                     </span>
                                 </div>
-
-                                {/* Quantity */}
-                                <div className="text-right shrink-0">
+                                <div className="hidden lg:block text-right shrink-0">
                                     <div className="text-sm font-mono font-semibold">
                                         {asset.available_quantity}
                                         <span className="text-muted-foreground font-normal">
@@ -352,33 +429,6 @@ export function AssetTable() {
                                         </span>
                                     </div>
                                 </div>
-
-                                {/* QR - visible on hover via lg screen */}
-                                {/* Actions menu */}
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 shrink-0"
-                                        >
-                                            <MoreVertical className="h-4 w-4" />
-                                            <span className="sr-only">Actions</span>
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                            onClick={() => router.push(`/assets/${asset.id}`)}
-                                        >
-                                            <Eye className="mr-2 h-4 w-4" />
-                                            View Details
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setMoveAsset(asset)}>
-                                            <ArrowRightLeft className="mr-2 h-4 w-4" />
-                                            Move to Another Family
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
                             </div>
                         ))}
                     </div>
