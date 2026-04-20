@@ -91,6 +91,7 @@ export function useCreateAssetFamily() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: assetFamilyKeys.all });
+            queryClient.invalidateQueries({ queryKey: ["asset-categories"] });
         },
     });
 }

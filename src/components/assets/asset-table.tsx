@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Search, Package, QrCode, MapPin, MoreVertical, Eye, ArrowRightLeft } from "lucide-react";
 import { useAssets } from "@/hooks/use-assets";
 import { useAssetCategories } from "@/hooks/use-asset-categories";
+import { useCompanyFilter } from "@/contexts/company-filter-context";
 import { useWarehouses } from "@/hooks/use-warehouses";
 import { MoveToFamilyModal } from "@/components/assets/move-to-family-modal";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,13 @@ export function AssetTable() {
     const totalAssets = Number(data?.meta?.total || assets.length);
     const totalPages = Math.max(1, Math.ceil(totalAssets / ITEMS_PER_PAGE));
 
-    const { data: categoriesData } = useAssetCategories();
+    // Logistics views all companies by default (null). When a specific
+    // company is selected via the global company filter, only surface
+    // that company's + universal categories. With null, surface everything.
+    const { selectedCompanyId } = useCompanyFilter();
+    const { data: categoriesData } = useAssetCategories(selectedCompanyId || undefined, {
+        allScopes: !selectedCompanyId,
+    });
     const categories = (categoriesData?.data || []).filter((c) => c.is_active);
 
     const { data: warehousesData } = useWarehouses();
@@ -388,7 +395,7 @@ export function AssetTable() {
                                         </Badge>
                                     ) : (
                                         <span className="text-xs font-mono text-muted-foreground">
-                                            {asset.category || "—"}
+                                            —
                                         </span>
                                     )}
                                 </div>

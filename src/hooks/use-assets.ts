@@ -183,6 +183,7 @@ export function useCreateAsset() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: assetKeys.lists() });
             queryClient.invalidateQueries({ queryKey: assetFamilyKeys.all });
+            queryClient.invalidateQueries({ queryKey: ["asset-categories"] });
         },
     });
 }
