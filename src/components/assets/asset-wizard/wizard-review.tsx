@@ -38,7 +38,7 @@ export function WizardReview({ state }: Props) {
                 <Row label="Type" value={isSerialized ? "Serialized" : "Pooled"} />
                 <Row
                     label="Category"
-                    value={state.category || state.selectedFamily?.category?.name}
+                    value={state.new_category?.name || state.selectedFamily?.category?.name}
                 />
                 {isSerialized && state.quantity > 1 && (
                     <Row
