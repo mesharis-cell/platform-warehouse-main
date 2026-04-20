@@ -45,7 +45,12 @@ export interface WizardState {
     // Item name — single field, used for both family and stock record
     itemName: string;
     itemDescription: string;
-    category: string;
+    // Structured category: either pick an existing one (category_id) or
+    // create a new one (new_category). Exactly one is non-null at submit
+    // time. `category` (flat string) is retained as a legacy read-only
+    // display field — writes use category_id / new_category only.
+    category_id: string | null;
+    new_category: { name: string; color?: string } | null;
 
     // Stock record fields
     warehouseId: string;
@@ -125,7 +130,8 @@ export const INITIAL_STATE: WizardState = {
     teamId: "",
     itemName: "",
     itemDescription: "",
-    category: "",
+    category_id: null,
+    new_category: null,
     warehouseId: "",
     zoneId: "",
     quantity: 1,
@@ -166,7 +172,8 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
                 stockMode: f.stockMode === "POOLED" ? "POOLED" : "SERIALIZED",
                 companyId: f.company?.id || state.companyId,
                 brandId: f.brand?.id || state.brandId,
-                category: f.category?.name || state.category,
+                category_id: f.category?.id || state.category_id,
+                new_category: null,
                 itemName: f.name || state.itemName,
                 dimLength: Number(f.dimensions?.length) || state.dimLength,
                 dimWidth: Number(f.dimensions?.width) || state.dimWidth,

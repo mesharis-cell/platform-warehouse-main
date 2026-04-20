@@ -34,7 +34,11 @@ function canAdvance(state: WizardState, stepKey: string): boolean {
         case "type":
             return !!state.stockMode;
         case "family":
-            return !!(state.companyId && state.itemName.trim() && state.category);
+            return !!(
+                state.companyId &&
+                state.itemName.trim() &&
+                (state.category_id || state.new_category)
+            );
         case "location": {
             const base = !!(state.warehouseId && state.zoneId && state.quantity >= 1);
             if (state.stockMode === "POOLED") return base && !!state.packaging.trim();
@@ -132,22 +136,30 @@ export function AssetWizard({
             const imagePayload = imageUrls.map((url) => ({ url }));
             let familyId = state.selectedFamily?.id;
 
-            // Branch B: create family first with images
+            // Branch B: create family first with images. Category is sent
+            // as either category_id (existing) or new_category (creates a new
+            // asset_categories row server-side) — the legacy flat `category`
+            // string is no longer accepted by the API.
             if (state.branch === "new" && !familyId) {
-                const familyResult = await createFamilyMutation.mutateAsync({
+                const familyPayload: any = {
                     company_id: companyId,
                     brand_id: state.brandId || undefined,
                     team_id: state.teamId || undefined,
                     name: state.itemName.trim(),
                     description: state.itemDescription.trim() || undefined,
-                    category: state.category,
                     stock_mode: state.stockMode === "POOLED" ? "POOLED" : "SERIALIZED",
                     packaging: state.packaging.trim() || undefined,
                     weight_per_unit: state.weightPerUnit || undefined,
                     volume_per_unit: state.volumePerUnit || undefined,
                     handling_tags: state.handlingTags,
                     images: imagePayload,
-                } as any);
+                };
+                if (state.new_category) {
+                    familyPayload.new_category = state.new_category;
+                } else if (state.category_id) {
+                    familyPayload.category_id = state.category_id;
+                }
+                const familyResult = await createFamilyMutation.mutateAsync(familyPayload);
                 familyId = familyResult?.data?.id;
             }
 
@@ -159,7 +171,7 @@ export function AssetWizard({
                 zone_id: state.zoneId,
                 brand_id: state.brandId || state.selectedFamily?.brand?.id || undefined,
                 name: itemName,
-                category: state.category || state.selectedFamily?.category?.name,
+                category_id: state.category_id || state.selectedFamily?.category?.id || undefined,
                 description:
                     state.itemDescription.trim() || state.selectedFamily?.description || undefined,
                 tracking_method: state.stockMode === "POOLED" ? "BATCH" : "INDIVIDUAL",
