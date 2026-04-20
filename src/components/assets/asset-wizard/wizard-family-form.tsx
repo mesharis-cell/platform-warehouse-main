@@ -93,14 +93,23 @@ export function WizardFamilyForm({ state, update }: Props) {
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent
-                            className="p-0 w-[--radix-popover-trigger-width] max-h-[60vh] overflow-hidden"
+                            className="w-[--radix-popover-trigger-width] p-0"
                             align="start"
-                            sideOffset={4}
-                            collisionPadding={12}
+                            style={{
+                                maxHeight:
+                                    "min(var(--radix-popover-content-available-height), 360px)",
+                            }}
                         >
-                            <Command className="max-h-[60vh]">
+                            <Command className="max-h-[inherit]">
                                 <CommandInput placeholder="Search brand…" />
-                                <CommandList className="max-h-[calc(60vh-3rem)] overflow-y-auto">
+                                <CommandList
+                                    className="max-h-none"
+                                    style={{
+                                        maxHeight:
+                                            "calc(min(var(--radix-popover-content-available-height), 360px) - 45px)",
+                                        overflowY: "auto",
+                                    }}
+                                >
                                     <CommandEmpty>No brand matches.</CommandEmpty>
                                     <CommandGroup>
                                         <CommandItem
