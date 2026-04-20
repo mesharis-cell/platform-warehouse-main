@@ -301,7 +301,15 @@ export function useSelfPickupHandoverProgress(selfPickupId: string | null) {
 export function useScanSelfPickupHandoverItem() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: async ({ selfPickupId, ...body }: { selfPickupId: string; qr_code: string; quantity?: number; note?: string }) => {
+        mutationFn: async ({
+            selfPickupId,
+            ...body
+        }: {
+            selfPickupId: string;
+            qr_code: string;
+            quantity?: number;
+            note?: string;
+        }) => {
             const { data } = await apiClient.post(
                 `/operations/v1/scanning/self-pickup-handover/${selfPickupId}/scan`,
                 body
@@ -348,7 +356,16 @@ export function useSelfPickupReturnProgress(selfPickupId: string | null) {
 export function useScanSelfPickupReturnItem() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: async ({ selfPickupId, ...body }: { selfPickupId: string; qr_code: string; condition: string; quantity?: number; notes?: string }) => {
+        mutationFn: async ({
+            selfPickupId,
+            ...body
+        }: {
+            selfPickupId: string;
+            qr_code: string;
+            condition: string;
+            quantity?: number;
+            notes?: string;
+        }) => {
             const { data } = await apiClient.post(
                 `/operations/v1/scanning/self-pickup-return/${selfPickupId}/scan`,
                 body
@@ -363,7 +380,13 @@ export function useScanSelfPickupReturnItem() {
 export function useCompleteSelfPickupReturn() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: async ({ selfPickupId, settlements }: { selfPickupId: string; settlements?: any[] }) => {
+        mutationFn: async ({
+            selfPickupId,
+            settlements,
+        }: {
+            selfPickupId: string;
+            settlements?: any[];
+        }) => {
             const { data } = await apiClient.post(
                 `/operations/v1/scanning/self-pickup-return/${selfPickupId}/complete`,
                 { settlements: settlements || [] }

@@ -76,7 +76,8 @@ function FamilyCard({ family, compact = false }: { family: AssetFamily; compact?
                             {family.name}
                         </h3>
                         <p className="mt-1 text-xs font-mono text-muted-foreground">
-                            {family.company?.name || "Unknown company"} • {family.category?.name || "Uncategorized"}
+                            {family.company?.name || "Unknown company"} •{" "}
+                            {family.category?.name || "Uncategorized"}
                         </p>
                         {family.brand?.name && (
                             <p className="mt-1 text-xs font-mono text-muted-foreground">
@@ -178,8 +179,16 @@ export default function AssetsPage() {
             <AdminHeader
                 icon={activeTab === "assets" ? Package : Layers3}
                 title={activeTab === "assets" ? "ASSETS" : "ASSET FAMILIES"}
-                description={activeTab === "assets" ? "Individual Stock Records · All Assets" : "Catalog Identity · Stock Overview · Physical Records"}
-                stats={activeTab === "assets" ? undefined : { label: "TOTAL FAMILIES", value: totalFamilies }}
+                description={
+                    activeTab === "assets"
+                        ? "Individual Stock Records · All Assets"
+                        : "Catalog Identity · Stock Overview · Physical Records"
+                }
+                stats={
+                    activeTab === "assets"
+                        ? undefined
+                        : { label: "TOTAL FAMILIES", value: totalFamilies }
+                }
                 actions={
                     canCreateAsset || (canBulkUploadAsset && bulkUploadEnabled) ? (
                         <div className="flex gap-2">
@@ -206,7 +215,10 @@ export default function AssetsPage() {
             />
 
             <div className="mx-auto max-w-[1600px] px-6 py-8">
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "assets" | "families")}>
+                <Tabs
+                    value={activeTab}
+                    onValueChange={(v) => setActiveTab(v as "assets" | "families")}
+                >
                     <TabsList className="mb-6">
                         <TabsTrigger value="assets" className="font-mono">
                             <Package className="mr-2 h-4 w-4" />
@@ -223,166 +235,174 @@ export default function AssetsPage() {
                     </TabsContent>
 
                     <TabsContent value="families">
-                <div className="mb-6 space-y-4">
-                    <div className="flex flex-col gap-4 lg:flex-row">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                value={searchQuery}
-                                onChange={(event) => setSearchQuery(event.target.value)}
-                                placeholder="Search asset families..."
-                                className="bg-background pl-10 font-mono"
-                            />
-                        </div>
+                        <div className="mb-6 space-y-4">
+                            <div className="flex flex-col gap-4 lg:flex-row">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input
+                                        value={searchQuery}
+                                        onChange={(event) => setSearchQuery(event.target.value)}
+                                        placeholder="Search asset families..."
+                                        className="bg-background pl-10 font-mono"
+                                    />
+                                </div>
 
-                        <div className="flex flex-wrap gap-2">
-                            <Select
-                                value={filters.category_id}
-                                onValueChange={(value) =>
-                                    setFilters((current) => ({ ...current, category_id: value }))
-                                }
-                            >
-                                <SelectTrigger className="w-[160px] font-mono">
-                                    <SelectValue placeholder="Category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Categories</SelectItem>
-                                    {categories.map((category) => (
-                                        <SelectItem key={category.id} value={category.id}>
-                                            <span className="flex items-center gap-2">
-                                                <span
-                                                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-border"
-                                                    style={{ backgroundColor: category.color }}
-                                                />
-                                                {category.name}
-                                            </span>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                <div className="flex flex-wrap gap-2">
+                                    <Select
+                                        value={filters.category_id}
+                                        onValueChange={(value) =>
+                                            setFilters((current) => ({
+                                                ...current,
+                                                category_id: value,
+                                            }))
+                                        }
+                                    >
+                                        <SelectTrigger className="w-[160px] font-mono">
+                                            <SelectValue placeholder="Category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Categories</SelectItem>
+                                            {categories.map((category) => (
+                                                <SelectItem key={category.id} value={category.id}>
+                                                    <span className="flex items-center gap-2">
+                                                        <span
+                                                            className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-border"
+                                                            style={{
+                                                                backgroundColor: category.color,
+                                                            }}
+                                                        />
+                                                        {category.name}
+                                                    </span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
 
-                            <Select
-                                value={filters.stockMode}
-                                onValueChange={(value) =>
-                                    setFilters((current) => ({ ...current, stockMode: value }))
-                                }
-                            >
-                                <SelectTrigger className="w-[160px] font-mono">
-                                    <SelectValue placeholder="Stock Mode" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Stock Modes</SelectItem>
-                                    <SelectItem value="SERIALIZED">Serialized</SelectItem>
-                                    <SelectItem value="POOLED">Pooled</SelectItem>
-                                </SelectContent>
-                            </Select>
+                                    <Select
+                                        value={filters.stockMode}
+                                        onValueChange={(value) =>
+                                            setFilters((current) => ({
+                                                ...current,
+                                                stockMode: value,
+                                            }))
+                                        }
+                                    >
+                                        <SelectTrigger className="w-[160px] font-mono">
+                                            <SelectValue placeholder="Stock Mode" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Stock Modes</SelectItem>
+                                            <SelectItem value="SERIALIZED">Serialized</SelectItem>
+                                            <SelectItem value="POOLED">Pooled</SelectItem>
+                                        </SelectContent>
+                                    </Select>
 
-                            <div className="flex overflow-hidden rounded-lg border border-border">
-                                <Button
-                                    variant={viewMode === "grid" ? "default" : "ghost"}
-                                    size="sm"
-                                    onClick={() => setViewMode("grid")}
-                                    className="rounded-none border-r border-border"
-                                >
-                                    <Grid3x3 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    variant={viewMode === "list" ? "default" : "ghost"}
-                                    size="sm"
-                                    onClick={() => setViewMode("list")}
-                                    className="rounded-none"
-                                >
-                                    <List className="h-4 w-4" />
-                                </Button>
+                                    <div className="flex overflow-hidden rounded-lg border border-border">
+                                        <Button
+                                            variant={viewMode === "grid" ? "default" : "ghost"}
+                                            size="sm"
+                                            onClick={() => setViewMode("grid")}
+                                            className="rounded-none border-r border-border"
+                                        >
+                                            <Grid3x3 className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant={viewMode === "list" ? "default" : "ghost"}
+                                            size="sm"
+                                            onClick={() => setViewMode("list")}
+                                            className="rounded-none"
+                                        >
+                                            <List className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                {isLoading ? (
-                    <div
-                        className={
-                            viewMode === "grid"
-                                ? "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-                                : "space-y-4"
-                        }
-                    >
-                        {Array.from({ length: 6 }).map((_, index) => (
-                            <Card key={index} className="overflow-hidden">
-                                <Skeleton className="h-48 w-full" />
-                                <CardContent className="space-y-3 p-4">
-                                    <Skeleton className="h-4 w-1/2" />
-                                    <Skeleton className="h-3 w-2/3" />
-                                    <Skeleton className="h-16 w-full" />
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                ) : families.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="mb-4 rounded-full bg-muted/50 p-4">
-                            <Layers3 className="h-12 w-12 text-muted-foreground" />
-                        </div>
-                        <h3 className="mb-2 font-mono text-lg font-semibold">
-                            No asset families found
-                        </h3>
-                        <p className="mb-6 max-w-md text-sm font-mono text-muted-foreground">
-                            Family-first browsing only shows grouped catalog identity. Adjust the
-                            company/category filters or continue creating stock from the existing
-                            asset workflows.
-                        </p>
-                        {canCreateAsset && !isMobile ? (
-                            <Button onClick={() => setShowWizard(true)}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Create Asset
-                            </Button>
-                        ) : null}
-                    </div>
-                ) : viewMode === "grid" ? (
-                    <div
-                        className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-                        data-testid="family-list"
-                    >
-                        {families.map((family) => (
-                            <FamilyCard key={family.id} family={family} />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="space-y-4" data-testid="family-list">
-                        {families.map((family) => (
-                            <FamilyCard key={family.id} family={family} compact />
-                        ))}
-                    </div>
-                )}
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-6">
-                        <p className="text-sm text-muted-foreground font-mono">
-                            Showing {families.length} of {totalFamilies}
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={page <= 1}
-                                onClick={() => setPage((p) => p - 1)}
+                        {isLoading ? (
+                            <div
+                                className={
+                                    viewMode === "grid"
+                                        ? "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+                                        : "space-y-4"
+                                }
                             >
-                                Previous
-                            </Button>
-                            <span className="text-sm font-mono text-muted-foreground">
-                                Page {page} of {totalPages}
-                            </span>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={page >= totalPages}
-                                onClick={() => setPage((p) => p + 1)}
+                                {Array.from({ length: 6 }).map((_, index) => (
+                                    <Card key={index} className="overflow-hidden">
+                                        <Skeleton className="h-48 w-full" />
+                                        <CardContent className="space-y-3 p-4">
+                                            <Skeleton className="h-4 w-1/2" />
+                                            <Skeleton className="h-3 w-2/3" />
+                                            <Skeleton className="h-16 w-full" />
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : families.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                                <div className="mb-4 rounded-full bg-muted/50 p-4">
+                                    <Layers3 className="h-12 w-12 text-muted-foreground" />
+                                </div>
+                                <h3 className="mb-2 font-mono text-lg font-semibold">
+                                    No asset families found
+                                </h3>
+                                <p className="mb-6 max-w-md text-sm font-mono text-muted-foreground">
+                                    Family-first browsing only shows grouped catalog identity.
+                                    Adjust the company/category filters or continue creating stock
+                                    from the existing asset workflows.
+                                </p>
+                                {canCreateAsset && !isMobile ? (
+                                    <Button onClick={() => setShowWizard(true)}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Create Asset
+                                    </Button>
+                                ) : null}
+                            </div>
+                        ) : viewMode === "grid" ? (
+                            <div
+                                className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+                                data-testid="family-list"
                             >
-                                Next
-                            </Button>
-                        </div>
-                    </div>
-                )}
+                                {families.map((family) => (
+                                    <FamilyCard key={family.id} family={family} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="space-y-4" data-testid="family-list">
+                                {families.map((family) => (
+                                    <FamilyCard key={family.id} family={family} compact />
+                                ))}
+                            </div>
+                        )}
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between pt-6">
+                                <p className="text-sm text-muted-foreground font-mono">
+                                    Showing {families.length} of {totalFamilies}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={page <= 1}
+                                        onClick={() => setPage((p) => p - 1)}
+                                    >
+                                        Previous
+                                    </Button>
+                                    <span className="text-sm font-mono text-muted-foreground">
+                                        Page {page} of {totalPages}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={page >= totalPages}
+                                        onClick={() => setPage((p) => p + 1)}
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </TabsContent>
                 </Tabs>
             </div>

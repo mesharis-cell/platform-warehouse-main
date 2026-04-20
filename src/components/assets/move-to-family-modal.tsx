@@ -203,8 +203,7 @@ export function MoveToFamilyModal({
 
                     {selectedFamily && (
                         <p className="text-xs font-mono text-muted-foreground">
-                            Selected:{" "}
-                            <span className="font-semibold">{selectedFamily.name}</span> (
+                            Selected: <span className="font-semibold">{selectedFamily.name}</span> (
                             {selectedFamily.stock_mode})
                         </p>
                     )}

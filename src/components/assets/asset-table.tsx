@@ -4,15 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import {
-    Search,
-    Package,
-    QrCode,
-    MapPin,
-    MoreVertical,
-    Eye,
-    ArrowRightLeft,
-} from "lucide-react";
+import { Search, Package, QrCode, MapPin, MoreVertical, Eye, ArrowRightLeft } from "lucide-react";
 import { useAssets } from "@/hooks/use-assets";
 import { useAssetCategories } from "@/hooks/use-asset-categories";
 import { useWarehouses } from "@/hooks/use-warehouses";
@@ -119,9 +111,7 @@ export function AssetTable() {
                 <div className="flex flex-wrap gap-2">
                     <Select
                         value={filters.category}
-                        onValueChange={(value) =>
-                            setFilters((c) => ({ ...c, category: value }))
-                        }
+                        onValueChange={(value) => setFilters((c) => ({ ...c, category: value }))}
                     >
                         <SelectTrigger className="w-[150px] font-mono">
                             <SelectValue placeholder="Category" />
@@ -144,9 +134,7 @@ export function AssetTable() {
 
                     <Select
                         value={filters.condition}
-                        onValueChange={(value) =>
-                            setFilters((c) => ({ ...c, condition: value }))
-                        }
+                        onValueChange={(value) => setFilters((c) => ({ ...c, condition: value }))}
                     >
                         <SelectTrigger className="w-[140px] font-mono">
                             <SelectValue placeholder="Condition" />
@@ -161,9 +149,7 @@ export function AssetTable() {
 
                     <Select
                         value={filters.status}
-                        onValueChange={(value) =>
-                            setFilters((c) => ({ ...c, status: value }))
-                        }
+                        onValueChange={(value) => setFilters((c) => ({ ...c, status: value }))}
                     >
                         <SelectTrigger className="w-[140px] font-mono">
                             <SelectValue placeholder="Status" />
@@ -308,8 +294,7 @@ export function AssetTable() {
                                             <span
                                                 className="inline-block h-2 w-2 shrink-0 rounded-full mr-1"
                                                 style={{
-                                                    backgroundColor:
-                                                        asset.family.category.color,
+                                                    backgroundColor: asset.family.category.color,
                                                 }}
                                             />
                                             {asset.family.category.name}
@@ -388,9 +373,7 @@ export function AssetTable() {
                                             <Eye className="mr-2 h-4 w-4" />
                                             View Details
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            onClick={() => setMoveAsset(asset)}
-                                        >
+                                        <DropdownMenuItem onClick={() => setMoveAsset(asset)}>
                                             <ArrowRightLeft className="mr-2 h-4 w-4" />
                                             Move to Another Family
                                         </DropdownMenuItem>
