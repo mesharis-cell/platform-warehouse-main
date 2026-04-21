@@ -117,6 +117,21 @@ export function useCancelSelfPickup() {
     });
 }
 
+export function useMarkSelfPickupNoCost() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { data } = await apiClient.post(`/operations/v1/self-pickup/${id}/mark-no-cost`);
+            return data;
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["self-pickups"] });
+            qc.invalidateQueries({ queryKey: ["self-pickup"] });
+        },
+        onError: throwApiError,
+    });
+}
+
 export function useUpdateSelfPickupJobNumber() {
     const qc = useQueryClient();
     return useMutation({

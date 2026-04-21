@@ -23,6 +23,10 @@ import { WorkflowRequestsCard } from "@/components/shared/workflow-requests-card
 import { EntityAttachmentsCard } from "@/components/shared/entity-attachments-card";
 import { LogisticsSelfPickupPricingReview } from "@/components/self-pickups/LogisticsSelfPickupPricingReview";
 import { CancelSelfPickupModal } from "@/components/self-pickups/CancelSelfPickupModal";
+import { MarkAsNoCostButton } from "@/components/self-pickups/MarkAsNoCostButton";
+import { useToken } from "@/lib/auth/use-token";
+import { hasPermission } from "@/lib/auth/permissions";
+import { WAREHOUSE_ACTION_PERMISSIONS } from "@/lib/auth/permission-map";
 
 const PICKUP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     SUBMITTED: { label: "Submitted", color: "bg-blue-100 text-blue-700 border-blue-300" },
@@ -59,6 +63,8 @@ const CANCELLABLE_STATUSES = [
     "READY_FOR_PICKUP",
 ];
 
+const MARK_NO_COST_STATUSES = ["PRICING_REVIEW", "PENDING_APPROVAL"];
+
 export default function WarehouseSelfPickupDetailPage({
     params,
 }: {
@@ -66,8 +72,10 @@ export default function WarehouseSelfPickupDetailPage({
 }) {
     const { id } = use(params);
     const router = useRouter();
+    const { user } = useToken();
     const { platform, isLoading: platformLoading } = usePlatform();
     const selfPickupEnabled = (platform?.features as any)?.enable_self_pickup === true;
+    const canMarkNoCost = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.selfPickupsMarkNoCost);
 
     useEffect(() => {
         if (!platformLoading && !selfPickupEnabled) {
@@ -148,6 +156,14 @@ export default function WarehouseSelfPickupDetailPage({
                             <Badge variant="outline" className={sc.color}>
                                 {sc.label}
                             </Badge>
+                            {pickup.pricing_mode === "NO_COST" && (
+                                <Badge
+                                    variant="secondary"
+                                    className="bg-neutral-500/10 text-neutral-700 border-neutral-400/60 font-mono text-xs"
+                                >
+                                    NO COST
+                                </Badge>
+                            )}
                         </div>
                         <div className="flex gap-2">
                             {pickup.self_pickup_status === "PRICING_REVIEW" && (
@@ -165,6 +181,16 @@ export default function WarehouseSelfPickupDetailPage({
                                     Submit for Approval
                                 </Button>
                             )}
+                            {canMarkNoCost &&
+                                pickup.pricing_mode === "STANDARD" &&
+                                MARK_NO_COST_STATUSES.includes(pickup.self_pickup_status) && (
+                                    <MarkAsNoCostButton
+                                        entityType="SELF_PICKUP"
+                                        entityId={pickup.id}
+                                        entityIdReadable={pickup.self_pickup_id}
+                                        onSuccess={() => refetch()}
+                                    />
+                                )}
                             {pickup.self_pickup_status === "CONFIRMED" && (
                                 <Button
                                     onClick={() =>
@@ -273,16 +299,32 @@ export default function WarehouseSelfPickupDetailPage({
                             </CardContent>
                         </Card>
 
-                        {/* Pricing review card — only when status allows logistics to
-                        manage line items + submit for approval. */}
-                        {["PRICING_REVIEW", "PENDING_APPROVAL"].includes(
-                            pickup.self_pickup_status
-                        ) && (
-                            <LogisticsSelfPickupPricingReview
-                                selfPickupId={pickup.id}
-                                pickup={pickup}
-                                onSubmitSuccess={() => refetch()}
-                            />
+                        {/* Pricing review card. Skipped entirely for NO_COST pickups —
+                            line items are voided server-side and the backend rejects
+                            any new inserts, so logistics has nothing to manage here.
+                            Rendered as a single neutral info card instead. */}
+                        {pickup.pricing_mode === "NO_COST" ? (
+                            <Card className="border-neutral-400/40 bg-neutral-50/50">
+                                <CardHeader>
+                                    <CardTitle className="text-base text-neutral-700">
+                                        Approved at No Cost
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="text-sm text-muted-foreground">
+                                    This pickup is approved at no cost. Line items and pricing are
+                                    disabled.
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            ["PRICING_REVIEW", "PENDING_APPROVAL"].includes(
+                                pickup.self_pickup_status
+                            ) && (
+                                <LogisticsSelfPickupPricingReview
+                                    selfPickupId={pickup.id}
+                                    pickup={pickup}
+                                    onSubmitSuccess={() => refetch()}
+                                />
+                            )
                         )}
                     </div>
 
