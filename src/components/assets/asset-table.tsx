@@ -4,7 +4,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Search, Package, QrCode, MapPin, MoreVertical, Eye, ArrowRightLeft } from "lucide-react";
+import {
+    Search,
+    Package,
+    QrCode,
+    MapPin,
+    MoreVertical,
+    Eye,
+    ArrowRightLeft,
+    Calendar,
+} from "lucide-react";
 import { useAssets } from "@/hooks/use-assets";
 import { useAssetCategories } from "@/hooks/use-asset-categories";
 import { useCompanyFilter } from "@/contexts/company-filter-context";
@@ -41,6 +50,18 @@ const STATUS_STYLES: Record<string, string> = {
     OUT: "bg-violet-500/10 text-violet-700 border-violet-500/20",
     MAINTENANCE: "bg-amber-500/10 text-amber-700 border-amber-500/20",
     TRANSFORMED: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+};
+
+const TYPE_STYLES: Record<string, string> = {
+    INDIVIDUAL: "bg-sky-500/10 text-sky-700 border-sky-500/20",
+    BATCH: "bg-orange-500/10 text-orange-700 border-orange-500/20",
+};
+
+const formatCreated = (iso?: string | Date | null) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
 };
 
 const ITEMS_PER_PAGE = 25;
@@ -227,16 +248,20 @@ export function AssetTable() {
                 </div>
             ) : (
                 <div className="rounded-lg border border-border overflow-hidden">
-                    {/* Header row — lg+ only */}
-                    <div className="hidden lg:grid grid-cols-[1fr_1fr_auto_auto_auto_auto_auto_auto_40px] items-center gap-4 border-b border-border bg-muted/50 px-4 py-2 text-xs font-mono font-semibold text-muted-foreground">
+                    {/* Header row — xl+ grid. On narrower viewports rows wrap
+                        (flex flex-wrap below) so columns stack responsively. */}
+                    <div className="hidden xl:grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_80px_80px_80px_100px_90px_120px_48px] gap-2 px-4 py-2 border-b text-[10px] font-mono font-semibold text-muted-foreground uppercase tracking-wider bg-muted/50">
                         <div>Name</div>
                         <div>Family</div>
                         <div>Category</div>
+                        <div>Company</div>
                         <div>Location</div>
                         <div>Condition</div>
                         <div>Status</div>
-                        <div>Tracking</div>
+                        <div>Type</div>
                         <div>Qty</div>
+                        <div>Created</div>
+                        <div>QR</div>
                         <div />
                     </div>
 
@@ -244,14 +269,14 @@ export function AssetTable() {
                         {assets.map((asset) => (
                             <div
                                 key={asset.id}
-                                className="px-3 py-2.5 transition-colors hover:bg-muted/30 lg:flex lg:items-center lg:gap-4 lg:px-4 lg:py-3"
+                                className="group xl:grid xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_80px_80px_80px_100px_90px_120px_48px] gap-2 px-4 py-2.5 items-center transition-colors hover:bg-muted/50 flex flex-wrap"
                             >
-                                {/* Mobile: stacked layout. Desktop: row items */}
-
-                                {/* Top row on mobile — flex layout for name/thumb + right-side qty/menu */}
-                                <div className="flex items-center gap-2.5 lg:contents">
-                                    {/* Thumbnail */}
-                                    <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md bg-muted border border-border lg:h-10 lg:w-10">
+                                {/* Name */}
+                                <Link
+                                    href={`/assets/${asset.id}`}
+                                    className="flex items-center gap-3 min-w-0"
+                                >
+                                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted border border-border">
                                         {asset.images?.[0]?.url ? (
                                             <Image
                                                 src={asset.images[0].url}
@@ -265,128 +290,29 @@ export function AssetTable() {
                                             </div>
                                         )}
                                     </div>
+                                    <span className="font-mono text-sm font-medium truncate hover:text-primary transition-colors">
+                                        {asset.name}
+                                    </span>
+                                </Link>
 
-                                    {/* Name + secondary meta */}
-                                    <div className="flex-1 min-w-0 lg:flex lg:items-center lg:gap-3 lg:flex-1">
-                                        <div className="min-w-0 lg:flex-1">
-                                            <Link
-                                                href={`/assets/${asset.id}`}
-                                                className="font-mono text-sm font-medium truncate block hover:text-primary hover:underline"
-                                            >
-                                                {asset.name}
-                                            </Link>
-                                            <p className="text-[11px] font-mono text-muted-foreground truncate lg:text-xs">
-                                                {asset.family?.name
-                                                    ? `${asset.family.name}`
-                                                    : "No family"}
-                                                {asset.company?.name
-                                                    ? ` · ${asset.company.name}`
-                                                    : ""}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Quantity — always visible, right-aligned */}
-                                    <div className="text-right shrink-0 lg:hidden">
-                                        <div className="text-xs font-mono font-semibold whitespace-nowrap">
-                                            {asset.available_quantity}
-                                            <span className="text-muted-foreground font-normal">
-                                                /{asset.total_quantity}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Actions menu — always visible */}
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 w-8 p-0 shrink-0 lg:order-last"
-                                            >
-                                                <MoreVertical className="h-4 w-4" />
-                                                <span className="sr-only">Actions</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem
-                                                onClick={() => router.push(`/assets/${asset.id}`)}
-                                            >
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                View Details
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setMoveAsset(asset)}>
-                                                <ArrowRightLeft className="mr-2 h-4 w-4" />
-                                                Move to Another Family
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                {/* Family */}
+                                <div className="font-mono text-xs text-muted-foreground truncate">
+                                    {asset.family?.name || "\u2014"}
                                 </div>
 
-                                {/* Badges row — mobile only, wraps as needed */}
-                                <div className="flex flex-wrap items-center gap-1 mt-2 pl-11 lg:hidden">
-                                    {asset.family?.category && (
-                                        <Badge
-                                            variant="outline"
-                                            className="font-mono text-[9px] py-0 px-1.5 h-4"
-                                        >
-                                            <span
-                                                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full mr-1"
-                                                style={{
-                                                    backgroundColor: asset.family.category.color,
-                                                }}
-                                            />
-                                            {asset.family.category.name}
-                                        </Badge>
-                                    )}
-                                    {asset.condition && (
-                                        <Badge
-                                            variant="outline"
-                                            className={`font-mono text-[9px] py-0 px-1.5 h-4 ${CONDITION_STYLES[asset.condition] || ""}`}
-                                        >
-                                            {asset.condition}
-                                        </Badge>
-                                    )}
-                                    <Badge
-                                        variant="outline"
-                                        className={`font-mono text-[9px] py-0 px-1.5 h-4 ${STATUS_STYLES[asset.status || ""] || ""}`}
-                                    >
-                                        {asset.status?.replace(/_/g, " ")}
-                                    </Badge>
-                                    {asset.warehouse?.name && (
-                                        <span className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground">
-                                            <MapPin className="h-2.5 w-2.5" />
-                                            <span className="truncate max-w-[140px]">
-                                                {asset.warehouse.name}
-                                                {asset.zone?.name ? ` / ${asset.zone.name}` : ""}
-                                            </span>
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Desktop-only columns */}
-                                <div className="hidden lg:block flex-1 min-w-0">
-                                    {asset.family ? (
-                                        <Link
-                                            href={`/assets/families/${asset.family.id}`}
-                                            className="font-mono text-xs hover:text-primary hover:underline truncate block"
-                                        >
-                                            {asset.family.name}
-                                        </Link>
-                                    ) : (
-                                        <span className="font-mono text-xs text-muted-foreground">
-                                            No family
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="hidden lg:block shrink-0">
+                                {/* Category */}
+                                <div>
                                     {asset.family?.category ? (
                                         <Badge
                                             variant="outline"
-                                            className="font-mono text-[10px] py-0"
+                                            className="font-mono text-[10px]"
+                                            style={{
+                                                borderColor: asset.family.category.color,
+                                                color: asset.family.category.color,
+                                            }}
                                         >
                                             <span
-                                                className="inline-block h-2 w-2 shrink-0 rounded-full mr-1"
+                                                className="mr-1 inline-block h-1.5 w-1.5 rounded-full"
                                                 style={{
                                                     backgroundColor: asset.family.category.color,
                                                 }}
@@ -394,18 +320,28 @@ export function AssetTable() {
                                             {asset.family.category.name}
                                         </Badge>
                                     ) : (
-                                        <span className="text-xs font-mono text-muted-foreground">
-                                            —
+                                        <span className="font-mono text-xs text-muted-foreground">
+                                            {"\u2014"}
                                         </span>
                                     )}
                                 </div>
-                                <div className="hidden lg:flex items-center gap-1 text-xs font-mono text-muted-foreground shrink-0">
-                                    <MapPin className="h-3 w-3" />
-                                    <span className="max-w-[120px] truncate">
-                                        {asset.warehouse?.name || "—"} / {asset.zone?.name || "—"}
+
+                                {/* Company */}
+                                <div className="font-mono text-xs text-muted-foreground truncate">
+                                    {asset.company?.name || "\u2014"}
+                                </div>
+
+                                {/* Location */}
+                                <div className="flex items-center gap-1 font-mono text-xs text-muted-foreground truncate">
+                                    <MapPin className="h-3 w-3 shrink-0" />
+                                    <span className="truncate">
+                                        {asset.warehouse?.name || "\u2014"} /{" "}
+                                        {asset.zone?.name || "\u2014"}
                                     </span>
                                 </div>
-                                <div className="hidden lg:block shrink-0">
+
+                                {/* Condition */}
+                                <div>
                                     <Badge
                                         variant="outline"
                                         className={`font-mono text-[10px] py-0 ${CONDITION_STYLES[asset.condition || ""] || ""}`}
@@ -413,7 +349,9 @@ export function AssetTable() {
                                         {asset.condition}
                                     </Badge>
                                 </div>
-                                <div className="hidden lg:block shrink-0">
+
+                                {/* Status */}
+                                <div>
                                     <Badge
                                         variant="outline"
                                         className={`font-mono text-[10px] py-0 ${STATUS_STYLES[asset.status || ""] || ""}`}
@@ -421,20 +359,70 @@ export function AssetTable() {
                                         {asset.status?.replace(/_/g, " ")}
                                     </Badge>
                                 </div>
-                                <div className="hidden lg:block shrink-0">
-                                    <span className="font-mono text-xs text-muted-foreground">
-                                        {asset.tracking_method === "INDIVIDUAL"
-                                            ? "Individual"
-                                            : "Batch"}
+
+                                {/* Type */}
+                                <div>
+                                    <Badge
+                                        variant="outline"
+                                        className={`font-mono text-[10px] py-0 ${TYPE_STYLES[asset.tracking_method || ""] || ""}`}
+                                    >
+                                        {asset.tracking_method}
+                                    </Badge>
+                                </div>
+
+                                {/* Qty */}
+                                <div className="font-mono text-xs">
+                                    <span className="font-semibold">
+                                        {asset.available_quantity}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                        /{asset.total_quantity}
                                     </span>
                                 </div>
-                                <div className="hidden lg:block text-right shrink-0">
-                                    <div className="text-sm font-mono font-semibold">
-                                        {asset.available_quantity}
-                                        <span className="text-muted-foreground font-normal">
-                                            /{asset.total_quantity}
-                                        </span>
-                                    </div>
+
+                                {/* Created */}
+                                <div className="flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
+                                    <Calendar className="h-3 w-3 shrink-0" />
+                                    <span className="truncate">
+                                        {formatCreated(asset.created_at)}
+                                    </span>
+                                </div>
+
+                                {/* QR */}
+                                <div className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                                    <QrCode className="h-3 w-3 shrink-0" />
+                                    <span className="truncate">{asset.qr_code}</span>
+                                </div>
+
+                                {/* Actions */}
+                                <div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                                onClick={() => router.push(`/assets/${asset.id}`)}
+                                                className="font-mono text-xs"
+                                            >
+                                                <Eye className="h-3.5 w-3.5 mr-2" />
+                                                View Details
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() => setMoveAsset(asset)}
+                                                className="font-mono text-xs"
+                                            >
+                                                <ArrowRightLeft className="h-3.5 w-3.5 mr-2" />
+                                                Move to Family
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
                             </div>
                         ))}
