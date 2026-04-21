@@ -14,8 +14,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAdminOrders } from "@/hooks/use-orders";
+import { useSelfPickups } from "@/hooks/use-self-pickups";
+import { usePlatform } from "@/contexts/platform-context";
 import { APIOrdersResponse } from "@/types/order";
-import { ScanLine, PackageCheck, PackageOpen, Search, ChevronRight, Truck } from "lucide-react";
+import {
+    ScanLine,
+    PackageCheck,
+    PackageOpen,
+    Search,
+    ChevronRight,
+    Truck,
+    User,
+} from "lucide-react";
 import { AdminHeader } from "@/components/admin-header";
 
 export default function AdminScanningDashboard() {
@@ -62,6 +72,35 @@ export default function AdminScanningDashboard() {
                 order.order_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 order.contact_name.toLowerCase().includes(searchQuery.toLowerCase())
         ) || [];
+
+    // Self-pickup queues — shown only when the feature is enabled. Mirrors
+    // the order outbound/inbound card structure. See SP8 of self-pickup
+    // parity sprint.
+    const { platform } = usePlatform();
+    const selfPickupEnabled = (platform?.features as any)?.enable_self_pickup === true;
+
+    const { data: spReadyData, isLoading: loadingSpReady } = useSelfPickups({
+        self_pickup_status: "READY_FOR_PICKUP",
+        limit: 20,
+    });
+    const { data: spReturnData, isLoading: loadingSpReturn } = useSelfPickups({
+        self_pickup_status: "AWAITING_RETURN",
+        limit: 20,
+    });
+
+    const spReadyList: any[] = spReadyData?.data?.self_pickups || [];
+    const spReturnList: any[] = spReturnData?.data?.self_pickups || [];
+
+    const filteredSpReady = spReadyList.filter(
+        (p) =>
+            p.self_pickup_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (p.collector_name || "").toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const filteredSpReturn = spReturnList.filter(
+        (p) =>
+            p.self_pickup_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (p.collector_name || "").toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
         <div className="min-h-screen bg-background">
@@ -228,6 +267,146 @@ export default function AdminScanningDashboard() {
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Self-Pickup queues (feature-gated) — mirror structure of the
+                    order queues above. */}
+                {selfPickupEnabled && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="border-2">
+                            <CardHeader>
+                                <CardTitle className="font-mono text-sm flex items-center gap-2">
+                                    <User className="h-5 w-5 text-primary" />
+                                    SELF-PICKUP HANDOVER
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    <div className="flex items-baseline gap-2">
+                                        <div className="text-4xl font-bold font-mono text-primary">
+                                            {filteredSpReady.length}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground font-mono">
+                                            pickups ready for handover
+                                        </div>
+                                    </div>
+
+                                    {loadingSpReady ? (
+                                        <div className="space-y-2">
+                                            {[1, 2, 3].map((i) => (
+                                                <div
+                                                    key={i}
+                                                    className="h-20 bg-muted/50 rounded animate-pulse"
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : filteredSpReady.length === 0 ? (
+                                        <div className="text-center py-8 text-sm text-muted-foreground font-mono">
+                                            No pickups ready for handover
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                                            {filteredSpReady.map((pickup) => (
+                                                <Link
+                                                    key={pickup.id}
+                                                    href={`/scanning/self-pickup-handover/${pickup.id}`}
+                                                    className="block"
+                                                >
+                                                    <div className="p-4 bg-muted/30 hover:bg-muted/50 rounded-lg border border-border hover:border-primary/50 transition-colors cursor-pointer">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex-1">
+                                                                <div className="font-mono text-sm font-bold">
+                                                                    {pickup.self_pickup_id}
+                                                                </div>
+                                                                <div className="text-xs text-muted-foreground mt-1">
+                                                                    {pickup.collector_name || "—"}
+                                                                </div>
+                                                            </div>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="font-mono"
+                                                            >
+                                                                START SCAN
+                                                                <ChevronRight className="w-4 h-4 ml-1" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-2">
+                            <CardHeader>
+                                <CardTitle className="font-mono text-sm flex items-center gap-2">
+                                    <Truck className="h-5 w-5 text-secondary" />
+                                    SELF-PICKUP RETURN
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    <div className="flex items-baseline gap-2">
+                                        <div className="text-4xl font-bold font-mono text-secondary">
+                                            {filteredSpReturn.length}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground font-mono">
+                                            pickups awaiting return
+                                        </div>
+                                    </div>
+
+                                    {loadingSpReturn ? (
+                                        <div className="space-y-2">
+                                            {[1, 2, 3].map((i) => (
+                                                <div
+                                                    key={i}
+                                                    className="h-20 bg-muted/50 rounded animate-pulse"
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : filteredSpReturn.length === 0 ? (
+                                        <div className="text-center py-8 text-sm text-muted-foreground font-mono">
+                                            No pickups awaiting return
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                                            {filteredSpReturn.map((pickup) => (
+                                                <Link
+                                                    key={pickup.id}
+                                                    href={`/scanning/self-pickup-return/${pickup.id}`}
+                                                    className="block"
+                                                >
+                                                    <div className="p-4 bg-muted/30 hover:bg-muted/50 rounded-lg border border-border hover:border-secondary/50 transition-colors cursor-pointer">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex-1">
+                                                                <div className="font-mono text-sm font-bold">
+                                                                    {pickup.self_pickup_id}
+                                                                </div>
+                                                                <div className="text-xs text-muted-foreground mt-1">
+                                                                    {pickup.collector_name || "—"}
+                                                                </div>
+                                                            </div>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="font-mono"
+                                                            >
+                                                                START SCAN
+                                                                <ChevronRight className="w-4 h-4 ml-1" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 {/* Instructions */}
                 <Card className="border-2 border-dashed">

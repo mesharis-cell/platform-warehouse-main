@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,16 +8,21 @@ import {
     useSelfPickupStatusHistory,
     useMarkReadyForPickup,
     useSubmitForApproval,
+    useUpdateSelfPickupJobNumber,
 } from "@/hooks/use-self-pickups";
 import { usePlatform } from "@/contexts/platform-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, User, Phone, Mail, Clock, Package } from "lucide-react";
+import { ArrowLeft, User, Phone, Mail, Clock, Package, Edit, Save, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { WorkflowRequestsCard } from "@/components/shared/workflow-requests-card";
 import { EntityAttachmentsCard } from "@/components/shared/entity-attachments-card";
+import { LogisticsSelfPickupPricingReview } from "@/components/self-pickups/LogisticsSelfPickupPricingReview";
+import { CancelSelfPickupModal } from "@/components/self-pickups/CancelSelfPickupModal";
 
 const PICKUP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
     SUBMITTED: { label: "Submitted", color: "bg-blue-100 text-blue-700 border-blue-300" },
@@ -30,21 +35,29 @@ const PICKUP_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
         color: "bg-orange-100 text-orange-700 border-orange-300",
     },
     QUOTED: { label: "Quoted", color: "bg-indigo-100 text-indigo-700 border-indigo-300" },
+    DECLINED: { label: "Declined", color: "bg-red-100 text-red-700 border-red-300" },
     CONFIRMED: { label: "Confirmed", color: "bg-green-100 text-green-700 border-green-300" },
     READY_FOR_PICKUP: {
         label: "Ready for Pickup",
         color: "bg-emerald-100 text-emerald-700 border-emerald-300",
     },
     PICKED_UP: { label: "Picked Up", color: "bg-teal-100 text-teal-700 border-teal-300" },
-    IN_USE: { label: "In Use", color: "bg-purple-100 text-purple-700 border-purple-300" },
     AWAITING_RETURN: {
         label: "Awaiting Return",
         color: "bg-amber-100 text-amber-700 border-amber-300",
     },
-    RETURNED: { label: "Returned", color: "bg-cyan-100 text-cyan-700 border-cyan-300" },
     CLOSED: { label: "Closed", color: "bg-gray-100 text-gray-700 border-gray-300" },
     CANCELLED: { label: "Cancelled", color: "bg-red-50 text-red-600 border-red-200" },
 };
+
+const CANCELLABLE_STATUSES = [
+    "SUBMITTED",
+    "PRICING_REVIEW",
+    "PENDING_APPROVAL",
+    "QUOTED",
+    "CONFIRMED",
+    "READY_FOR_PICKUP",
+];
 
 export default function WarehouseSelfPickupDetailPage({
     params,
@@ -62,10 +75,15 @@ export default function WarehouseSelfPickupDetailPage({
         }
     }, [platformLoading, selfPickupEnabled, router]);
 
-    const { data: pickupData, isLoading } = useSelfPickupDetails(id);
+    const { data: pickupData, isLoading, refetch } = useSelfPickupDetails(id);
     const { data: historyData } = useSelfPickupStatusHistory(id);
     const markReady = useMarkReadyForPickup();
     const submitForApproval = useSubmitForApproval();
+    const updateJobNumber = useUpdateSelfPickupJobNumber();
+
+    const [cancelOpen, setCancelOpen] = useState(false);
+    const [isEditingJobNumber, setIsEditingJobNumber] = useState(false);
+    const [jobNumber, setJobNumber] = useState("");
 
     if (platformLoading || !selfPickupEnabled) {
         return null;
@@ -73,6 +91,24 @@ export default function WarehouseSelfPickupDetailPage({
 
     const pickup = pickupData?.data;
     const history = historyData?.data || [];
+
+    if (pickup && !jobNumber && pickup.job_number) {
+        setJobNumber(pickup.job_number);
+    }
+
+    const handleJobNumberSave = async () => {
+        if (!pickup) return;
+        try {
+            await updateJobNumber.mutateAsync({
+                id: pickup.id,
+                job_number: jobNumber || null,
+            });
+            setIsEditingJobNumber(false);
+            toast.success("Job number updated");
+        } catch (error: unknown) {
+            toast.error((error as Error).message || "Failed to update job number");
+        }
+    };
 
     if (isLoading)
         return (
@@ -146,6 +182,11 @@ export default function WarehouseSelfPickupDetailPage({
                         <Link href={`/scanning/self-pickup-return/${id}`}>
                             <Button>Start Return Scan</Button>
                         </Link>
+                    )}
+                    {CANCELLABLE_STATUSES.includes(pickup.self_pickup_status) && (
+                        <Button variant="destructive" onClick={() => setCancelOpen(true)}>
+                            Cancel Pickup
+                        </Button>
                     )}
                 </div>
             </div>
@@ -221,9 +262,87 @@ export default function WarehouseSelfPickupDetailPage({
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Pricing review card — only when status allows logistics to
+                        manage line items + submit for approval. */}
+                    {["PRICING_REVIEW", "PENDING_APPROVAL"].includes(pickup.self_pickup_status) && (
+                        <LogisticsSelfPickupPricingReview
+                            selfPickupId={pickup.id}
+                            pickup={pickup}
+                            onSubmitSuccess={() => refetch()}
+                        />
+                    )}
                 </div>
 
-                <div>
+                <div className="space-y-6">
+                    {/* Job Number Card — mirrors warehouse orders detail */}
+                    <Card className="border-2 border-primary/20 bg-primary/5">
+                        <CardContent className="pt-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                    <Label className="font-mono text-xs text-muted-foreground">
+                                        PLATFORM JOB NUMBER
+                                    </Label>
+                                    {isEditingJobNumber ? (
+                                        <Input
+                                            value={jobNumber}
+                                            onChange={(e) => setJobNumber(e.target.value)}
+                                            placeholder="JOB-XXXX"
+                                            className="mt-2 font-mono"
+                                        />
+                                    ) : (
+                                        <p className="mt-2 font-mono text-lg font-bold">
+                                            {jobNumber || "—"}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex items-center justify-center gap-2">
+                                    {isEditingJobNumber ? (
+                                        <>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => setIsEditingJobNumber(false)}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                disabled={updateJobNumber.isPending}
+                                                onClick={handleJobNumberSave}
+                                            >
+                                                {updateJobNumber.isPending ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Save className="h-4 w-4" />
+                                                )}
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => setIsEditingJobNumber(true)}
+                                        >
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {pickup.decline_reason && (
+                        <Card className="border border-destructive/30 bg-destructive/5">
+                            <CardContent className="pt-6">
+                                <Label className="font-mono text-xs text-destructive">
+                                    DECLINE REASON
+                                </Label>
+                                <p className="mt-2 text-sm">{pickup.decline_reason}</p>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     <Card className="sticky top-6">
                         <CardHeader>
                             <CardTitle className="text-base">Status History</CardTitle>
@@ -268,6 +387,16 @@ export default function WarehouseSelfPickupDetailPage({
                     </Card>
                 </div>
             </div>
+
+            <CancelSelfPickupModal
+                open={cancelOpen}
+                onOpenChange={setCancelOpen}
+                selfPickupId={pickup.id}
+                selfPickupIdReadable={pickup.self_pickup_id}
+                companyName={(pickup.company as any)?.name || ""}
+                currentStatus={pickup.self_pickup_status}
+                itemCount={items.length}
+            />
         </div>
     );
 }

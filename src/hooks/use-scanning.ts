@@ -365,6 +365,10 @@ export function useScanSelfPickupReturnItem() {
             condition: string;
             quantity?: number;
             notes?: string;
+            return_media?: Array<{ url: string; note?: string }>;
+            damage_media?: Array<{ url: string; note?: string }>;
+            refurb_days_estimate?: number;
+            discrepancy_reason?: "BROKEN" | "LOST" | "OTHER";
         }) => {
             const { data } = await apiClient.post(
                 `/operations/v1/scanning/self-pickup-return/${selfPickupId}/scan`,
