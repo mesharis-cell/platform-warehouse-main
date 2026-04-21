@@ -15,8 +15,11 @@ export function useSelfPickups(
         page?: number;
         limit?: number;
         company?: string;
+        brand?: string;
         self_pickup_status?: string;
         search?: string;
+        sortBy?: string;
+        sortOrder?: "asc" | "desc";
     } = {}
 ) {
     return useQuery({
