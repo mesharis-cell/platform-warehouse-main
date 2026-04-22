@@ -7,6 +7,7 @@ import {
     useSelfPickupDetails,
     useSelfPickupStatusHistory,
     useMarkReadyForPickup,
+    useOpsTriggerSelfPickupReturn,
     useSubmitForApproval,
     useUpdateSelfPickupJobNumber,
 } from "@/hooks/use-self-pickups";
@@ -86,6 +87,7 @@ export default function WarehouseSelfPickupDetailPage({
     const { data: pickupData, isLoading, refetch } = useSelfPickupDetails(id);
     const { data: historyData } = useSelfPickupStatusHistory(id);
     const markReady = useMarkReadyForPickup();
+    const triggerReturnOps = useOpsTriggerSelfPickupReturn();
     const submitForApproval = useSubmitForApproval();
     const updateJobNumber = useUpdateSelfPickupJobNumber();
 
@@ -214,16 +216,34 @@ export default function WarehouseSelfPickupDetailPage({
                                     <Button>Start Handover Scan</Button>
                                 </Link>
                             )}
+                            {pickup.self_pickup_status === "PICKED_UP" && (
+                                <Button
+                                    onClick={() =>
+                                        triggerReturnOps.mutate(id, {
+                                            onSuccess: () => toast.success("Return initiated"),
+                                            onError: (e: unknown) =>
+                                                toast.error((e as Error).message),
+                                        })
+                                    }
+                                    disabled={triggerReturnOps.isPending}
+                                >
+                                    Start Return
+                                </Button>
+                            )}
                             {pickup.self_pickup_status === "AWAITING_RETURN" && (
                                 <Link href={`/scanning/self-pickup-return/${id}`}>
                                     <Button>Start Return Scan</Button>
                                 </Link>
                             )}
-                            {CANCELLABLE_STATUSES.includes(pickup.self_pickup_status) && (
-                                <Button variant="destructive" onClick={() => setCancelOpen(true)}>
-                                    Cancel Pickup
-                                </Button>
-                            )}
+                            {user?.role === "ADMIN" &&
+                                CANCELLABLE_STATUSES.includes(pickup.self_pickup_status) && (
+                                    <Button
+                                        variant="destructive"
+                                        onClick={() => setCancelOpen(true)}
+                                    >
+                                        Cancel Pickup
+                                    </Button>
+                                )}
                         </div>
                     </div>
                 </div>
