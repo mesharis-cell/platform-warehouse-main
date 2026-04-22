@@ -129,12 +129,16 @@ export default function SelfPickupReturnPage() {
         const damageMedia =
             condition.condition === "GREEN" ? [] : collectMedia(condition.conditionPhotos);
 
+        // Always send qty ≥ 1. BATCH requires it explicitly; INDIVIDUAL
+        // ignores it. Matches the handover scan fix.
+        const effectiveQty = quantity && quantity > 0 ? quantity : 1;
+
         scanItem.mutate(
             {
                 selfPickupId,
                 qr_code: qrCode,
                 condition: condition.condition,
-                quantity,
+                quantity: effectiveQty,
                 return_media: returnMedia,
                 damage_media: damageMedia,
                 refurb_days_estimate: condition.refurbDays ?? undefined,
@@ -159,7 +163,8 @@ export default function SelfPickupReturnPage() {
 
     const handleManualScan = () => {
         if (!manualQr.trim()) return;
-        handleScan(manualQr.trim(), batchQuantity > 1 ? batchQuantity : undefined);
+        // Always pass batchQuantity (default 1) — handleScan normalizes it.
+        handleScan(manualQr.trim(), batchQuantity);
         setManualQr("");
         setBatchQuantity(1);
     };
