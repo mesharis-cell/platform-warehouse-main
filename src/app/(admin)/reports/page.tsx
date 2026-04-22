@@ -12,7 +12,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type ExportCardId = "workSummary" | "ordersExport" | "stockReport" | "inboundLog";
+type ExportCardId =
+    | "workSummary"
+    | "ordersExport"
+    | "stockReport"
+    | "inboundLog"
+    | "clientIssuanceLog";
 
 type ExportCardConfig = {
     id: ExportCardId;
@@ -52,6 +57,14 @@ const EXPORT_CARDS: ExportCardConfig[] = [
         description: "All new stock requests with status, company, requester, and pricing.",
         endpoint: "/operations/v1/export/inbound-log",
         filename: "inbound-log.csv",
+    },
+    {
+        id: "clientIssuanceLog",
+        title: "Client Issuance Log",
+        description:
+            "Every item delivered via a post-scan order or self-pickup — item code, qty (actual scanned for SPs), venue, city, musketeer, purpose.",
+        endpoint: "/operations/v1/export/client-issuance-log",
+        filename: "client-issuance-log.csv",
     },
 ];
 
