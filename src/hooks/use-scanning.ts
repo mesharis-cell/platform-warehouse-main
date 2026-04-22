@@ -324,9 +324,54 @@ export function useScanSelfPickupHandoverItem() {
 export function useCompleteSelfPickupHandover() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: async ({ selfPickupId }: { selfPickupId: string }) => {
+        mutationFn: async ({
+            selfPickupId,
+            allow_partial,
+            partial_reason,
+            items,
+        }: {
+            selfPickupId: string;
+            allow_partial?: boolean;
+            partial_reason?: string;
+            items?: Array<{ self_pickup_item_id: string; scanned_quantity: number }>;
+        }) => {
+            const body: Record<string, unknown> = {};
+            if (allow_partial) body.allow_partial = true;
+            if (partial_reason) body.partial_reason = partial_reason;
+            if (items) body.items = items;
             const { data } = await apiClient.post(
-                `/operations/v1/scanning/self-pickup-handover/${selfPickupId}/complete`
+                `/operations/v1/scanning/self-pickup-handover/${selfPickupId}/complete`,
+                body
+            );
+            return data;
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["selfPickupHandoverProgress"] });
+            qc.invalidateQueries({ queryKey: ["self-pickups"] });
+            qc.invalidateQueries({ queryKey: ["self-pickup"] });
+        },
+        onError: throwApiError,
+    });
+}
+
+// Mid-flow add item (F3). NO_COST pickups at CONFIRMED/READY_FOR_PICKUP only.
+export function useAddSelfPickupItemMidflow() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({
+            selfPickupId,
+            asset_id,
+            quantity,
+            reason,
+        }: {
+            selfPickupId: string;
+            asset_id: string;
+            quantity: number;
+            reason: string;
+        }) => {
+            const { data } = await apiClient.post(
+                `/operations/v1/scanning/self-pickup-handover/${selfPickupId}/add-item`,
+                { asset_id, quantity, reason }
             );
             return data;
         },
@@ -365,6 +410,10 @@ export function useScanSelfPickupReturnItem() {
             condition: string;
             quantity?: number;
             notes?: string;
+            return_media?: Array<{ url: string; note?: string }>;
+            damage_media?: Array<{ url: string; note?: string }>;
+            refurb_days_estimate?: number;
+            discrepancy_reason?: "BROKEN" | "LOST" | "OTHER";
         }) => {
             const { data } = await apiClient.post(
                 `/operations/v1/scanning/self-pickup-return/${selfPickupId}/scan`,

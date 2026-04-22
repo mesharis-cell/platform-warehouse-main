@@ -7,13 +7,25 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
     useSelfPickupHandoverProgress,
     useScanSelfPickupHandoverItem,
     useCompleteSelfPickupHandover,
+    useAddSelfPickupItemMidflow,
 } from "@/hooks/use-scanning";
+import { useMarkReadyForPickup, useSelfPickupDetails } from "@/hooks/use-self-pickups";
+import { useSearchAssets } from "@/hooks/use-assets";
 import { usePlatform } from "@/contexts/platform-context";
-import { Camera, CheckCircle2, ScanLine, Package, ArrowLeft } from "lucide-react";
+import { Camera, CheckCircle2, ScanLine, Package, ArrowLeft, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Html5Qrcode } from "html5-qrcode";
 import Link from "next/link";
@@ -37,16 +49,50 @@ export default function SelfPickupHandoverPage() {
     const progress = useSelfPickupHandoverProgress(selfPickupId);
     const scanItem = useScanSelfPickupHandoverItem();
     const completeScan = useCompleteSelfPickupHandover();
+    const markReady = useMarkReadyForPickup();
+    const pickupDetails = useSelfPickupDetails(selfPickupId);
+    const addItemMidflow = useAddSelfPickupItemMidflow();
 
     const [step, setStep] = useState<ScanStep>("scanning");
     const [manualQr, setManualQr] = useState("");
     const [batchQuantity, setBatchQuantity] = useState(1);
     const [cameraActive, setCameraActive] = useState(false);
+    const [finalizeOpen, setFinalizeOpen] = useState(false);
+    const [finalizeReason, setFinalizeReason] = useState("");
+    const [addItemOpen, setAddItemOpen] = useState(false);
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const lastScanRef = useRef<number>(0);
+    const autoFlipRef = useRef<boolean>(false);
 
     const progressData = progress.data?.data;
     const assets = progressData?.assets || [];
+    const pickupStatus = (progressData as any)?.self_pickup_status;
+    const pickup = pickupDetails.data?.data;
+    const pricingMode = pickup?.pricing_mode as "STANDARD" | "NO_COST" | undefined;
+    const isNoCost = pricingMode === "NO_COST";
+    const companyId = pickup?.company_id as string | undefined;
+
+    // Auto-flip CONFIRMED → READY_FOR_PICKUP on load. Prevents the
+    // "Must be READY_FOR_PICKUP" 400 deep-linkers used to hit when they
+    // jumped straight to the scanner page without clicking "Ready for
+    // Pickup" on the detail page. One-shot guard to avoid re-fire loops.
+    useEffect(() => {
+        if (pickupStatus === "CONFIRMED" && !autoFlipRef.current && !markReady.isPending) {
+            autoFlipRef.current = true;
+            markReady.mutate(selfPickupId, {
+                onSuccess: () => {
+                    toast.success("Marked ready for pickup");
+                    progress.refetch();
+                },
+                onError: (e: any) => {
+                    autoFlipRef.current = false;
+                    toast.error("Failed to auto-mark ready", {
+                        description: e?.response?.data?.message || e.message,
+                    });
+                },
+            });
+        }
+    }, [pickupStatus, markReady, selfPickupId, progress]);
 
     useEffect(() => {
         return () => {
@@ -61,8 +107,15 @@ export default function SelfPickupHandoverPage() {
         if (now - lastScanRef.current < 2000) return;
         lastScanRef.current = now;
 
+        // Always send a qty (default 1). BATCH assets hard-reject missing
+        // qty on the server ("Quantity required for BATCH assets"), and
+        // INDIVIDUAL assets silently ignore any sent qty — so sending 1
+        // as a safe default for both call paths (manual + camera) is
+        // correct for every tracking method.
+        const effectiveQty = quantity && quantity > 0 ? quantity : 1;
+
         scanItem.mutate(
-            { selfPickupId, qr_code: qrCode, quantity },
+            { selfPickupId, qr_code: qrCode, quantity: effectiveQty },
             {
                 onSuccess: (data: any) => {
                     const asset = data?.data?.asset;
@@ -83,7 +136,8 @@ export default function SelfPickupHandoverPage() {
 
     const handleManualScan = () => {
         if (!manualQr.trim()) return;
-        handleScan(manualQr.trim(), batchQuantity > 1 ? batchQuantity : undefined);
+        // Always pass batchQuantity (default 1) — handleScan normalizes it.
+        handleScan(manualQr.trim(), batchQuantity);
         setManualQr("");
         setBatchQuantity(1);
     };
@@ -99,6 +153,42 @@ export default function SelfPickupHandoverPage() {
                 },
                 onError: (error: any) => {
                     toast.error("Cannot complete", { description: error.message });
+                },
+            }
+        );
+    };
+
+    // Finalize PARTIAL handover (F1 + F2) — called when client took fewer
+    // items than ordered. Gated NO_COST-only at the API layer; the UI hides
+    // the button on STANDARD pickups so warehouse doesn't get confused.
+    const handleFinalizePartial = () => {
+        if (!isNoCost) return;
+        if (finalizeReason.trim().length < 5) {
+            toast.error("Please enter a reason (min 5 characters)");
+            return;
+        }
+        const items = assets.map((a: any) => ({
+            self_pickup_item_id: a.self_pickup_item_id,
+            scanned_quantity: a.scanned_quantity,
+        }));
+        completeScan.mutate(
+            {
+                selfPickupId,
+                allow_partial: true,
+                partial_reason: finalizeReason.trim(),
+                items,
+            },
+            {
+                onSuccess: () => {
+                    setFinalizeOpen(false);
+                    setStep("complete");
+                    toast.success("Partial handover complete");
+                    setTimeout(() => router.push(`/self-pickups/${selfPickupId}`), 1500);
+                },
+                onError: (error: any) => {
+                    toast.error("Cannot finalize", {
+                        description: error?.response?.data?.message || error.message,
+                    });
                 },
             }
         );
@@ -203,7 +293,14 @@ export default function SelfPickupHandoverPage() {
                         className="flex items-center justify-between p-3 border rounded-lg"
                     >
                         <div>
-                            <p className="font-medium text-sm">{asset.asset_name}</p>
+                            <p className="font-medium text-sm">
+                                {asset.asset_name}
+                                {asset.added_midflow && (
+                                    <Badge variant="outline" className="ml-2 text-[10px]">
+                                        ADDED
+                                    </Badge>
+                                )}
+                            </p>
                             <p className="text-xs text-muted-foreground">{asset.tracking_method}</p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -220,7 +317,19 @@ export default function SelfPickupHandoverPage() {
                 ))}
             </div>
 
-            {progressData.percent_complete === 100 && (
+            {/* Mid-flow add-item button — NO_COST-only, CONFIRMED/READY_FOR_PICKUP.
+                UI hides on STANDARD so warehouse doesn't get a "not available"
+                error — the API layer enforces it either way. */}
+            {isNoCost && (
+                <Button onClick={() => setAddItemOpen(true)} variant="outline" className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add item (extra requested)
+                </Button>
+            )}
+
+            {/* Two-button footer at <100%: Finalize-partial (NO_COST) OR keep scanning.
+                At 100%: single CONFIRM HANDOVER button (legacy path). */}
+            {progressData.percent_complete === 100 ? (
                 <Button
                     onClick={handleComplete}
                     disabled={completeScan.isPending}
@@ -229,7 +338,244 @@ export default function SelfPickupHandoverPage() {
                 >
                     {completeScan.isPending ? "COMPLETING..." : "CONFIRM HANDOVER"}
                 </Button>
-            )}
+            ) : isNoCost ? (
+                <Button
+                    onClick={() => setFinalizeOpen(true)}
+                    variant="secondary"
+                    className="w-full"
+                    size="lg"
+                >
+                    Finalize with partial / skipped items
+                </Button>
+            ) : null}
+
+            {/* Finalize partial handover dialog (F1 + F2). Client took less
+                than ordered — confirm per-item qty + reason. */}
+            <Dialog open={finalizeOpen} onOpenChange={setFinalizeOpen}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Finalize partial handover</DialogTitle>
+                        <DialogDescription>
+                            Client took fewer items than ordered. Confirm what was actually
+                            collected per line and note the reason.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 max-h-64 overflow-auto border rounded p-3 bg-muted/30">
+                        {assets.map((a: any) => {
+                            const short = a.scanned_quantity < a.required_quantity;
+                            return (
+                                <div
+                                    key={a.asset_id}
+                                    className="flex items-center justify-between text-sm"
+                                >
+                                    <span className="truncate">{a.asset_name}</span>
+                                    <span
+                                        className={`font-mono ${short ? "text-amber-700" : "text-muted-foreground"}`}
+                                    >
+                                        Ordered {a.required_quantity} → Collected{" "}
+                                        {a.scanned_quantity}
+                                        {a.scanned_quantity === 0 && " (skipped)"}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <Textarea
+                        placeholder="Why is this partial? e.g. 'Car too small for all chairs'"
+                        value={finalizeReason}
+                        onChange={(e) => setFinalizeReason(e.target.value)}
+                        rows={3}
+                    />
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setFinalizeOpen(false)}
+                            disabled={completeScan.isPending}
+                        >
+                            Keep scanning
+                        </Button>
+                        <Button
+                            onClick={handleFinalizePartial}
+                            disabled={completeScan.isPending || finalizeReason.trim().length < 5}
+                        >
+                            {completeScan.isPending ? "Finalizing…" : "Confirm partial"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add item mid-flow dialog (F3) */}
+            <AddMidflowItemDialog
+                open={addItemOpen}
+                onOpenChange={setAddItemOpen}
+                selfPickupId={selfPickupId}
+                companyId={companyId}
+                onAdded={() => {
+                    toast.success("Item added to pickup");
+                    progress.refetch();
+                    setAddItemOpen(false);
+                }}
+                mutation={addItemMidflow}
+            />
         </div>
+    );
+}
+
+function AddMidflowItemDialog({
+    open,
+    onOpenChange,
+    selfPickupId,
+    companyId,
+    onAdded,
+    mutation,
+}: {
+    open: boolean;
+    onOpenChange: (v: boolean) => void;
+    selfPickupId: string;
+    companyId: string | undefined;
+    onAdded: () => void;
+    mutation: ReturnType<typeof useAddSelfPickupItemMidflow>;
+}) {
+    const [search, setSearch] = useState("");
+    const [picked, setPicked] = useState<{
+        id: string;
+        name: string;
+        available_quantity: number;
+    } | null>(null);
+    const [qty, setQty] = useState(1);
+    const [reason, setReason] = useState("");
+    const results = useSearchAssets(search, companyId);
+
+    useEffect(() => {
+        if (!open) {
+            setSearch("");
+            setPicked(null);
+            setQty(1);
+            setReason("");
+        }
+    }, [open]);
+
+    const submit = () => {
+        if (!picked) {
+            toast.error("Pick an asset first");
+            return;
+        }
+        if (qty < 1 || qty > picked.available_quantity) {
+            toast.error(`Qty must be 1-${picked.available_quantity}`);
+            return;
+        }
+        if (reason.trim().length < 5) {
+            toast.error("Enter a reason (min 5 chars)");
+            return;
+        }
+        mutation.mutate(
+            {
+                selfPickupId,
+                asset_id: picked.id,
+                quantity: qty,
+                reason: reason.trim(),
+            },
+            {
+                onSuccess: () => onAdded(),
+                onError: (e: any) =>
+                    toast.error("Add failed", {
+                        description: e?.response?.data?.message || e.message,
+                    }),
+            }
+        );
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Add item mid-handover</DialogTitle>
+                    <DialogDescription>
+                        Add a new asset to this pickup. Only available on No-Cost pickups.
+                    </DialogDescription>
+                </DialogHeader>
+                <Input
+                    placeholder="Search asset by name or ID..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
+                {search.length >= 2 && (
+                    <div className="border rounded max-h-48 overflow-auto">
+                        {(results.data?.data || [])
+                            .filter((a: any) => a.available_quantity > 0)
+                            .slice(0, 15)
+                            .map((a: any) => (
+                                <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() =>
+                                        setPicked({
+                                            id: a.id,
+                                            name: a.name,
+                                            available_quantity: a.available_quantity,
+                                        })
+                                    }
+                                    className={`w-full text-left px-3 py-2 hover:bg-muted flex items-center justify-between text-sm ${
+                                        picked?.id === a.id ? "bg-muted" : ""
+                                    }`}
+                                >
+                                    <span className="truncate">{a.name}</span>
+                                    <span className="font-mono text-xs text-muted-foreground">
+                                        {a.available_quantity} avail
+                                    </span>
+                                </button>
+                            ))}
+                        {results.data?.data?.length === 0 && !results.isLoading && (
+                            <p className="p-3 text-sm text-muted-foreground">No assets found</p>
+                        )}
+                    </div>
+                )}
+                {picked && (
+                    <div className="space-y-2">
+                        <div className="text-sm">
+                            Picked: <span className="font-medium">{picked.name}</span>
+                            <span className="text-muted-foreground">
+                                {" "}
+                                ({picked.available_quantity} available)
+                            </span>
+                        </div>
+                        <Input
+                            type="number"
+                            min={1}
+                            max={picked.available_quantity}
+                            value={qty}
+                            onChange={(e) => setQty(parseInt(e.target.value) || 1)}
+                        />
+                    </div>
+                )}
+                <Textarea
+                    placeholder="Reason (min 5 chars) — e.g. 'Client asked for extra chair on-site'"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={2}
+                />
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => onOpenChange(false)}
+                        disabled={mutation.isPending}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={submit}
+                        disabled={
+                            !picked ||
+                            qty < 1 ||
+                            qty > (picked?.available_quantity ?? 0) ||
+                            reason.trim().length < 5 ||
+                            mutation.isPending
+                        }
+                    >
+                        {mutation.isPending ? "Adding…" : "Add to pickup"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }

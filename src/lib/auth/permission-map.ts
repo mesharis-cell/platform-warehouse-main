@@ -52,4 +52,6 @@ export const WAREHOUSE_ACTION_PERMISSIONS = {
     collectionsRead: "collections:read",
     collectionsUpdate: "collections:update",
     collectionsDelete: "collections:delete",
+    // Self-pickup actions (warehouse can access via LOGISTICS role).
+    selfPickupsMarkNoCost: "self_pickups:mark_no_cost",
 } as const;

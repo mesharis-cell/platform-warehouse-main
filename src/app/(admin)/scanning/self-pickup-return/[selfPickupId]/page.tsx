@@ -4,16 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {
     useSelfPickupReturnProgress,
     useScanSelfPickupReturnItem,
@@ -24,6 +16,12 @@ import {
     type UnsettledLine,
     type SettlementEntry,
 } from "@/components/scanning/PooledSettlementModal";
+import {
+    ConditionReportPanel,
+    validateConditionReport,
+    type ConditionReport,
+} from "@/components/shared/condition-report-panel";
+import { PhotoCaptureStrip, type PhotoEntry } from "@/components/shared/photo-capture-strip";
 import { usePlatform } from "@/contexts/platform-context";
 import { Camera, CheckCircle2, ScanLine, Package, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +29,13 @@ import { Html5Qrcode } from "html5-qrcode";
 import Link from "next/link";
 
 type ScanStep = "scanning" | "complete";
+
+const emptyCondition: ConditionReport = {
+    condition: "GREEN",
+    conditionPhotos: [],
+    conditionNotes: "",
+    refurbDays: null,
+};
 
 export default function SelfPickupReturnPage() {
     const params = useParams();
@@ -53,7 +58,15 @@ export default function SelfPickupReturnPage() {
     const [step, setStep] = useState<ScanStep>("scanning");
     const [manualQr, setManualQr] = useState("");
     const [batchQuantity, setBatchQuantity] = useState(1);
-    const [scanCondition, setScanCondition] = useState<"GREEN" | "ORANGE" | "RED">("GREEN");
+
+    // Media + condition state — same shape as orders inbound scan.
+    // return_media is required (min 2 wide photos) on every scan. Condition
+    // photos are required only for ORANGE/RED. User fills these once per item
+    // before hitting Scan; persists across scans so they can re-use if doing
+    // same asset twice. Cleared after successful scan.
+    const [returnPhotos, setReturnPhotos] = useState<PhotoEntry[]>([]);
+    const [condition, setCondition] = useState<ConditionReport>(emptyCondition);
+
     const [cameraActive, setCameraActive] = useState(false);
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const lastScanRef = useRef<number>(0);
@@ -73,17 +86,71 @@ export default function SelfPickupReturnPage() {
         };
     }, []);
 
+    const collectMedia = (entries: PhotoEntry[]) =>
+        entries
+            .map((e) => ({
+                url: e.uploadedUrl || e.previewUrl,
+                note: e.note?.trim() || undefined,
+            }))
+            .filter((e) => !!e.url);
+
+    const validateBeforeScan = (): string | null => {
+        if (returnPhotos.length < 2) {
+            return "At least 2 wide return photos are required before scanning";
+        }
+        const returnMediaReady = returnPhotos.every((p) => !!p.uploadedUrl);
+        if (!returnMediaReady) {
+            return "Return photos are still uploading — please wait a moment";
+        }
+        const conditionErr = validateConditionReport(condition);
+        if (conditionErr) return conditionErr;
+        if (condition.condition !== "GREEN") {
+            const conditionPhotosReady = condition.conditionPhotos.every((p) => !!p.uploadedUrl);
+            if (!conditionPhotosReady) {
+                return "Condition photos are still uploading — please wait a moment";
+            }
+        }
+        return null;
+    };
+
     const handleScan = (qrCode: string, quantity?: number) => {
         const now = Date.now();
         if (now - lastScanRef.current < 2000) return;
+
+        const validationError = validateBeforeScan();
+        if (validationError) {
+            toast.error(validationError);
+            return;
+        }
+
         lastScanRef.current = now;
 
+        const returnMedia = collectMedia(returnPhotos);
+        const damageMedia =
+            condition.condition === "GREEN" ? [] : collectMedia(condition.conditionPhotos);
+
+        // Always send qty ≥ 1. BATCH requires it explicitly; INDIVIDUAL
+        // ignores it. Matches the handover scan fix.
+        const effectiveQty = quantity && quantity > 0 ? quantity : 1;
+
         scanItem.mutate(
-            { selfPickupId, qr_code: qrCode, condition: scanCondition, quantity },
+            {
+                selfPickupId,
+                qr_code: qrCode,
+                condition: condition.condition,
+                quantity: effectiveQty,
+                return_media: returnMedia,
+                damage_media: damageMedia,
+                refurb_days_estimate: condition.refurbDays ?? undefined,
+                notes: condition.conditionNotes || undefined,
+            },
             {
                 onSuccess: (data: any) => {
                     const asset = data?.data?.asset;
                     toast.success(`Returned: ${asset?.asset_name || qrCode}`);
+                    // Reset media + condition for the next scan
+                    setReturnPhotos([]);
+                    setCondition(emptyCondition);
                 },
                 onError: (error: any) => {
                     toast.error("Scan failed", {
@@ -96,7 +163,8 @@ export default function SelfPickupReturnPage() {
 
     const handleManualScan = () => {
         if (!manualQr.trim()) return;
-        handleScan(manualQr.trim(), batchQuantity > 1 ? batchQuantity : undefined);
+        // Always pass batchQuantity (default 1) — handleScan normalizes it.
+        handleScan(manualQr.trim(), batchQuantity);
         setManualQr("");
         setBatchQuantity(1);
     };
@@ -168,6 +236,8 @@ export default function SelfPickupReturnPage() {
         );
     }
 
+    const pickupCompanyId = (progressData as any).company_id;
+
     return (
         <div className="min-h-screen bg-background p-4 space-y-4">
             <div className="flex items-center gap-4">
@@ -188,6 +258,30 @@ export default function SelfPickupReturnPage() {
                 {progressData.percent_complete}%)
             </p>
 
+            {/* Return photos (required — min 2 wide photos). Mirrors orders inbound scan. */}
+            <Card className="p-4">
+                <PhotoCaptureStrip
+                    photos={returnPhotos}
+                    onChange={setReturnPhotos}
+                    minPhotos={2}
+                    label="Return Photos (wide) * — min 2 required"
+                    uploadOnCapture
+                    companyId={pickupCompanyId}
+                />
+            </Card>
+
+            {/* Condition report — GREEN by default; ORANGE/RED expands to require
+                damage photos + notes + refurb days. */}
+            <Card className="p-4">
+                <p className="text-xs font-mono text-muted-foreground mb-3">ITEM CONDITION</p>
+                <ConditionReportPanel
+                    value={condition}
+                    onChange={setCondition}
+                    uploadOnCapture
+                    companyId={pickupCompanyId}
+                />
+            </Card>
+
             {/* Camera */}
             <div id="qr-reader-return" className="rounded-lg overflow-hidden" />
             {!cameraActive && (
@@ -196,7 +290,7 @@ export default function SelfPickupReturnPage() {
                 </Button>
             )}
 
-            {/* Manual entry with condition */}
+            {/* Manual entry */}
             <Card className="p-4 space-y-3">
                 <p className="text-xs font-mono text-muted-foreground">MANUAL ENTRY</p>
                 <div className="flex gap-2">
@@ -214,16 +308,6 @@ export default function SelfPickupReturnPage() {
                         onChange={(e) => setBatchQuantity(Number(e.target.value))}
                         className="w-20"
                     />
-                    <Select value={scanCondition} onValueChange={(v) => setScanCondition(v as any)}>
-                        <SelectTrigger className="w-28">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="GREEN">Green</SelectItem>
-                            <SelectItem value="ORANGE">Orange</SelectItem>
-                            <SelectItem value="RED">Red</SelectItem>
-                        </SelectContent>
-                    </Select>
                     <Button onClick={handleManualScan} disabled={!manualQr.trim()}>
                         Scan
                     </Button>
@@ -255,7 +339,7 @@ export default function SelfPickupReturnPage() {
                 ))}
             </div>
 
-            {/* Complete button — always visible on return, since pooled items may be partial */}
+            {/* Complete button — always visible on return since pooled items may be partial */}
             <Button
                 onClick={handleComplete}
                 disabled={completeScan.isPending}

@@ -15,8 +15,11 @@ export function useSelfPickups(
         page?: number;
         limit?: number;
         company?: string;
+        brand?: string;
         self_pickup_status?: string;
         search?: string;
+        sortBy?: string;
+        sortOrder?: "asc" | "desc";
     } = {}
 ) {
     return useQuery({
@@ -71,6 +74,25 @@ export function useMarkReadyForPickup() {
     });
 }
 
+// Ops-triggered return — unblocks logistics when the client hasn't clicked
+// "Start Return" on their portal. PICKED_UP → AWAITING_RETURN.
+export function useOpsTriggerSelfPickupReturn() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { data } = await apiClient.post(
+                `/operations/v1/self-pickup/${id}/trigger-return`
+            );
+            return data;
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["self-pickups"] });
+            qc.invalidateQueries({ queryKey: ["self-pickup"] });
+        },
+        onError: throwApiError,
+    });
+}
+
 export function useSubmitForApproval() {
     const qc = useQueryClient();
     return useMutation({
@@ -91,14 +113,57 @@ export function useSubmitForApproval() {
 export function useCancelSelfPickup() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+        mutationFn: async ({
+            id,
+            reason,
+            notes,
+            notifyClient,
+        }: {
+            id: string;
+            reason: string;
+            notes?: string;
+            notifyClient?: boolean;
+        }) => {
             const { data } = await apiClient.post(`/operations/v1/self-pickup/${id}/cancel`, {
                 reason,
+                notes,
+                notify_client: notifyClient,
             });
             return data;
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["self-pickups"] });
+            qc.invalidateQueries({ queryKey: ["self-pickup"] });
+        },
+        onError: throwApiError,
+    });
+}
+
+export function useMarkSelfPickupNoCost() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { data } = await apiClient.post(`/operations/v1/self-pickup/${id}/mark-no-cost`);
+            return data;
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["self-pickups"] });
+            qc.invalidateQueries({ queryKey: ["self-pickup"] });
+        },
+        onError: throwApiError,
+    });
+}
+
+export function useUpdateSelfPickupJobNumber() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, job_number }: { id: string; job_number: string | null }) => {
+            const { data } = await apiClient.patch(`/operations/v1/self-pickup/${id}/job-number`, {
+                job_number,
+            });
+            return data;
+        },
+        onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["self-pickup"] });
         },
         onError: throwApiError,

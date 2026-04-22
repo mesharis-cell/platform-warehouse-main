@@ -34,8 +34,12 @@ const invalidateLineItemRelatedQueries = (
     } else if (purposeType === "INBOUND_REQUEST") {
         queryClient.invalidateQueries({ queryKey: ["inbound-requests"] });
         queryClient.invalidateQueries({ queryKey: inboundRequestKeys.detail(targetId) });
-    } else {
+    } else if (purposeType === "SERVICE_REQUEST") {
         queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+    } else {
+        // SELF_PICKUP
+        queryClient.invalidateQueries({ queryKey: ["self-pickups"] });
+        queryClient.invalidateQueries({ queryKey: ["self-pickup", targetId] });
     }
 };
 
@@ -54,7 +58,9 @@ export function useListLineItems(
                         ? `order_id=${targetId}`
                         : purposeType === "INBOUND_REQUEST"
                           ? `inbound_request_id=${targetId}`
-                          : `service_request_id=${targetId}`;
+                          : purposeType === "SERVICE_REQUEST"
+                            ? `service_request_id=${targetId}`
+                            : `self_pickup_id=${targetId}`;
                 const response = await apiClient.get(`/operations/v1/line-item?${queryParam}`);
                 // Map snake_case API response to camelCase for UI components
                 return mapArraySnakeToCamel(response.data.data) as unknown as OrderLineItem[];
@@ -88,7 +94,9 @@ export function useCreateCatalogLineItem(
                         ? { order_id: targetId }
                         : purposeType === "INBOUND_REQUEST"
                           ? { inbound_request_id: targetId }
-                          : { service_request_id: targetId }),
+                          : purposeType === "SERVICE_REQUEST"
+                            ? { service_request_id: targetId }
+                            : { self_pickup_id: targetId }),
                 };
                 const response = await apiClient.post(`/operations/v1/line-item/catalog`, payload);
                 return response.data.data;
@@ -209,7 +217,9 @@ export function usePatchEntityLineItemsClientVisibility(
                         ? { orderId: targetId }
                         : purposeType === "INBOUND_REQUEST"
                           ? { inboundRequestId: targetId }
-                          : { serviceRequestId: targetId }),
+                          : purposeType === "SERVICE_REQUEST"
+                            ? { serviceRequestId: targetId }
+                            : { selfPickupId: targetId }),
                 };
                 const apiData = mapCamelToSnake(payload);
                 const response = await apiClient.patch(
