@@ -107,8 +107,15 @@ export default function SelfPickupHandoverPage() {
         if (now - lastScanRef.current < 2000) return;
         lastScanRef.current = now;
 
+        // Always send a qty (default 1). BATCH assets hard-reject missing
+        // qty on the server ("Quantity required for BATCH assets"), and
+        // INDIVIDUAL assets silently ignore any sent qty — so sending 1
+        // as a safe default for both call paths (manual + camera) is
+        // correct for every tracking method.
+        const effectiveQty = quantity && quantity > 0 ? quantity : 1;
+
         scanItem.mutate(
-            { selfPickupId, qr_code: qrCode, quantity },
+            { selfPickupId, qr_code: qrCode, quantity: effectiveQty },
             {
                 onSuccess: (data: any) => {
                     const asset = data?.data?.asset;
@@ -129,7 +136,8 @@ export default function SelfPickupHandoverPage() {
 
     const handleManualScan = () => {
         if (!manualQr.trim()) return;
-        handleScan(manualQr.trim(), batchQuantity > 1 ? batchQuantity : undefined);
+        // Always pass batchQuantity (default 1) — handleScan normalizes it.
+        handleScan(manualQr.trim(), batchQuantity);
         setManualQr("");
         setBatchQuantity(1);
     };
