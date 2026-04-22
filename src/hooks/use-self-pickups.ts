@@ -74,6 +74,25 @@ export function useMarkReadyForPickup() {
     });
 }
 
+// Ops-triggered return — unblocks logistics when the client hasn't clicked
+// "Start Return" on their portal. PICKED_UP → AWAITING_RETURN.
+export function useOpsTriggerSelfPickupReturn() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const { data } = await apiClient.post(
+                `/operations/v1/self-pickup/${id}/trigger-return`
+            );
+            return data;
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["self-pickups"] });
+            qc.invalidateQueries({ queryKey: ["self-pickup"] });
+        },
+        onError: throwApiError,
+    });
+}
+
 export function useSubmitForApproval() {
     const qc = useQueryClient();
     return useMutation({
