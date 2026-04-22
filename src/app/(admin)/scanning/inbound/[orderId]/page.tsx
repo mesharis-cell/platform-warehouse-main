@@ -746,16 +746,20 @@ export default function InboundScanningPage() {
                         ))}
                     </div>
 
-                    {/* Complete scan button */}
-                    {progressData.percent_complete === 100 && (
-                        <Button
-                            onClick={handleCompleteScan}
-                            className="w-full h-14 text-lg font-mono font-bold bg-primary hover:bg-primary/90"
-                            disabled={completeScan.isPending}
-                        >
-                            {completeScan.isPending ? "CLOSING ORDER..." : "COMPLETE RETURN SCAN"}
-                        </Button>
-                    )}
+                    {/* Complete scan button — always visible (matches SP return).
+                        Pooled items legitimately come back in smaller quantities
+                        (consumables consumed at the event), so we can't gate
+                        completion on percent_complete=100. The server decides:
+                        for pooled shortfalls it returns 400 + requires_settlement
+                        list, which pops the settlement modal. For serialized
+                        shortfalls it errors cleanly. */}
+                    <Button
+                        onClick={handleCompleteScan}
+                        className="w-full h-14 text-lg font-mono font-bold bg-primary hover:bg-primary/90"
+                        disabled={completeScan.isPending}
+                    >
+                        {completeScan.isPending ? "CLOSING ORDER..." : "COMPLETE RETURN SCAN"}
+                    </Button>
                 </div>
             )}
 
