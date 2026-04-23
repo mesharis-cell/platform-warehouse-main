@@ -184,11 +184,24 @@ const scanInboundItem = async (data: {
     }
 };
 
-const completeInboundScan = async (data: { orderId: string }) => {
+const completeInboundScan = async (data: {
+    orderId: string;
+    settlements?: Array<{
+        line_id: string;
+        write_off_reason: "CONSUMED" | "LOST" | "DAMAGED" | "OTHER";
+        note?: string;
+    }>;
+}) => {
     try {
         const response = await apiClient.post(
             `/operations/v1/scanning/inbound/${data.orderId}/complete`,
-            {}
+            // Forward settlements so the server can close an order with
+            // pooled shortfalls. Previously this posted an empty body,
+            // which meant even after the settlement modal gathered the
+            // user's reasons, the API still saw "no settlements" and
+            // re-rejected with `requires_settlement`. Matches the
+            // self-pickup-return hook's payload shape directly below.
+            { settlements: data.settlements || [] }
         );
         return response.data;
     } catch (error) {
