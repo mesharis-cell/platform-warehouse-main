@@ -278,35 +278,65 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
     );
     const canAdjustPricing = hasPermission(user, WAREHOUSE_ACTION_PERMISSIONS.ordersPricingAdjust);
 
-    // Initialize states when order loads
+    // Initialize states when order loads.
+    //
+    // Prefill priority for the delivery schedule pickers:
+    //   1. `delivery_window` / `pickup_window`  — already confirmed by
+    //      logistics on a prior save.
+    //   2. `requested_delivery_window` / `requested_pickup_window`  — the
+    //      client's ask on submit. Most of the time logistics just confirms
+    //      these, so starting from here saves a re-entry.
+    //   3. Event-day fallback  — when neither of the above exists (e.g. PR
+    //      client skipped the optional delivery window). Uses event_start /
+    //      event_end + a 1h default window. Deliberately same-day — no
+    //      prior-day / next-day guess which was misleading logistics.
     if (order) {
         if (!jobNumber && order?.data?.job_number) setJobNumber(order?.data?.job_number);
         if (!timeWindows.deliveryWindowStart) {
-            if (order?.data?.delivery_window?.start) {
-                setTimeWindows({
-                    deliveryWindowStart: new Date(order?.data?.delivery_window?.start),
-                    deliveryWindowEnd: new Date(order?.data?.delivery_window?.end),
-                    pickupWindowStart: new Date(order?.data?.pickup_window?.start),
-                    pickupWindowEnd: new Date(order?.data?.pickup_window?.end),
-                });
-            } else if (order?.data?.event_start_date && order?.data?.event_end_date) {
-                const eventStart = new Date(order.data.event_start_date);
-                const eventEnd = new Date(order.data.event_end_date);
-                const deliveryStart = subDays(eventStart, 1);
-                deliveryStart.setHours(8, 0, 0, 0);
-                const deliveryEnd = new Date(deliveryStart);
-                deliveryEnd.setHours(9, 0, 0, 0);
+            type Window = { start?: string; end?: string } | null | undefined;
+            const pickWindow = (
+                confirmed: Window,
+                requested: Window,
+                fallbackStart: Date | null
+            ): { start: Date; end: Date } | null => {
+                if (confirmed?.start && confirmed?.end) {
+                    return { start: new Date(confirmed.start), end: new Date(confirmed.end) };
+                }
+                if (requested?.start && requested?.end) {
+                    return { start: new Date(requested.start), end: new Date(requested.end) };
+                }
+                if (fallbackStart) {
+                    const end = new Date(fallbackStart);
+                    end.setHours(end.getHours() + 1);
+                    return { start: fallbackStart, end };
+                }
+                return null;
+            };
 
-                const pickupStart = addDays(eventEnd, 1);
-                pickupStart.setHours(8, 0, 0, 0);
-                const pickupEnd = new Date(pickupStart);
-                pickupEnd.setHours(9, 0, 0, 0);
+            const eventStart = order?.data?.event_start_date
+                ? new Date(order.data.event_start_date)
+                : null;
+            const eventEnd = order?.data?.event_end_date
+                ? new Date(order.data.event_end_date)
+                : null;
 
+            const delivery = pickWindow(
+                order?.data?.delivery_window,
+                order?.data?.requested_delivery_window,
+                eventStart
+            );
+            const pickup = pickWindow(
+                order?.data?.pickup_window,
+                order?.data?.requested_pickup_window,
+                eventEnd
+            );
+
+            if (delivery || pickup) {
                 setTimeWindows({
-                    deliveryWindowStart: deliveryStart,
-                    deliveryWindowEnd: deliveryEnd,
-                    pickupWindowStart: pickupStart,
-                    pickupWindowEnd: pickupEnd,
+                    deliveryWindowStart: delivery?.start,
+                    deliveryWindowEnd: delivery?.end,
+                    pickupWindowStart: pickup?.start,
+                    pickupWindowEnd: pickup?.end,
                 });
             }
         }
@@ -572,17 +602,11 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         ? new Date(order.data.event_end_date)
         : undefined;
 
-    const deliveryDisabledDays = eventStartDate
-        ? (date: Date) =>
-              isBefore(date, startOfDay(subDays(eventStartDate, 5))) ||
-              isAfter(date, endOfDay(subDays(eventStartDate, 1)))
-        : undefined;
-
-    const pickupDisabledDays = eventEndDate
-        ? (date: Date) =>
-              isBefore(date, startOfDay(addDays(eventEndDate, 1))) ||
-              isAfter(date, endOfDay(addDays(eventEndDate, 3)))
-        : undefined;
+    // Delivery / pickup date-picker constraints were removed 2026-04-23.
+    // The previous `deliveryDisabledDays` forbade same-day delivery (event
+    // start) and `pickupDisabledDays` forbade same-day pickup (event end) —
+    // both legitimate use cases (e.g. short events, Red Bull-style same-day
+    // turnarounds). Logistics judges feasibility; the UI shouldn't ban it.
 
     return (
         <div className="min-h-screen bg-background">
@@ -1208,7 +1232,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                             }))
                                                         }
                                                         placeholder="Select delivery start"
-                                                        disabledDays={deliveryDisabledDays}
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
@@ -1224,7 +1247,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                             }))
                                                         }
                                                         placeholder="Select delivery end"
-                                                        disabledDays={deliveryDisabledDays}
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
@@ -1240,7 +1262,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                             }))
                                                         }
                                                         placeholder="Select pickup start"
-                                                        disabledDays={pickupDisabledDays}
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
@@ -1256,7 +1277,6 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                             }))
                                                         }
                                                         placeholder="Select pickup end"
-                                                        disabledDays={pickupDisabledDays}
                                                     />
                                                 </div>
                                             </div>
@@ -1499,9 +1519,8 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                                                     </p>
                                                     <p className="font-mono text-sm font-bold">
                                                         {new Date(
-                                                            (
-                                                                order.data.delivery_window as any
-                                                            ).start
+                                                            (order.data.delivery_window as any)
+                                                                .start
                                                         ).toLocaleString()}{" "}
                                                         –{" "}
                                                         {new Date(
