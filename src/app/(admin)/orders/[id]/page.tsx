@@ -472,12 +472,20 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                     profile: "photo",
                 });
                 deliveryPhotos = uploadResult.data?.imageUrls?.filter(Boolean) || [];
-                if (deliveryPhotos.length > 0) {
+                // /scanning/outbound/:id/truck-photos accepts OUTBOUND photos
+                // only in IN_PREPARATION/READY_FOR_DELIVERY (truck loading at
+                // the warehouse) and RETURN photos in AWAITING_RETURN/
+                // RETURN_IN_TRANSIT (return pickup). DELIVERED photos are
+                // taken at the venue and belong on the order record directly
+                // via the /status endpoint's `delivery_photos` param, not
+                // on the truck-photos endpoint. Previously this fired with
+                // trip_phase=OUTBOUND from IN_TRANSIT and the API rejected —
+                // blocking the whole status transition. Skip for DELIVERED.
+                if (deliveryPhotos.length > 0 && selectedNextStatus === "RETURN_IN_TRANSIT") {
                     await uploadTruckPhotos.mutateAsync({
                         orderId: order.data.id,
                         photos: deliveryPhotos,
-                        tripPhase:
-                            selectedNextStatus === "RETURN_IN_TRANSIT" ? "RETURN" : "OUTBOUND",
+                        tripPhase: "RETURN",
                     });
                 }
             }
