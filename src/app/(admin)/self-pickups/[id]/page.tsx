@@ -289,6 +289,11 @@ export default function WarehouseSelfPickupDetailPage({
                                         </span>
                                     </div>
                                 )}
+                                {pickup.notes && (
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                        {pickup.notes}
+                                    </p>
+                                )}
                             </CardContent>
                         </Card>
 
