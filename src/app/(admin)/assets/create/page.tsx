@@ -11,9 +11,18 @@ import {
     Check,
     Loader2,
     Plus,
-    Search,
     X,
 } from "lucide-react";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -123,26 +132,14 @@ export default function MobileCreateAssetPage() {
         formData.warehouse_id ? { warehouse_id: formData.warehouse_id } : undefined
     );
     const [brandOpen, setBrandOpen] = useState(false);
-    const [brandSearch, setBrandSearch] = useState("");
-    const [debouncedBrandSearch, setDebouncedBrandSearch] = useState("");
-    const brandDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useEffect(() => {
-        if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current);
-        brandDebounceRef.current = setTimeout(() => setDebouncedBrandSearch(brandSearch), 300);
-        return () => {
-            if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current);
-        };
-    }, [brandSearch]);
-
-    const { data: brandsResponse, isFetching: brandsFetching } = useBrands(
-        formData.company_id
-            ? {
-                  company_id: formData.company_id,
-                  limit: "100",
-                  ...(debouncedBrandSearch ? { search_term: debouncedBrandSearch } : {}),
-              }
-            : undefined
+    // Load the full brand list for the selected company (limit=200 covers
+    // every realistic tenant). Filtering happens client-side via cmdk inside
+    // the Popover + Command combobox below — matches the asset-wizard pattern
+    // and replaces the previous custom popover that had separate server-side
+    // debounced search + bespoke scroll.
+    const { data: brandsResponse } = useBrands(
+        formData.company_id ? { company_id: formData.company_id, limit: "200" } : undefined
     );
     const { data: teamsResponse } = useTeams(
         formData.company_id ? { company_id: formData.company_id } : undefined
@@ -698,77 +695,89 @@ export default function MobileCreateAssetPage() {
                                         )}
                                     </>
                                 ) : (
-                                    <>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            disabled={!formData.company_id}
-                                            onClick={() =>
-                                                formData.company_id && setBrandOpen((o) => !o)
-                                            }
-                                            className="w-full justify-between font-normal"
+                                    <Popover open={brandOpen} onOpenChange={setBrandOpen}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                role="combobox"
+                                                aria-expanded={brandOpen}
+                                                disabled={!formData.company_id}
+                                                className="w-full justify-between font-normal"
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        "truncate text-left",
+                                                        !formData.brand_id &&
+                                                            "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    {formData.brand_id
+                                                        ? (brands.find(
+                                                              (b) => b.id === formData.brand_id
+                                                          )?.name ?? "Select brand")
+                                                        : !formData.company_id
+                                                          ? "Select company first"
+                                                          : "Select brand"}
+                                                </span>
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            className="w-[--radix-popover-trigger-width] p-0"
+                                            align="start"
+                                            style={{
+                                                maxHeight:
+                                                    "min(var(--radix-popover-content-available-height), 360px)",
+                                                isolation: "isolate",
+                                            }}
+                                            onWheel={(e) => e.stopPropagation()}
+                                            onTouchMove={(e) => e.stopPropagation()}
                                         >
-                                            <span className="truncate text-left">
-                                                {formData.brand_id
-                                                    ? (brands.find(
-                                                          (b) => b.id === formData.brand_id
-                                                      )?.name ?? "Select brand")
-                                                    : !formData.company_id
-                                                      ? "Select company first"
-                                                      : "Select brand"}
-                                            </span>
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                        {brandOpen && formData.company_id && (
-                                            <div className="rounded-md border bg-popover shadow-sm">
-                                                <div className="flex items-center border-b px-3">
-                                                    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                                                    <input
-                                                        className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
-                                                        placeholder="Search brands..."
-                                                        value={brandSearch}
-                                                        onChange={(e) =>
-                                                            setBrandSearch(e.target.value)
-                                                        }
-                                                    />
-                                                </div>
-                                                <div className="max-h-48 overflow-y-auto p-1">
-                                                    {brandsFetching ? (
-                                                        <div className="py-4 text-center text-sm text-muted-foreground">
-                                                            Loading...
-                                                        </div>
-                                                    ) : brands.length === 0 ? (
-                                                        <div className="py-2 text-center text-sm text-muted-foreground">
-                                                            No brands found
-                                                        </div>
-                                                    ) : (
-                                                        brands.map((b) => (
-                                                            <button
+                                            <Command className="max-h-[inherit]">
+                                                <CommandInput placeholder="Search brand…" />
+                                                <CommandList
+                                                    className="max-h-none"
+                                                    style={{
+                                                        maxHeight:
+                                                            "calc(min(var(--radix-popover-content-available-height), 360px) - 45px)",
+                                                        overflowY: "auto",
+                                                        overscrollBehavior: "contain",
+                                                        touchAction: "pan-y",
+                                                        WebkitOverflowScrolling: "touch",
+                                                    }}
+                                                >
+                                                    <CommandEmpty>No brand matches.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {brands.map((b) => (
+                                                            <CommandItem
                                                                 key={b.id}
-                                                                type="button"
-                                                                onClick={() => {
+                                                                value={b.name}
+                                                                onSelect={() => {
                                                                     setFormData((prev) => ({
                                                                         ...prev,
                                                                         brand_id: b.id,
                                                                         family_id: undefined,
                                                                     }));
                                                                     setBrandOpen(false);
-                                                                    setBrandSearch("");
-                                                                    setDebouncedBrandSearch("");
                                                                 }}
-                                                                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
                                                             >
                                                                 <Check
-                                                                    className={`h-4 w-4 ${formData.brand_id === b.id ? "opacity-100" : "opacity-0"}`}
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        formData.brand_id === b.id
+                                                                            ? "opacity-100"
+                                                                            : "opacity-0"
+                                                                    )}
                                                                 />
                                                                 {b.name}
-                                                            </button>
-                                                        ))
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </>
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
                                 )}
                             </div>
 
